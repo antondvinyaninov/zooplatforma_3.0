@@ -158,7 +158,11 @@ export default function PetPage({ params }: PetPageProps) {
                 <div className="flex gap-2">
                   {user?.id === pet.user_id && (
                     <a
-                      href={`/pets/${pet.id}/edit`}
+                      href={
+                        pet.relationship === 'curator'
+                          ? `/pethelper/pets/${pet.id}`
+                          : `/owner/pets/${pet.id}`
+                      }
                       className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors font-medium"
                     >
                       Редактировать
