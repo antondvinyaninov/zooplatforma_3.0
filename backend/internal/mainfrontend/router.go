@@ -16,6 +16,7 @@ import (
 	"github.com/zooplatforma/backend/internal/mainfrontend/polls"
 	"github.com/zooplatforma/backend/internal/mainfrontend/posts"
 	"github.com/zooplatforma/backend/internal/mainfrontend/reports"
+	"github.com/zooplatforma/backend/internal/mainfrontend/search"
 	"github.com/zooplatforma/backend/internal/mainfrontend/support"
 	"github.com/zooplatforma/backend/internal/mainfrontend/users"
 	"github.com/zooplatforma/backend/internal/shared/auth"
@@ -46,6 +47,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 	// announcementsHandler := announcements.NewHandler(db) // Таблица не существует
 	reportsHandler := reports.NewHandler(db)
 	supportHandler := support.NewHandler(db, s3Client)
+	searchHandler := search.NewHandler(db)
 
 	// Auth routes
 	authGroup := r.Group("/auth")
@@ -203,4 +205,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 	{
 		supportGroup.POST("", supportHandler.CreateSupportMessage)
 	}
+
+	// Search route
+	r.GET("/search", searchHandler.Search)
 }

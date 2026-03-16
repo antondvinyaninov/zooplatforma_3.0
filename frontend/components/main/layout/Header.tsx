@@ -7,10 +7,20 @@ import CityDetector from './CityDetector';
 import UserMenu from './UserMenu';
 import NotificationsDropdown from './NotificationsDropdown';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 function HeaderMobile() {
   const { isAuthenticated } = useAuth();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      router.push(`/main/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
+    }
+  };
 
   return (
     <div className="sm:hidden">
@@ -50,6 +60,9 @@ function HeaderMobile() {
             <input
               type="text"
               placeholder="Поиск..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
               className="w-full pl-10 pr-4 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gradient-to-br from-gray-50 to-gray-100"
               style={{ '--tw-ring-color': '#1B76FF' } as React.CSSProperties}
             />
@@ -62,6 +75,14 @@ function HeaderMobile() {
 
 function HeaderDesktop() {
   const { isAuthenticated } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      router.push(`/main/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   return (
     <div className="hidden sm:flex items-center gap-2.5">
@@ -96,6 +117,9 @@ function HeaderDesktop() {
           <input
             type="text"
             placeholder="Поиск..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearch}
             className="w-full pl-10 pr-4 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gradient-to-br from-gray-50 to-gray-100"
             style={{ '--tw-ring-color': '#1B76FF' } as React.CSSProperties}
           />
