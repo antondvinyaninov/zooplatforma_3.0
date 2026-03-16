@@ -1,0 +1,23 @@
+# Build Output
+.next
+out
+build
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Env
+.env*
+!.env.example
+
+# Misc
+.DS_Store
+*.pem
+
+# Coverage
+coverage
+
+# Next.js cache
+.vercel

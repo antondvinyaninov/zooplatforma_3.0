@@ -1,0 +1,10 @@
+-- Up
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS reply_setting VARCHAR(20) DEFAULT 'anyone';
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS verify_replies BOOLEAN DEFAULT false;
+
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'published';
+
+-- Down
+ALTER TABLE comments DROP COLUMN IF EXISTS status;
+ALTER TABLE posts DROP COLUMN IF EXISTS verify_replies;
+ALTER TABLE posts DROP COLUMN IF EXISTS reply_setting;

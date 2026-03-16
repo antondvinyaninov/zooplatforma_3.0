@@ -1,0 +1,308 @@
+package oauth
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/zooplatforma/backend/internal/shared/auth"
+	"github.com/zooplatforma/backend/internal/shared/config"
+)
+
+type VKHandler struct {
+	db     *sql.DB
+	config *config.Config
+}
+
+func NewVKHandler(db *sql.DB, cfg *config.Config) *VKHandler {
+	return &VKHandler{
+		db:     db,
+		config: cfg,
+	}
+}
+
+// VKUser структура ответа от VK API
+type VKUser struct {
+	ID        int    `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Photo     string `json:"photo_200"`
+	Email     string `json:"email"`
+}
+
+type VKTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+	UserID      int    `json:"user_id"`
+	Email       string `json:"email"`
+}
+
+type VKAPIResponse struct {
+	Response []VKUser `json:"response"`
+}
+
+// Login - начало OAuth процесса
+func (h *VKHandler) Login(c *gin.Context) {
+	// Формируем URL для авторизации VK
+	authURL := fmt.Sprintf(
+		"https://oauth.vk.com/authorize?client_id=%s&redirect_uri=%s&display=page&scope=email&response_type=code&v=5.131",
+		h.config.VK.ClientID,
+		h.config.VK.RedirectURL,
+	)
+
+	c.Redirect(http.StatusTemporaryRedirect, authURL)
+}
+
+// Callback - обработка ответа от VK
+func (h *VKHandler) Callback(c *gin.Context) {
+	code := c.Query("code")
+	if code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "No authorization code provided"})
+		return
+	}
+
+	// Обмениваем code на access_token
+	tokenURL := fmt.Sprintf(
+		"https://oauth.vk.com/access_token?client_id=%s&client_secret=%s&redirect_uri=%s&code=%s",
+		h.config.VK.ClientID,
+		h.config.VK.ClientSecret,
+		h.config.VK.RedirectURL,
+		code,
+	)
+
+	resp, err := http.Get(tokenURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to get access token"})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to read response"})
+		return
+	}
+
+	var tokenResp VKTokenResponse
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to parse token response"})
+		return
+	}
+
+	// Получаем информацию о пользователе
+	userInfoURL := fmt.Sprintf(
+		"https://api.vk.com/method/users.get?user_ids=%d&fields=photo_200&access_token=%s&v=5.131",
+		tokenResp.UserID,
+		tokenResp.AccessToken,
+	)
+
+	userResp, err := http.Get(userInfoURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to get user info"})
+		return
+	}
+	defer userResp.Body.Close()
+
+	userBody, err := io.ReadAll(userResp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to read user info"})
+		return
+	}
+
+	var vkAPIResp VKAPIResponse
+	if err := json.Unmarshal(userBody, &vkAPIResp); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to parse user info"})
+		return
+	}
+
+	if len(vkAPIResp.Response) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "No user data received"})
+		return
+	}
+
+	vkUser := vkAPIResp.Response[0]
+
+	// Используем email из токена, если он есть
+	email := tokenResp.Email
+	if email == "" {
+		// Если email не предоставлен, создаем временный
+		email = fmt.Sprintf("vk%d@vk.placeholder", vkUser.ID)
+	}
+
+	// Проверяем, существует ли пользователь с таким VK ID
+	var userID int
+	var existingEmail string
+	checkQuery := `SELECT id, email FROM users WHERE vk_id = $1`
+	err = h.db.QueryRow(checkQuery, vkUser.ID).Scan(&userID, &existingEmail)
+
+	if err == sql.ErrNoRows {
+		// Пользователь не найден, создаем нового
+		insertQuery := `
+			INSERT INTO users (name, last_name, email, vk_id, avatar, created_at, verified)
+			VALUES ($1, $2, $3, $4, $5, $6, true)
+			RETURNING id
+		`
+		err = h.db.QueryRow(
+			insertQuery,
+			vkUser.FirstName,
+			vkUser.LastName,
+			email,
+			vkUser.ID,
+			vkUser.Photo,
+			time.Now().UTC(),
+		).Scan(&userID)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create user: " + err.Error()})
+			return
+		}
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database error"})
+		return
+	}
+
+	// Генерируем JWT токен
+	token, err := auth.GenerateToken(userID, email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to generate token"})
+		return
+	}
+
+	// Устанавливаем cookie с токеном
+	c.SetCookie(
+		"auth_token",
+		token,
+		30*24*60*60, // 30 дней
+		"/",
+		"",
+		false,
+		true,
+	)
+
+	// Редирект на фронтенд
+	c.Redirect(http.StatusTemporaryRedirect, "http://localhost:3000/main/dashboard")
+}
+
+// SDKCallback - обработка данных от VK ID SDK
+func (h *VKHandler) SDKCallback(c *gin.Context) {
+	var req struct {
+		AccessToken string `json:"access_token"`
+		UserID      int    `json:"user_id"`
+		ExpiresIn   int    `json:"expires_in"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid request"})
+		return
+	}
+
+	// Получаем информацию о пользователе через VK API
+	userInfoURL := fmt.Sprintf(
+		"https://api.vk.com/method/users.get?user_ids=%d&fields=photo_200&access_token=%s&v=5.131",
+		req.UserID,
+		req.AccessToken,
+	)
+
+	userResp, err := http.Get(userInfoURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to get user info"})
+		return
+	}
+	defer userResp.Body.Close()
+
+	userBody, err := io.ReadAll(userResp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to read user info"})
+		return
+	}
+
+	var vkAPIResp VKAPIResponse
+	if err := json.Unmarshal(userBody, &vkAPIResp); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to parse user info"})
+		return
+	}
+
+	if len(vkAPIResp.Response) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "No user data received"})
+		return
+	}
+
+	vkUser := vkAPIResp.Response[0]
+	email := fmt.Sprintf("vk%d@vk.placeholder", vkUser.ID)
+
+	// Проверяем, существует ли пользователь с таким VK ID
+	var userID int
+	checkQuery := `SELECT id FROM users WHERE vk_id = $1`
+	err = h.db.QueryRow(checkQuery, vkUser.ID).Scan(&userID)
+
+	if err == sql.ErrNoRows {
+		// Пользователь не найден, создаем нового
+		insertQuery := `
+			INSERT INTO users (name, last_name, email, vk_id, avatar, vk_access_token, created_at, verified)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+			RETURNING id
+		`
+		err = h.db.QueryRow(
+			insertQuery,
+			vkUser.FirstName,
+			vkUser.LastName,
+			email,
+			vkUser.ID,
+			vkUser.Photo,
+			req.AccessToken,
+			time.Now().UTC(),
+		).Scan(&userID)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create user: " + err.Error()})
+			return
+		}
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database error"})
+		return
+	} else {
+		// Обновляем access_token для существующего пользователя
+		updateQuery := `UPDATE users SET vk_access_token = $1 WHERE id = $2`
+		_, err = h.db.Exec(updateQuery, req.AccessToken, userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update token"})
+			return
+		}
+	}
+
+	// Генерируем JWT токен
+	token, err := auth.GenerateToken(userID, email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to generate token"})
+		return
+	}
+
+	// Устанавливаем cookie с токеном
+	c.SetCookie(
+		"auth_token",
+		token,
+		30*24*60*60, // 30 дней
+		"/",
+		"",
+		false,
+		true,
+	)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"user": gin.H{
+				"id":         userID,
+				"first_name": vkUser.FirstName,
+				"last_name":  vkUser.LastName,
+				"avatar_url": vkUser.Photo,
+				"vk_id":      vkUser.ID,
+			},
+			"token": token,
+		},
+	})
+}

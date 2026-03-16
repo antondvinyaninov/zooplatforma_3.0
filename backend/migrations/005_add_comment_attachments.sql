@@ -1,0 +1,10 @@
+-- +goose Up
+-- +goose StatementBegin
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name='comments' AND column_name='attachments') THEN
+        ALTER TABLE comments ADD COLUMN attachments JSONB DEFAULT '[]'::jsonb;
+    END IF;
+END $$;
+-- +goose StatementEnd
