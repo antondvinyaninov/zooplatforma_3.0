@@ -314,18 +314,47 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				return
 			}
 
-			// Обновляем только переданные поля
+			// Разрешенные поля таблицы pets для обновления (и маппинг)
+			allowedFields := map[string]string{
+				"name":               "name",
+				"species_id":         "species_id",
+				"breed_id":           "breed_id",
+				"birth_date":         "birth_date",
+				"gender":             "gender",
+				"description":        "description",
+				"relationship":       "relationship",
+				"color":              "color",
+				"size":               "size",
+				"location_type":      "location_type",
+				"sterilization_date": "sterilization_date",
+				"photo_url":          "photo_url",
+				"chip_number":        "microchip", // map from frontend key to db column
+				"weight":             "weight",
+				// Остальные поля пока игнорируются, чтобы не вызывать SQL ошибку (42703)
+			}
+
+			// Обновляем только переданные поля, которые есть в разрешенном списке
 			query := "UPDATE pets SET "
 			args := []interface{}{}
 			argCount := 1
 
-			for key, value := range input {
+			for jsonKey, value := range input {
+				dbCol, ok := allowedFields[jsonKey]
+				if !ok {
+					continue // Игнорируем неразрешенные или вычисляемые поля
+				}
 				if argCount > 1 {
 					query += ", "
 				}
-				query += key + " = $" + fmt.Sprint(argCount)
+				query += dbCol + " = $" + fmt.Sprint(argCount)
 				args = append(args, value)
 				argCount++
+			}
+
+			if argCount == 1 {
+				// Нет полей для обновления
+				c.JSON(200, gin.H{"success": true})
+				return
 			}
 
 			query += " WHERE id = $" + fmt.Sprint(argCount)
