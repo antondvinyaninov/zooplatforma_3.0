@@ -14,11 +14,13 @@ export const getApiUrl = (): string => {
   }
 };
 
-// WebSocket URL (всегда полный URL)
+// WebSocket URL
 export const getWebSocketUrl = (): string => {
-  const apiUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://api.zooplatforma.ru';
-  // Преобразуем http(s) в ws(s)
-  return apiUrl.replace(/^http/, 'ws');
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}/ws`;
+  }
+  return 'ws://127.0.0.1:8000/ws';
 };
 
 // Auth Service URL

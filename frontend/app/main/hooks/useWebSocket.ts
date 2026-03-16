@@ -79,19 +79,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       return;
     }
 
-    // WebSocket подключаем напрямую к Gateway
-    // В development используем локальный бэкенд, в production - продакшн Gateway
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const apiUrl = isDevelopment
-      ? 'http://localhost:8000'
-      : process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://api.zooplatforma.ru';
-
-    // Определяем протокол: если API URL использует https, используем wss
-    const wsProtocol = apiUrl.startsWith('https://') ? 'wss:' : 'ws:';
-    const wsHost = new URL(apiUrl).host;
-
-    // Передаем токен через query параметр
-    const wsUrl = `${wsProtocol}//${wsHost}/ws?token=${token}`;
+    // Используем getWebSocketUrl из lib/urls.ts для определения правильного хоста
+    const { getWebSocketUrl } = require('@/lib/urls');
+    const baseWsUrl = getWebSocketUrl();
+    const wsUrl = `${baseWsUrl}?token=${token}`;
 
     try {
       const ws = new WebSocket(wsUrl);

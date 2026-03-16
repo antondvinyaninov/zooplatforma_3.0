@@ -34,11 +34,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Rewrites для main frontend routes
   async rewrites() {
     return [
+      // WebSocket backend proxy
+      { source: '/ws', destination: 'http://127.0.0.1:8000/ws' },
+      
       // Main frontend routes at root
-      { source: '/about', destination: '/main/about' },
       { source: '/announcements', destination: '/main/announcements' },
       { source: '/catalog', destination: '/main/catalog' },
       { source: '/favorites', destination: '/main/favorites' },
