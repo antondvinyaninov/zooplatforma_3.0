@@ -24,8 +24,7 @@ func (m *Mailer) SendPasswordResetEmail(toEmail, firstName, token string) error 
 	}
 
 	// Ссылка на восстановление пароля:
-	// TODO: возможно нужно заменить zooplatforma.ru на localhost если это dev
-	resetLink := "https://zooplatforma.ru/reset-password?token=" + token
+	resetLink := "https://zooplatforma.ru/main/reset-password?token=" + token
 
 	subject := "Восстановление пароля - ЗооПлатформа"
 	
