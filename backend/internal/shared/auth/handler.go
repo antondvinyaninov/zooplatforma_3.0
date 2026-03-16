@@ -423,10 +423,10 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	}
 
 	// Обновляем сам пароль в пользователях
-	_, err = tx.Exec(`UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`, string(passwordHash), userID)
+	_, err = tx.Exec(`UPDATE users SET password_hash = $1 WHERE id = $2`, string(passwordHash), userID)
 	if err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Could not update password"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": fmt.Sprintf("Could not update password: %v", err)})
 		return
 	}
 
