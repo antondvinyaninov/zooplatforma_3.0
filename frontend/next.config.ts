@@ -39,6 +39,9 @@ const nextConfig: NextConfig = {
       // WebSocket backend proxy
       { source: '/ws', destination: 'http://127.0.0.1:8000/ws' },
       
+      // Global API proxy for backend REST routes
+      { source: '/api/:path*', destination: 'http://127.0.0.1:8000/api/:path*' },
+
       // Main frontend routes at root
       { source: '/announcements', destination: '/main/announcements' },
       { source: '/catalog', destination: '/main/catalog' },
