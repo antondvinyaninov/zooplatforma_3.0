@@ -13,6 +13,7 @@ RUN npm run build
 # ==========================================
 # Stage 2: Build Backend (Golang)
 # ==========================================
+# Use standard golang latest to ensure go.mod matches (or at least 1.24)
 FROM golang:1.24-alpine AS builder-backend
 WORKDIR /app/backend
 
