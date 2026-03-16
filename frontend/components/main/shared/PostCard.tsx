@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import PostComments from './PostComments';
 import { getMediaUrl, getFullName } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 type PostType = 'post' | 'sale' | 'lost' | 'found' | 'help';
 
@@ -37,6 +38,7 @@ const formatDate = (dateString: string) => {
 };
 
 export default function PostCard({ post }: { post: Post }) {
+  const { isAuthenticated } = useAuth();
   const [commentsCount, setCommentsCount] = useState(post.comments_count || 0);
   const badge =
     post.post_type && post.post_type !== 'post'
@@ -89,29 +91,33 @@ export default function PostCard({ post }: { post: Post }) {
       </div>
 
       {/* Actions */}
-      <div className="border-t border-gray-100 px-4 py-2 flex items-center gap-4 text-sm text-gray-600">
-        <button className="flex items-center gap-2 hover:text-red-500 py-2 px-3 hover:bg-red-50 rounded-lg transition-all">
-          <span>❤️</span>
-          <span className="font-medium">0</span>
-        </button>
-        <div className="flex items-center gap-2 py-2 px-3">
-          <span>💬</span>
-          <span className="font-medium">{commentsCount}</span>
-        </div>
-        <button className="flex items-center gap-2 hover:text-green-600 py-2 px-3 hover:bg-green-50 rounded-lg transition-all">
-          <span>↗️</span>
-          <span className="font-medium">Поделиться</span>
-        </button>
-      </div>
+      {isAuthenticated && (
+        <>
+          <div className="border-t border-gray-100 px-4 py-2 flex items-center gap-4 text-sm text-gray-600">
+            <button className="flex items-center gap-2 hover:text-red-500 py-2 px-3 hover:bg-red-50 rounded-lg transition-all">
+              <span>❤️</span>
+              <span className="font-medium">0</span>
+            </button>
+            <div className="flex items-center gap-2 py-2 px-3">
+              <span>💬</span>
+              <span className="font-medium">{commentsCount}</span>
+            </div>
+            <button className="flex items-center gap-2 hover:text-green-600 py-2 px-3 hover:bg-green-50 rounded-lg transition-all">
+              <span>↗️</span>
+              <span className="font-medium">Поделиться</span>
+            </button>
+          </div>
 
-      {/* Comments */}
-      <div className="px-4 pb-3">
-        <PostComments
-          postId={post.id}
-          initialCount={post.comments_count}
-          onCountChange={setCommentsCount}
-        />
-      </div>
+          {/* Comments */}
+          <div className="px-4 pb-3">
+            <PostComments
+              postId={post.id}
+              initialCount={post.comments_count}
+              onCountChange={setCommentsCount}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

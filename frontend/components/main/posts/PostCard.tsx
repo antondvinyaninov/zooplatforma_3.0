@@ -831,115 +831,100 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-6 text-gray-600 px-4 py-3 border-t border-gray-100">
-        <div 
-          className="relative flex items-center"
-          onMouseEnter={handleMouseEnterTooltip}
-          onMouseLeave={handleMouseLeaveTooltip}
-        >
-          <div className="flex items-center">
-            {/* Кнопка Лайка (иконка) - с поддержкой долгого нажатия */}
-            <button
-              {...longPressEvent}
-              className={`flex items-center gap-1 transition-colors p-1 -ml-1 ${isLiked && !selectedReaction ? 'text-red-500' : 'hover:text-red-500'}`}
-              style={{ touchAction: 'manipulation' }}
-            >
-              {selectedReaction ? (
-                <span className="text-[20px] drop-shadow-sm leading-none flex items-center justify-center w-5 h-5 pointer-events-none">
-                  {
-                    {
-                      haha: '😂',
-                      wow: '😲',
-                      love: '🥰',
-                      sad: '😢',
-                      angry: '😡'
-                    }[selectedReaction] || '❤️'
-                  }
-                </span>
-              ) : (
-                <svg
-                  className={`w-5 h-5 pointer-events-none ${isLiked ? 'fill-current' : ''}`}
-                  fill={isLiked ? 'currentColor' : 'none'}
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                  />
-                </svg>
-              )}
-            </button>
-            
-            {/* Кнопка Цифры (количество лайков) - открывает модалку со списком */}
-            {likesCount > 0 && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowLikersModal(true);
-                  setShowLikersTooltip(false);
-                }}
-                className="text-sm font-medium hover:underline p-1"
-              >
-                {likesCount}
-              </button>
-            )}
-          </div>
-          
-          <LikersTooltip
-            postId={post.id}
-            isVisible={showLikersTooltip && !showLikersModal}
-            totalLikes={likesCount}
+      {isAuthenticated && (
+        <div className="flex items-center gap-6 text-gray-600 px-4 py-3 border-t border-gray-100">
+          <div 
+            className="relative flex items-center"
             onMouseEnter={handleMouseEnterTooltip}
             onMouseLeave={handleMouseLeaveTooltip}
-            onReaction={(type) => {
-              if (isAuthenticated) {
-                handleLike(type); // handleLike сам разрулит Upsert
-              } else {
-                setShowAuthModal(true);
-              }
-              setShowLikersTooltip(false);
-            }}
-            onLikersClick={() => {
-              setShowLikersModal(true);
-              setShowLikersTooltip(false);
-            }}
-          />
-
-          {/* Likers Modal (on click) */}
-          <LikersModal
-            postId={post.id}
-            isOpen={showLikersModal}
-            onClose={() => setShowLikersModal(false)}
-          />
-        </div>
-
-        <button
-          onClick={handleOpenModal}
-          className="flex items-center gap-2 hover:text-blue-500 transition-colors"
-          title={
-            post.reply_setting === 'followers' ? 'Только подписчики могут комментировать' :
-            post.reply_setting === 'following' ? 'Только те, на кого подписан автор, могут комментировать' :
-            'Комментировать'
-          }
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          >
+            <div className="flex items-center">
+              {/* Кнопка Лайка (иконка) - с поддержкой долгого нажатия */}
+              <button
+                {...longPressEvent}
+                className={`flex items-center gap-1 transition-colors p-1 -ml-1 ${isLiked && !selectedReaction ? 'text-red-500' : 'hover:text-red-500'}`}
+                style={{ touchAction: 'manipulation' }}
+              >
+                {selectedReaction ? (
+                  <span className="text-[20px] drop-shadow-sm leading-none flex items-center justify-center w-5 h-5 pointer-events-none">
+                    {
+                      {
+                        haha: '😂',
+                        wow: '😲',
+                        love: '🥰',
+                        sad: '😢',
+                        angry: '😡'
+                      }[selectedReaction] || '❤️'
+                    }
+                  </span>
+                ) : (
+                  <svg
+                    className={`w-5 h-5 pointer-events-none ${isLiked ? 'fill-current' : ''}`}
+                    fill={isLiked ? 'currentColor' : 'none'}
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                )}
+              </button>
+              
+              {/* Кнопка Цифры (количество лайков) - открывает модалку со списком */}
+              {likesCount > 0 && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowLikersModal(true);
+                    setShowLikersTooltip(false);
+                  }}
+                  className="text-sm font-medium hover:underline p-1"
+                >
+                  {likesCount}
+                </button>
+              )}
+            </div>
+            
+            <LikersTooltip
+              postId={post.id}
+              isVisible={showLikersTooltip && !showLikersModal}
+              totalLikes={likesCount}
+              onMouseEnter={handleMouseEnterTooltip}
+              onMouseLeave={handleMouseLeaveTooltip}
+              onReaction={(type) => {
+                if (isAuthenticated) {
+                  handleLike(type); // handleLike сам разрулит Upsert
+                } else {
+                  setShowAuthModal(true);
+                }
+                setShowLikersTooltip(false);
+              }}
+              onLikersClick={() => {
+                setShowLikersModal(true);
+                setShowLikersTooltip(false);
+              }}
             />
-          </svg>
-          {commentsCount > 0 && <span className="text-sm">{commentsCount}</span>}
-        </button>
 
-        <div className="relative">
+            {/* Likers Modal (on click) */}
+            <LikersModal
+              postId={post.id}
+              isOpen={showLikersModal}
+              onClose={() => setShowLikersModal(false)}
+            />
+          </div>
+
           <button
-            onClick={() => setShowShareMenu(!showShareMenu)}
-            className="flex items-center gap-2 hover:text-purple-500 transition-colors"
+            onClick={handleOpenModal}
+            className="flex items-center gap-2 hover:text-blue-500 transition-colors"
+            title={
+              post.reply_setting === 'followers' ? 'Только подписчики могут комментировать' :
+              post.reply_setting === 'following' ? 'Только те, на кого подписан автор, могут комментировать' :
+              'Комментировать'
+            }
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -999,7 +984,7 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
             </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Post Modal */}
       <PostModal
