@@ -329,7 +329,23 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				"sterilization_date": "sterilization_date",
 				"photo_url":          "photo_url",
 				"chip_number":        "microchip", // map from frontend key to db column
-				"weight":             "weight",
+
+				// Новые поля из миграции 013
+				"fur":              "fur",
+				"ears":             "ears",
+				"tail":             "tail",
+				"special_marks":    "special_marks",
+				"marking_date":     "marking_date",
+				"tag_number":       "tag_number",
+				"brand_number":     "brand_number",
+				"location_address": "location_address",
+				"location_cage":    "location_cage",
+				"location_contact": "location_contact",
+				"location_phone":   "location_phone",
+				"location_notes":   "location_notes",
+				"weight":           "weight",
+				"health_notes":     "health_notes",
+
 				// Остальные поля пока игнорируются, чтобы не вызывать SQL ошибку (42703)
 			}
 

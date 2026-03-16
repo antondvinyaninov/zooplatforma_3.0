@@ -163,6 +163,12 @@ func (h *Handler) GetByID(c *gin.Context) {
 			p.id, p.name, p.species, p.breed, p.gender, p.birth_date,
 			p.color, p.size, p.photo_url, p.user_id, p.description,
 			p.relationship, p.location_type, p.microchip, p.sterilization_date,
+
+			p.fur, p.ears, p.tail, p.special_marks,
+			p.marking_date, p.tag_number, p.brand_number,
+			p.location_address, p.location_cage, p.location_contact, p.location_phone, p.location_notes,
+			p.weight, p.health_notes,
+
 			u.name as owner_name, u.last_name, u.avatar, u.location, u.phone, u.email as owner_email,
 			p.created_at::text as created_at
 		FROM pets p
@@ -176,6 +182,13 @@ func (h *Handler) GetByID(c *gin.Context) {
 		breed, gender, color, size, photoURL, description sql.NullString
 		birthDate, sterilizationDate                      sql.NullString
 		relationship, locationType, microchip             sql.NullString
+
+		fur, ears, tail, specialMarks                     sql.NullString
+		markingDate, tagNumber, brandNumber               sql.NullString
+		locationAddress, locationCage, locationContact    sql.NullString
+		locationPhone, locationNotes                      sql.NullString
+		weight, healthNotes                               sql.NullString
+
 		ownerName, ownerLastName, ownerAvatar             sql.NullString
 		location, phone, createdAt, ownerEmail            sql.NullString
 	)
@@ -184,6 +197,12 @@ func (h *Handler) GetByID(c *gin.Context) {
 		&id, &name, &species, &breed, &gender, &birthDate,
 		&color, &size, &photoURL, &userID, &description,
 		&relationship, &locationType, &microchip, &sterilizationDate,
+
+		&fur, &ears, &tail, &specialMarks,
+		&markingDate, &tagNumber, &brandNumber,
+		&locationAddress, &locationCage, &locationContact, &locationPhone, &locationNotes,
+		&weight, &healthNotes,
+
 		&ownerName, &ownerLastName, &ownerAvatar, &location, &phone, &ownerEmail, &createdAt,
 	)
 
@@ -225,6 +244,22 @@ func (h *Handler) GetByID(c *gin.Context) {
 		"location_type":      locationType.String,
 		"microchip":          microchip.String,
 		"sterilization_date": sterilizationDate.String,
+
+		"fur":                fur.String,
+		"ears":               ears.String,
+		"tail":               tail.String,
+		"special_marks":      specialMarks.String,
+		"marking_date":       markingDate.String,
+		"tag_number":         tagNumber.String,
+		"brand_number":       brandNumber.String,
+		"location_address":   locationAddress.String,
+		"location_cage":      locationCage.String,
+		"location_contact":   locationContact.String,
+		"location_phone":     locationPhone.String,
+		"location_notes":     locationNotes.String,
+		"weight":             weight.String,
+		"health_notes":       healthNotes.String,
+
 		"owner_name":         ownerName.String,
 		"owner_email":        ownerEmail.String,
 		"city":               location.String,
