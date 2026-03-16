@@ -348,6 +348,27 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
+	// Проверяем, когда был последний запрос для этого пользователя (Rate Limiting 15 минут)
+	var lastRequest time.Time
+	checkLimitQuery := `
+		SELECT created_at 
+		FROM password_resets 
+		WHERE user_id = $1 
+		ORDER BY created_at DESC 
+		LIMIT 1
+	`
+	err = h.db.QueryRow(checkLimitQuery, userID).Scan(&lastRequest)
+	if err == nil {
+		if time.Since(lastRequest) < 15*time.Minute {
+			// Возвращаем успешный статус, но не шлем письмо, чтобы не спамить
+			c.JSON(http.StatusOK, gin.H{"success": true, "message": "Email sent."})
+			return
+		}
+	} else if err != sql.ErrNoRows {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": fmt.Sprintf("Database error limit check: %v", err)})
+		return
+	}
+
 	// Генерируем новый токен
 	token, err := GenerateRandomToken(32) // 64 символа (hex)
 	if err != nil {
@@ -408,6 +429,35 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 		return
 	}
 
+	// Получаем текущий хэш пароля пользователя, чтобы проверить совпадения и сохранить его в историю
+	var oldPasswordHash string
+	err = h.db.QueryRow(`SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&oldPasswordHash)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Could not fetch current password"})
+		return
+	}
+
+	// Проверяем текущий пароль
+	if bcrypt.CompareHashAndPassword([]byte(oldPasswordHash), []byte(req.Password)) == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Новый пароль не должен совпадать с текущим."})
+		return
+	}
+
+	// Проверяем историю паролей (последние 5)
+	rows, err := h.db.Query(`SELECT password_hash FROM password_history WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5`, userID)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var histHash string
+			if err := rows.Scan(&histHash); err == nil {
+				if bcrypt.CompareHashAndPassword([]byte(histHash), []byte(req.Password)) == nil {
+					c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Этот пароль уже использовался недавно. Придумайте другой."})
+					return
+				}
+			}
+		}
+	}
+
 	// Хешируем новый пароль
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -419,6 +469,30 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	tx, err := h.db.Begin()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Transaction failed"})
+		return
+	}
+
+	// Сохраняем старый пароль в историю
+	_, err = tx.Exec(`INSERT INTO password_history (user_id, password_hash) VALUES ($1, $2)`, userID, oldPasswordHash)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Could not save password history"})
+		return
+	}
+
+	// Очищаем старые записи истории, оставляя только 5 последних
+	_, err = tx.Exec(`
+		DELETE FROM password_history 
+		WHERE id IN (
+			SELECT id FROM password_history 
+			WHERE user_id = $1 
+			ORDER BY created_at DESC 
+			OFFSET 5
+		)
+	`, userID)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Could not cleanup old password history"})
 		return
 	}
 
@@ -447,5 +521,159 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Пароль успешно изменен. Вы можете войти в систему.",
+	})
+}
+
+// Смена пароля авторизованным пользователем (Change Password)
+func (h *Handler) ChangePassword(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID, ok := userIDInterface.(int)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Invalid user ID"})
+		return
+	}
+
+	var req struct {
+		OldPassword string `json:"old_password" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required,min=6"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	// Получаем текущий хэш пароля пользователя
+	var currentPasswordHash string
+	err := h.db.QueryRow(`SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&currentPasswordHash)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Could not fetch current password"})
+		return
+	}
+
+	// Проверяем старый пароль
+	if bcrypt.CompareHashAndPassword([]byte(currentPasswordHash), []byte(req.OldPassword)) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Неверный текущий пароль"})
+		return
+	}
+
+	// Проверяем, не совпадает ли новый пароль со старым
+	if bcrypt.CompareHashAndPassword([]byte(currentPasswordHash), []byte(req.NewPassword)) == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Новый пароль не должен совпадать с текущим"})
+		return
+	}
+
+	// Проверяем историю паролей (последние 5)
+	rows, err := h.db.Query(`SELECT password_hash FROM password_history WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5`, userID)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var histHash string
+			if err := rows.Scan(&histHash); err == nil {
+				if bcrypt.CompareHashAndPassword([]byte(histHash), []byte(req.NewPassword)) == nil {
+					c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Этот пароль уже использовался недавно. Придумайте другой."})
+					return
+				}
+			}
+		}
+	}
+
+	// Хешируем новый пароль
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to hash password"})
+		return
+	}
+
+	// Начинаем транзакцию
+	tx, err := h.db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Transaction failed"})
+		return
+	}
+
+	// Сохраняем старый пароль в историю
+	_, err = tx.Exec(`INSERT INTO password_history (user_id, password_hash) VALUES ($1, $2)`, userID, currentPasswordHash)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Could not save password history"})
+		return
+	}
+
+	// Очищаем старые записи истории, оставляя только 5 последних
+	_, err = tx.Exec(`
+		DELETE FROM password_history 
+		WHERE id IN (
+			SELECT id FROM password_history 
+			WHERE user_id = $1 
+			ORDER BY created_at DESC 
+			OFFSET 5
+		)
+	`, userID)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Could not cleanup old password history"})
+		return
+	}
+
+	// Обновляем сам пароль в пользователях
+	_, err = tx.Exec(`UPDATE users SET password_hash = $1 WHERE id = $2`, string(passwordHash), userID)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": fmt.Sprintf("Could not update password: %v", err)})
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Final commit failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Пароль успешно изменен",
+	})
+}
+
+// AdminGenerateTempPassword - Принудительная генерация случайного пароля администратором
+func (h *Handler) AdminGenerateTempPassword(c *gin.Context) {
+	targetUserID := c.Param("id")
+
+	// TODO: Добавить проверку Middleware на права администратора
+	// Сейчас метод открыт для интеграции в админ-панель
+
+	// 8-символьный hex пароль из 4 случайных байт (например: "a1b2c3d4")
+	tempPassword, err := GenerateRandomToken(4) 
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to generate temp password"})
+		return
+	}
+
+	// Хешируем временный пароль
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(tempPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to hash password"})
+		return
+	}
+
+	// Сохраняем в таблицу users
+	_, err = h.db.Exec(`UPDATE users SET password_hash = $1 WHERE id = $2`, string(passwordHash), targetUserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": fmt.Sprintf("Failed to set temporary password: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Временный пароль сгенерирован",
+		"data": gin.H{
+			"user_id":       targetUserID,
+			"temp_password": tempPassword,
+		},
 	})
 }
