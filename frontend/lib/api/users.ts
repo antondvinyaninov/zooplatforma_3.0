@@ -47,7 +47,7 @@ export const usersApi = {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${API_URL}/api/profile/avatar`, {
+      const response = await fetch(`${API_URL}/profile/avatar`, {
         method: 'POST',
         credentials: 'include',
         headers,
@@ -94,7 +94,7 @@ export const usersApi = {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${API_URL}/api/profile/cover`, {
+      const response = await fetch(`${API_URL}/profile/cover`, {
         method: 'POST',
         credentials: 'include',
         headers,
@@ -132,7 +132,7 @@ export const usersApi = {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${API_URL}/api/profile/avatar/delete`, {
+      const response = await fetch(`${API_URL}/profile/avatar/delete`, {
         method: 'DELETE',
         credentials: 'include',
         headers,
@@ -169,7 +169,7 @@ export const usersApi = {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${API_URL}/api/profile/cover/delete`, {
+      const response = await fetch(`${API_URL}/profile/cover/delete`, {
         method: 'DELETE',
         credentials: 'include',
         headers,
