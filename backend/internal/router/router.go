@@ -56,7 +56,7 @@ func Setup(r *gin.Engine, db *sql.DB, cfg *config.Config) {
 	}
 
 	// Main frontend routes
-	mainfrontend.SetupRoutes(api, db, cfg)
+	mainfrontend.SetupRoutes(api, db, cfg, wsHandler.GetHub())
 
 	// Admin routes (под префиксом /api/admin)
 	adminAPI := api.Group("/admin")

@@ -52,7 +52,6 @@ export default function MessengerPage() {
       return response.data || [];
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // Кэшируем на 5 минут (обновления приходят через WS)
   });
 
   const { 
@@ -73,7 +72,6 @@ export default function MessengerPage() {
       return data;
     },
     enabled: !!selectedChatId && selectedChatId > 0,
-    staleTime: 5 * 60 * 1000, // Кэшируем на 5 минут (апдейты через WS)
   });
 
   // Объединяем серверные и временные чаты

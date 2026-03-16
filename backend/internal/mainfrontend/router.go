@@ -21,9 +21,10 @@ import (
 	"github.com/zooplatforma/backend/internal/shared/auth"
 	"github.com/zooplatforma/backend/internal/shared/config"
 	"github.com/zooplatforma/backend/internal/shared/s3"
+	"github.com/zooplatforma/backend/internal/shared/websocket"
 )
 
-func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
+func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websocket.Hub) {
 	// Инициализируем S3 Client
 	s3Client, err := s3.NewClient(cfg)
 	if err != nil {
@@ -35,7 +36,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 	usersHandler := users.NewHandler(db)
 	petsHandler := pets.NewHandler(db)
 	mediaHandler := media.NewHandler(db, s3Client)
-	chatsHandler := chats.NewHandler(db, s3Client)
+	chatsHandler := chats.NewHandler(db, s3Client, hub)
 	organizationsHandler := organizations.NewHandler(db)
 	commentsHandler := comments.NewHandler(db, s3Client)
 	pollsHandler := polls.NewHandler(db)

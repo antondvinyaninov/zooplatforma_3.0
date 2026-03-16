@@ -3,12 +3,14 @@ package chats
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zooplatforma/backend/internal/shared/websocket"
 )
 
 type S3Client interface {
@@ -18,12 +20,14 @@ type S3Client interface {
 type Handler struct {
 	db       *sql.DB
 	s3Client S3Client
+	hub      *websocket.Hub
 }
 
-func NewHandler(db *sql.DB, s3Client S3Client) *Handler {
+func NewHandler(db *sql.DB, s3Client S3Client, hub *websocket.Hub) *Handler {
 	return &Handler{
 		db:       db,
 		s3Client: s3Client,
+		hub:      hub,
 	}
 }
 
@@ -296,6 +300,46 @@ func (h *Handler) SendMessage(c *gin.Context) {
 			"chat_id": chatID,
 		},
 	})
+
+	if h.hub != nil {
+		senderQuery := `SELECT name, last_name, avatar FROM users WHERE id = $1`
+		var senderName, senderLastName string
+		var senderAvatar sql.NullString
+		h.db.QueryRow(senderQuery, userID).Scan(&senderName, &senderLastName, &senderAvatar)
+
+		msgPayload := map[string]interface{}{
+			"type": "new_message",
+			"data": map[string]interface{}{
+				"id":          messageID,
+				"chat_id":     chatID,
+				"sender_id":   userID,
+				"receiver_id": req.ReceiverID,
+				"content":     req.Content,
+				"created_at":  time.Now().Format(time.RFC3339),
+				"is_read":     false,
+				"attachments": []map[string]interface{}{},
+				"sender": map[string]interface{}{
+					"id":         userID,
+					"name":       senderName,
+					"last_name":  senderLastName,
+					"avatar":     senderAvatar.String,
+					"avatar_url": senderAvatar.String,
+				},
+			},
+		}
+		msgBytes, _ := json.Marshal(msgPayload)
+		h.hub.SendToUser(req.ReceiverID, msgBytes)
+		h.hub.SendToUser(userID, msgBytes)
+
+		var unreadCount int
+		h.db.QueryRow(`SELECT COUNT(*) FROM messages WHERE receiver_id = $1 AND is_read = false`, req.ReceiverID).Scan(&unreadCount)
+		unreadPayload := map[string]interface{}{
+			"type": "unread_count",
+			"data": map[string]interface{}{"count": unreadCount},
+		}
+		unreadBytes, _ := json.Marshal(unreadPayload)
+		h.hub.SendToUser(req.ReceiverID, unreadBytes)
+	}
 }
 
 // MarkAsRead - пометить сообщения как прочитанные
@@ -523,4 +567,44 @@ func (h *Handler) SendMessageWithMedia(c *gin.Context) {
 			"attachments": uploadedFiles,
 		},
 	})
+
+	if h.hub != nil {
+		senderQuery := `SELECT name, last_name, avatar FROM users WHERE id = $1`
+		var senderName, senderLastName string
+		var senderAvatar sql.NullString
+		h.db.QueryRow(senderQuery, userID).Scan(&senderName, &senderLastName, &senderAvatar)
+
+		msgPayload := map[string]interface{}{
+			"type": "new_message",
+			"data": map[string]interface{}{
+				"id":          messageID,
+				"chat_id":     chatID,
+				"sender_id":   userID,
+				"receiver_id": receiverID,
+				"content":     content,
+				"created_at":  time.Now().Format(time.RFC3339),
+				"is_read":     false,
+				"attachments": uploadedFiles,
+				"sender": map[string]interface{}{
+					"id":         userID,
+					"name":       senderName,
+					"last_name":  senderLastName,
+					"avatar":     senderAvatar.String,
+					"avatar_url": senderAvatar.String,
+				},
+			},
+		}
+		msgBytes, _ := json.Marshal(msgPayload)
+		h.hub.SendToUser(receiverID, msgBytes)
+		h.hub.SendToUser(userID, msgBytes)
+
+		var unreadCount int
+		h.db.QueryRow(`SELECT COUNT(*) FROM messages WHERE receiver_id = $1 AND is_read = false`, receiverID).Scan(&unreadCount)
+		unreadPayload := map[string]interface{}{
+			"type": "unread_count",
+			"data": map[string]interface{}{"count": unreadCount},
+		}
+		unreadBytes, _ := json.Marshal(unreadPayload)
+		h.hub.SendToUser(receiverID, unreadBytes)
+	}
 }
