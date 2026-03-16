@@ -46,7 +46,8 @@ export default function PostsFeed({ activeFilter = 'for-you' }: PostsFeedProps) 
       if (lastPage.length < 10) return undefined;
       return allPages.length * 10; // next offset = pages count * limit
     },
-    enabled: isAuthenticated && !isAuthLoading,
+    // Убираем жесткое ожидание isAuthenticated, чтобы гости тоже загружали ленту
+    enabled: !isAuthLoading,
   });
 
   // FlatMap arrays since Data is now just Post[]
@@ -139,20 +140,6 @@ export default function PostsFeed({ activeFilter = 'for-you' }: PostsFeedProps) 
           <PostSkeleton />
           <PostSkeleton />
           <PostSkeleton />
-        </div>
-      ) : !isAuthenticated ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
-          <p className="text-gray-700 font-medium text-lg mb-2">Добро пожаловать в Зооплатформу!</p>
-          <p className="text-gray-500 mb-4">
-            Войдите или зарегистрируйтесь, чтобы увидеть ленту постов
-          </p>
-          <Link
-            href="/auth"
-            className="inline-block px-6 py-2 text-white rounded-lg font-medium"
-            style={{ backgroundColor: '#1B76FF' }}
-          >
-            Войти / Регистрация
-          </Link>
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow-sm border border-gray-200">
