@@ -14,6 +14,8 @@
 [GIN-debug] POST   /api/auth/logout          --> github.com/zooplatforma/backend/internal/shared/auth.(*Handler).Logout-fm (6 handlers)
 [GIN-debug] POST   /api/auth/forgot-password --> github.com/zooplatforma/backend/internal/shared/auth.(*Handler).ForgotPassword-fm (6 handlers)
 [GIN-debug] POST   /api/auth/reset-password  --> github.com/zooplatforma/backend/internal/shared/auth.(*Handler).ResetPassword-fm (6 handlers)
+[GIN-debug] POST   /api/auth/change-password --> github.com/zooplatforma/backend/internal/shared/auth.(*Handler).ChangePassword-fm (6 handlers)
+[GIN-debug] POST   /api/auth/admin/users/:id/temp-password --> github.com/zooplatforma/backend/internal/shared/auth.(*Handler).AdminGenerateTempPassword-fm (6 handlers)
 [GIN-debug] GET    /api/auth/me              --> github.com/zooplatforma/backend/internal/shared/auth.(*Handler).Me-fm (6 handlers)
 [GIN-debug] GET    /api/users                --> github.com/zooplatforma/backend/internal/mainfrontend/users.(*Handler).GetAll-fm (6 handlers)
 [GIN-debug] GET    /api/users/stats          --> github.com/zooplatforma/backend/internal/mainfrontend/users.(*Handler).GetStats-fm (6 handlers)
@@ -171,7 +173,7 @@
 [GIN-debug] GET    /api/zooassistant/auth/me --> github.com/zooplatforma/backend/internal/shared/auth.(*Handler).Me-fm (6 handlers)
 [GIN-debug] GET    /api/zooassistant/health  --> github.com/zooplatforma/backend/internal/zooassistant.SetupRoutes.func1 (6 handlers)
 [GIN-debug] POST   /api/zooassistant/assistant/chat --> github.com/zooplatforma/backend/internal/zooassistant.SetupRoutes.func2 (6 handlers)
-2026/03/16 23:37:15 Сервер запускается на порту 8000
+2026/03/17 00:22:51 Сервер запускается на порту 8000
 [GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
 Please check https://github.com/gin-gonic/gin/blob/master/docs/doc.md#dont-trust-all-proxies for details.
 [GIN-debug] Listening and serving HTTP on :8000

@@ -238,12 +238,12 @@ func (h *Handler) GetPostByID(c *gin.Context) {
 	postID := c.Param("id")
 
 	// Получаем текущего пользователя (если авторизован)
-	userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	currentUserID := 0
+	if uid, exists := c.Get("user_id"); exists {
+		if id, ok := uid.(int); ok {
+			currentUserID = id
+		}
+	}
 
 	query := `
 		SELECT 
@@ -402,10 +402,6 @@ func (h *Handler) GetUserPosts(c *gin.Context) {
 			currentUserID = id
 		}
 	}
-	if currentUserID == 0 {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
 
 	limit := 20
 	offset := 0
@@ -613,10 +609,6 @@ func (h *Handler) GetPetPosts(c *gin.Context) {
 			currentUserID = id
 		}
 	}
-	if currentUserID == 0 {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
 
 	query := `
 		SELECT 
