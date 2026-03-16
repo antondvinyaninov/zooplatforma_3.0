@@ -30,7 +30,7 @@ export default function PetPage({ params }: PetPageProps) {
   const loadPet = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8000/api/pets/${id}`, {
+      const response = await fetch(`/api/pets/${id}`, {
         credentials: 'include',
       });
       const result = await response.json();

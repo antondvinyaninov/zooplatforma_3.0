@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const API_BASE = 'http://localhost:8000'; // Напрямую на backend, минуя Next.js proxy
+const API_BASE = ''; // Загружаем через Next.js proxy
 
 export interface UploadedMedia {
   id: number;
