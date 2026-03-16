@@ -817,6 +817,8 @@ func (h *Handler) ToggleLike(c *gin.Context) {
 	var likesCount int
 	var currentReaction string
 
+	var isNewLike bool
+
 	if err == sql.ErrNoRows {
 		// Лайка нет - создаем
 		insertQuery := `INSERT INTO likes (post_id, user_id, reaction_type) VALUES ($1, $2, $3)`
@@ -836,6 +838,7 @@ func (h *Handler) ToggleLike(c *gin.Context) {
 
 		liked = true
 		currentReaction = req.ReactionType
+		isNewLike = true
 	} else if err != nil {
 		c.JSON(500, gin.H{"success": false, "error": "Database error"})
 		return
@@ -885,6 +888,18 @@ func (h *Handler) ToggleLike(c *gin.Context) {
 	if err := tx.Commit(); err != nil {
 		c.JSON(500, gin.H{"success": false, "error": "Failed to commit transaction"})
 		return
+	}
+
+	// Отправляем уведомление автору поста
+	if isNewLike {
+		var postAuthorID int
+		err := h.db.QueryRow(`SELECT author_id FROM posts WHERE id = $1 AND author_type = 'user'`, postID).Scan(&postAuthorID)
+		if err == nil && postAuthorID != userID {
+			_, _ = h.db.Exec(`
+				INSERT INTO notifications (user_id, actor_id, type, message, is_read, created_at, updated_at)
+				VALUES ($1, $2, 'like', 'оценил(а) вашу запись', false, NOW(), NOW())
+			`, postAuthorID, userID)
+		}
 	}
 
 	c.JSON(200, gin.H{

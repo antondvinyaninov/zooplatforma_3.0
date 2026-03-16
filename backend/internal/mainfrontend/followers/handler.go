@@ -43,7 +43,9 @@ func (h *Handler) Follow(c *gin.Context) {
 		return
 	}
 
-	_, err = h.db.Exec(`
+	// Используем xmax или проверяем affected rows для postgres, 
+	// но проще вернуть id или просто проверить affected rows
+	result, err := h.db.Exec(`
 		INSERT INTO followers (follower_id, following_id) 
 		VALUES ($1, $2)
 		ON CONFLICT (follower_id, following_id) DO NOTHING
@@ -52,6 +54,16 @@ func (h *Handler) Follow(c *gin.Context) {
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "error": "Failed to follow user"})
 		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+
+	if rowsAffected > 0 {
+		// Отправляем уведомление только если это новая подписка
+		_, _ = h.db.Exec(`
+			INSERT INTO notifications (user_id, actor_id, type, message, is_read, created_at, updated_at)
+			VALUES ($1, $2, 'follow', 'подписался(лась) на ваши обновления', false, NOW(), NOW())
+		`, targetID, currentUserID)
 	}
 
 	c.JSON(200, gin.H{"success": true, "message": "Successfully followed"})
