@@ -17,7 +17,7 @@ RUN npm run build
 FROM golang:1.24-alpine AS builder-backend
 WORKDIR /app/backend
 
-ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOTOOLCHAIN=auto
 
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
