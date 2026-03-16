@@ -39,11 +39,12 @@ func (h *Handler) ensurePostsReplyColumns() {
 func (h *Handler) GetPosts(c *gin.Context) {
 	// Получаем текущего пользователя (если авторизован)
 	userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	var currentUserID int
+	if hasUser {
+		currentUserID = userIDInterface.(int)
+	} else {
+		currentUserID = 0 // Гость
+	}
 
 	limit := 20
 	offset := 0
