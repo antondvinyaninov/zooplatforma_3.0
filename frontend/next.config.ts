@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     // Используем timestamp + random для гарантии уникальности
     return `build-${Date.now()}-${Math.random().toString(36).substring(7)}`;
   },
+  output: 'standalone',
   turbopack: {},
   images: {
     remotePatterns: [
