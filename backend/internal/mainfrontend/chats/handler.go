@@ -306,8 +306,8 @@ func (h *Handler) SendMessage(c *gin.Context) {
 
 	if h.hub != nil {
 		senderQuery := `SELECT name, last_name, avatar FROM users WHERE id = $1`
-		var senderName, senderLastName string
-		var senderAvatar sql.NullString
+		var senderName string
+		var senderLastName, senderAvatar sql.NullString
 		h.db.QueryRow(senderQuery, userID).Scan(&senderName, &senderLastName, &senderAvatar)
 
 		msgPayload := map[string]interface{}{
@@ -324,7 +324,7 @@ func (h *Handler) SendMessage(c *gin.Context) {
 				"sender": map[string]interface{}{
 					"id":         userID,
 					"name":       senderName,
-					"last_name":  senderLastName,
+					"last_name":  senderLastName.String,
 					"avatar":     senderAvatar.String,
 					"avatar_url": senderAvatar.String,
 				},
@@ -586,8 +586,8 @@ func (h *Handler) SendMessageWithMedia(c *gin.Context) {
 
 	if h.hub != nil {
 		senderQuery := `SELECT name, last_name, avatar FROM users WHERE id = $1`
-		var senderName, senderLastName string
-		var senderAvatar sql.NullString
+		var senderName string
+		var senderLastName, senderAvatar sql.NullString
 		h.db.QueryRow(senderQuery, userID).Scan(&senderName, &senderLastName, &senderAvatar)
 
 		msgPayload := map[string]interface{}{
@@ -604,7 +604,7 @@ func (h *Handler) SendMessageWithMedia(c *gin.Context) {
 				"sender": map[string]interface{}{
 					"id":         userID,
 					"name":       senderName,
-					"last_name":  senderLastName,
+					"last_name":  senderLastName.String,
 					"avatar":     senderAvatar.String,
 					"avatar_url": senderAvatar.String,
 				},

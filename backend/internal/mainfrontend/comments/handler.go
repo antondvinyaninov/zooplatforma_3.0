@@ -83,8 +83,8 @@ func (h *Handler) GetPostComments(c *gin.Context) {
 			parentID, replyToUserID       sql.NullInt64
 			status                        string
 			attachmentsJSON               string
-			firstName, lastName           string
-			avatarURL                     sql.NullString
+			firstName                     string
+			lastName, avatarURL           sql.NullString
 			isVerified                    bool
 		)
 
@@ -115,7 +115,7 @@ func (h *Handler) GetPostComments(c *gin.Context) {
 			"user": map[string]interface{}{
 				"id":          userID,
 				"first_name":  firstName,
-				"last_name":   lastName,
+				"last_name":   lastName.String,
 				"avatar_url":  avatarURL.String,
 				"is_verified": isVerified,
 			},
@@ -311,8 +311,8 @@ func (h *Handler) CreateComment(c *gin.Context) {
 	}
 
 	// Получаем данные пользователя для ответа
-	var firstName, lastName string
-	var avatarURL sql.NullString
+	var firstName string
+	var lastName, avatarURL sql.NullString
 	var isVerified bool
 	userQuery := `SELECT name, last_name, avatar, verified FROM users WHERE id = $1`
 	h.db.QueryRow(userQuery, userID).Scan(&firstName, &lastName, &avatarURL, &isVerified)
@@ -336,7 +336,7 @@ func (h *Handler) CreateComment(c *gin.Context) {
 			"user": map[string]interface{}{
 				"id":          userID,
 				"first_name":  firstName,
-				"last_name":   lastName,
+				"last_name":   lastName.String,
 				"avatar_url":  avatarURL.String,
 				"is_verified": isVerified,
 			},
