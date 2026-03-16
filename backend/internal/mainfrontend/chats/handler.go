@@ -366,6 +366,19 @@ func (h *Handler) MarkAsRead(c *gin.Context) {
 		return
 	}
 
+	// Отправляем обновленный счетчик по вебсокету
+	if h.hub != nil {
+		var unreadCount int
+		h.db.QueryRow(`SELECT COUNT(*) FROM messages WHERE receiver_id = $1 AND is_read = false`, userID).Scan(&unreadCount)
+		
+		unreadPayload := map[string]interface{}{
+			"type": "unread_count",
+			"data": map[string]interface{}{"count": unreadCount},
+		}
+		unreadBytes, _ := json.Marshal(unreadPayload)
+		h.hub.SendToUser(userID, unreadBytes)
+	}
+
 	c.JSON(200, gin.H{"success": true})
 }
 
