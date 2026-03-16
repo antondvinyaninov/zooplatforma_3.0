@@ -10,7 +10,7 @@ export const getApiUrl = (): string => {
     return '/main/api';
   } else {
     // Server-side: обращаемся в backend контейнер/процесс
-    return process.env.ADMIN_API_URL || 'http://localhost:8000';
+    return (process.env.ADMIN_API_URL || 'http://127.0.0.1:8000').replace('localhost', '127.0.0.1');
   }
 };
 

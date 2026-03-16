@@ -90,7 +90,7 @@ export default function AuthForm({
       : 'Создайте новый аккаунт, затем войдите во вкладке "Вход"';
 
   const handleVKLogin = () => {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
     window.location.href = `${apiBase}/api/auth/vk/login`;
   };
 

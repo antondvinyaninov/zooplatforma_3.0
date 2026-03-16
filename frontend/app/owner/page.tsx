@@ -14,7 +14,7 @@ export default function HomePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
 
   useEffect(() => {
     checkAuth();

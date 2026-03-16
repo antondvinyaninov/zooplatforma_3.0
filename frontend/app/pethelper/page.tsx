@@ -25,7 +25,7 @@ export default function HomePage() {
 
   const checkAuth = async () => {
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
       const response = await fetch(`${apiBase}/api/pethelper/auth/me`, {
         credentials: 'include',
       });

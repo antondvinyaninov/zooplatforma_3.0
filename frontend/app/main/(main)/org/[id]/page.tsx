@@ -192,7 +192,7 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
         <div className="relative h-48 bg-gradient-to-br from-blue-100 to-purple-100">
           {org.cover_photo ? (
             <img
-              src={`http://localhost:8000${org.cover_photo}`}
+              src={`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.cover_photo}`}
               alt={org.name}
               className="w-full h-full object-cover"
             />
@@ -211,7 +211,7 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
               <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center overflow-hidden">
                 {org.logo ? (
                   <img
-                    src={`http://localhost:8000${org.logo}`}
+                    src={`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.logo}`}
                     alt={org.name}
                     className="w-full h-full object-cover"
                   />
@@ -355,7 +355,7 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
                     <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                       {member.user_avatar ? (
                         <img
-                          src={`http://localhost:8000${member.user_avatar}`}
+                          src={`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${member.user_avatar}`}
                           alt={member.user_name}
                           className="w-full h-full object-cover"
                         />

@@ -64,7 +64,7 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
               const authData = await VKID.Auth.exchangeCode(code, deviceId);
 
               // Отправляем данные на наш backend
-              const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+              const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
               const response = await fetch(`${apiBase}/api/auth/vk/sdk-callback`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

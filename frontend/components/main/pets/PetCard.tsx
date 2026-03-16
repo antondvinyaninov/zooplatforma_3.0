@@ -124,7 +124,7 @@ export default function PetCard({ pet, onAction }: PetCardProps) {
           <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
             {pet.photo ? (
               <img
-                src={`http://localhost:8000${pet.photo}`}
+                src={`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${pet.photo}`}
                 alt={pet.name}
                 className="w-full h-full object-cover"
               />

@@ -218,7 +218,7 @@ export default function OrganizationsPage() {
                   <div className="w-20 h-20 flex-shrink-0 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
                     {org.logo ? (
                       <img
-                        src={`http://localhost:8000${org.logo}`}
+                        src={`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.logo}`}
                         alt={org.name}
                         className="w-full h-full object-cover rounded-lg"
                       />

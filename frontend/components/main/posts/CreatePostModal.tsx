@@ -447,7 +447,7 @@ export default function CreatePostModal(props: CreatePostModalProps) {
                 {uploadedMedia.map((media, index) => {
                   const mediaUrl = media.url.startsWith('http')
                     ? `${media.url}?t=${Date.now()}`
-                    : `http://localhost:8000${media.url}?t=${Date.now()}`;
+                    : `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${media.url}?t=${Date.now()}`;
 
                   return (
                     <div

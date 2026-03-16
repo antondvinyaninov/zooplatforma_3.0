@@ -6,7 +6,7 @@ import VKIDButton from '../../../components/auth/VKIDButton';
 
 export default function AdminAuth() {
   const router = useRouter();
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
 
   const handleSubmit = async (data: { email: string; password: string }) => {
     try {

@@ -48,7 +48,7 @@ export default function CatalogPage() {
 
   const loadPets = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/pets/catalog');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/pets/catalog`);
       const result = await response.json();
 
       if (result.success && result.data) {

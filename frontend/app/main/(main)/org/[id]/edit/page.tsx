@@ -66,9 +66,9 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
           address_full: response.data.address_full || '',
           address_city: response.data.address_city || '',
         });
-        setLogoPreview(response.data.logo ? `http://localhost:8000${response.data.logo}` : null);
+        setLogoPreview(response.data.logo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${response.data.logo}` : null);
         setCoverPreview(
-          response.data.cover_photo ? `http://localhost:8000${response.data.cover_photo}` : null,
+          response.data.cover_photo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${response.data.cover_photo}` : null,
         );
       }
     } catch (error) {
@@ -110,16 +110,16 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
     try {
       const response = await organizationsApi.uploadLogo(Number(id), file);
       if (response.success && response.data) {
-        setLogoPreview(`http://localhost:8000${response.data.logo_url}`);
+        setLogoPreview(`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${response.data.logo_url}`);
         alert('Логотип успешно обновлен!');
       } else {
         alert(response.error || 'Ошибка загрузки логотипа');
-        setLogoPreview(org?.logo ? `http://localhost:8000${org.logo}` : null);
+        setLogoPreview(org?.logo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.logo}` : null);
       }
     } catch (error) {
       console.error('Error uploading logo:', error);
       alert('Ошибка загрузки логотипа');
-      setLogoPreview(org?.logo ? `http://localhost:8000${org.logo}` : null);
+      setLogoPreview(org?.logo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.logo}` : null);
     } finally {
       setIsUploadingLogo(false);
     }
@@ -145,16 +145,16 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
     try {
       const response = await organizationsApi.uploadCover(Number(id), file);
       if (response.success && response.data) {
-        setCoverPreview(`http://localhost:8000${response.data.cover_url}`);
+        setCoverPreview(`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${response.data.cover_url}`);
         alert('Обложка успешно обновлена!');
       } else {
         alert(response.error || 'Ошибка загрузки обложки');
-        setCoverPreview(org?.cover_photo ? `http://localhost:8000${org.cover_photo}` : null);
+        setCoverPreview(org?.cover_photo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.cover_photo}` : null);
       }
     } catch (error) {
       console.error('Error uploading cover:', error);
       alert('Ошибка загрузки обложки');
-      setCoverPreview(org?.cover_photo ? `http://localhost:8000${org.cover_photo}` : null);
+      setCoverPreview(org?.cover_photo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.cover_photo}` : null);
     } finally {
       setIsUploadingCover(false);
     }

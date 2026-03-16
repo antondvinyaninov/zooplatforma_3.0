@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Backend API URL (локально - localhost:8000, в production - localhost:8000 внутри контейнера)
-const BACKEND_API_URL = process.env.ADMIN_API_URL || 'http://localhost:8000';
+// Backend API URL (локально - 127.0.0.1:8000, в production - 127.0.0.1:8000 внутри контейнера)
+const BACKEND_API_URL = (process.env.ADMIN_API_URL || 'http://127.0.0.1:8000').replace('localhost', '127.0.0.1');
 
 // Проксирование всех /api/* запросов в Go Backend
 export async function GET(
