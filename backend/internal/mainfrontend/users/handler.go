@@ -2,18 +2,31 @@ package users
 
 import (
 	"database/sql"
+	"fmt"
+	"io"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-type Handler struct {
-	db *sql.DB
+type S3Client interface {
+	UploadFile(key string, data io.Reader, contentType string) (string, error)
+	DeleteObject(key string) error
 }
 
-func NewHandler(db *sql.DB) *Handler {
-	return &Handler{db: db}
+type Handler struct {
+	db       *sql.DB
+	s3Client S3Client
+}
+
+func NewHandler(db *sql.DB, s3Client S3Client) *Handler {
+	return &Handler{
+		db:       db,
+		s3Client: s3Client,
+	}
 }
 
 // GetAll - получить всех пользователей (админский функционал, но перенесен в монолит)
@@ -415,4 +428,130 @@ currentUserID := userIDInterface.(int)
 	}
 
 	c.JSON(200, gin.H{"success": true, "data": user})
+}
+
+// UploadAvatar загружает аватар пользователя в S3
+func (h *Handler) UploadAvatar(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
+
+	file, header, err := c.Request.FormFile("avatar")
+	if err != nil {
+		c.JSON(400, gin.H{"success": false, "error": "No file uploaded"})
+		return
+	}
+	defer file.Close()
+
+	if !strings.HasPrefix(header.Header.Get("Content-Type"), "image/") {
+		c.JSON(400, gin.H{"success": false, "error": "Invalid file type"})
+		return
+	}
+
+	ext := filepath.Ext(header.Filename)
+	key := fmt.Sprintf("avatars/%d/%d%s", userID, time.Now().UnixNano(), ext)
+
+	url, err := h.s3Client.UploadFile(key, file, header.Header.Get("Content-Type"))
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to upload to S3"})
+		return
+	}
+
+	_, err = h.db.Exec(`UPDATE users SET avatar = $1 WHERE id = $2`, url, userID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Database error"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"data": map[string]interface{}{
+			"avatar_url": url,
+			"message":    "Аватар успешно обновлен",
+		},
+	})
+}
+
+// UploadCover загружает обложку пользователя в S3
+func (h *Handler) UploadCover(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
+
+	file, header, err := c.Request.FormFile("cover")
+	if err != nil {
+		c.JSON(400, gin.H{"success": false, "error": "No file uploaded"})
+		return
+	}
+	defer file.Close()
+
+	if !strings.HasPrefix(header.Header.Get("Content-Type"), "image/") {
+		c.JSON(400, gin.H{"success": false, "error": "Invalid file type"})
+		return
+	}
+
+	ext := filepath.Ext(header.Filename)
+	key := fmt.Sprintf("covers/%d/%d%s", userID, time.Now().UnixNano(), ext)
+
+	url, err := h.s3Client.UploadFile(key, file, header.Header.Get("Content-Type"))
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to upload to S3"})
+		return
+	}
+
+	_, err = h.db.Exec(`UPDATE users SET cover_photo = $1 WHERE id = $2`, url, userID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Database error"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"data": map[string]interface{}{
+			"cover_url": url,
+			"message":   "Обложка успешно обновлена",
+		},
+	})
+}
+
+// DeleteAvatar удаляет аватар
+func (h *Handler) DeleteAvatar(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
+
+	_, err := h.db.Exec(`UPDATE users SET avatar = NULL WHERE id = $1`, userID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to remove avatar"})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": map[string]interface{}{"message": "Avatar deleted"}})
+}
+
+// DeleteCover удаляет обложку
+func (h *Handler) DeleteCover(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
+
+	_, err := h.db.Exec(`UPDATE users SET cover_photo = NULL WHERE id = $1`, userID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to remove cover"})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": map[string]interface{}{"message": "Cover deleted"}})
 }

@@ -34,7 +34,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 
 	authHandler := auth.NewHandler(db, cfg)
 	postsHandler := posts.NewHandler(db)
-	usersHandler := users.NewHandler(db)
+	usersHandler := users.NewHandler(db, s3Client)
 	petsHandler := pets.NewHandler(db)
 	mediaHandler := media.NewHandler(db, s3Client)
 	chatsHandler := chats.NewHandler(db, s3Client, hub)
@@ -81,6 +81,10 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 	profile := r.Group("/profile")
 	{
 		profile.PUT("", usersHandler.UpdateProfile)
+		profile.POST("/avatar", usersHandler.UploadAvatar)
+		profile.DELETE("/avatar/delete", usersHandler.DeleteAvatar)
+		profile.POST("/cover", usersHandler.UploadCover)
+		profile.DELETE("/cover/delete", usersHandler.DeleteCover)
 	}
 
 	// Posts routes
