@@ -120,6 +120,8 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 	{
 		sitemapGroup.GET("/posts", sitemapHandler.GetSitemapPosts)
 		sitemapGroup.GET("/users", sitemapHandler.GetSitemapUsers)
+		sitemapGroup.GET("/pets", sitemapHandler.GetSitemapPets)
+		sitemapGroup.GET("/organizations", sitemapHandler.GetSitemapOrganizations)
 	}
 
 	// Friends routes
