@@ -83,7 +83,8 @@ func (h *Handler) GetChats(c *gin.Context) {
 		var (
 			chatID, user1ID, user2ID, unreadCount int
 			otherUserID                           int
-			otherUserName, otherUserLastName      string
+			otherUserName                         string
+			otherUserLastName                     sql.NullString
 			otherUserAvatar, otherUserLastSeen    sql.NullString
 			otherUserVerified                     bool
 			lastMessageAt                         sql.NullString
@@ -95,6 +96,7 @@ func (h *Handler) GetChats(c *gin.Context) {
 			&otherUserAvatar, &otherUserVerified, &otherUserLastSeen,
 		)
 		if err != nil {
+			fmt.Printf("GetChats Scan error for user %d: %v\n", userID, err)
 			continue
 		}
 
@@ -107,7 +109,7 @@ func (h *Handler) GetChats(c *gin.Context) {
 			"other_user": map[string]interface{}{
 				"id":         otherUserID,
 				"name":       otherUserName,
-				"last_name":  otherUserLastName,
+				"last_name":  otherUserLastName.String,
 				"avatar":     otherUserAvatar.String,
 				"avatar_url": otherUserAvatar.String,
 				"verified":   otherUserVerified,
@@ -187,8 +189,8 @@ func (h *Handler) GetMessages(c *gin.Context) {
 			content, createdAt                  string
 			isRead                              bool
 			readAt                              sql.NullString
-			senderName, senderLastName          string
-			senderAvatar                        sql.NullString
+			senderName                          string
+			senderLastName, senderAvatar        sql.NullString
 		)
 
 		err := rows.Scan(
@@ -197,6 +199,7 @@ func (h *Handler) GetMessages(c *gin.Context) {
 			&senderName, &senderLastName, &senderAvatar,
 		)
 		if err != nil {
+			fmt.Printf("GetMessages Scan error for chat %s: %v\n", chatID, err)
 			continue
 		}
 
@@ -218,7 +221,7 @@ func (h *Handler) GetMessages(c *gin.Context) {
 			"sender": map[string]interface{}{
 				"id":         senderID,
 				"name":       senderName,
-				"last_name":  senderLastName,
+				"last_name":  senderLastName.String,
 				"avatar":     senderAvatar.String,
 				"avatar_url": senderAvatar.String,
 			},
