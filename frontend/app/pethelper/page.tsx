@@ -119,7 +119,7 @@ export default function HomePage() {
           {/* Hero Section */}
           <div className="mb-12">
             <div className="mb-6">
-              <img src="/pethelper/favicon.svg" alt="ЗооПлатформа" className="w-24 h-24 mx-auto" />
+              <img src="/favicon.svg" alt="ЗооПлатформа" className="w-24 h-24 mx-auto" />
             </div>
 
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
