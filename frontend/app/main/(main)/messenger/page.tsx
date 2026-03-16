@@ -296,6 +296,20 @@ export default function MessengerPage() {
     setSelectedChatId(null);
   };
 
+  const handleSelectChat = (chatId: number) => {
+    setSelectedChatId(chatId);
+    
+    // Explicitly mark chat as read to clear the global badge immediately
+    if (chatId > 0) {
+      apiClient.post(`/api/chats/${chatId}/mark-read`, {}).then(() => {
+        // Optimistically update the chat list to clear the unread count dot
+        queryClient.setQueryData<Chat[]>(['chats'], (oldChats = []) => {
+          return oldChats.map(c => c.id === chatId ? { ...c, unread_count: 0 } : c);
+        });
+      }).catch(() => {});
+    }
+  };
+
   const selectedChat = chats.find((c) => c.id === selectedChatId);
 
   return (
@@ -308,7 +322,7 @@ export default function MessengerPage() {
         selectedChatId={selectedChatId}
         currentUserId={user?.id}
         onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
-        onSelectChat={setSelectedChatId}
+        onSelectChat={handleSelectChat}
       />
 
       {/* Правая часть - окно чата */}
