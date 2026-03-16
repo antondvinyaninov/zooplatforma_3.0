@@ -831,10 +831,9 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
       )}
 
       {/* Actions */}
-      {isAuthenticated && (
-        <div className="flex items-center gap-6 text-gray-600 px-4 py-3 border-t border-gray-100">
-          <div 
-            className="relative flex items-center"
+      <div className="flex items-center gap-6 text-gray-600 px-4 py-3 border-t border-gray-100">
+        <div 
+          className="relative flex items-center"
             onMouseEnter={handleMouseEnterTooltip}
             onMouseLeave={handleMouseLeaveTooltip}
           >
@@ -879,8 +878,12 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowLikersModal(true);
-                    setShowLikersTooltip(false);
+                    if (isAuthenticated) {
+                      setShowLikersModal(true);
+                      setShowLikersTooltip(false);
+                    } else {
+                      setShowAuthModal(true);
+                    }
                   }}
                   className="text-sm font-medium hover:underline p-1"
                 >
@@ -889,25 +892,23 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
               )}
             </div>
             
-            <LikersTooltip
-              postId={post.id}
-              isVisible={showLikersTooltip && !showLikersModal}
-              totalLikes={likesCount}
-              onMouseEnter={handleMouseEnterTooltip}
-              onMouseLeave={handleMouseLeaveTooltip}
-              onReaction={(type) => {
-                if (isAuthenticated) {
+            {isAuthenticated && (
+              <LikersTooltip
+                postId={post.id}
+                isVisible={showLikersTooltip && !showLikersModal}
+                totalLikes={likesCount}
+                onMouseEnter={handleMouseEnterTooltip}
+                onMouseLeave={handleMouseLeaveTooltip}
+                onReaction={(type) => {
                   handleLike(type); // handleLike сам разрулит Upsert
-                } else {
-                  setShowAuthModal(true);
-                }
-                setShowLikersTooltip(false);
-              }}
-              onLikersClick={() => {
-                setShowLikersModal(true);
-                setShowLikersTooltip(false);
-              }}
-            />
+                  setShowLikersTooltip(false);
+                }}
+                onLikersClick={() => {
+                  setShowLikersModal(true);
+                  setShowLikersTooltip(false);
+                }}
+              />
+            )}
 
             {/* Likers Modal (on click) */}
             <LikersModal
@@ -918,7 +919,13 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
           </div>
 
           <button
-            onClick={handleOpenModal}
+            onClick={() => {
+              if (isAuthenticated) {
+                handleOpenModal();
+              } else {
+                setShowAuthModal(true);
+              }
+            }}
             className="flex items-center gap-2 hover:text-blue-500 transition-colors"
             title={
               post.reply_setting === 'followers' ? 'Только подписчики могут комментировать' :
@@ -931,60 +938,82 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
               />
             </svg>
+            {commentsCount > 0 && <span className="text-sm">{commentsCount}</span>}
           </button>
 
-          {/* Share Menu */}
-          {showShareMenu && (
-            <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-[200px] z-10">
-              <button
-                onClick={() => handleShare('copy')}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-                Копировать ссылку
-              </button>
-              <button
-                onClick={() => handleShare('vk')}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-              >
-                <span className="text-blue-500 font-bold">VK</span>
-                ВКонтакте
-              </button>
-              <button
-                onClick={() => handleShare('telegram')}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-              >
-                <span className="text-blue-400">✈️</span>
-                Telegram
-              </button>
-              <button
-                onClick={() => handleShare('whatsapp')}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-              >
-                <span className="text-green-500">💬</span>
-                WhatsApp
-              </button>
-            </div>
-          )}
+          <div className="relative">
+            <button
+              onClick={() => {
+                if (isAuthenticated) {
+                  setShowShareMenu(!showShareMenu);
+                } else {
+                  setShowAuthModal(true);
+                }
+              }}
+              className="flex items-center gap-2 hover:text-purple-500 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                />
+              </svg>
+            </button>
 
-          {/* Share Message */}
-          {shareMessage && (
-            <div className="absolute bottom-full right-0 mb-2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm whitespace-nowrap">
-              {shareMessage}
-            </div>
-          )}
+            {/* Share Menu */}
+            {isAuthenticated && showShareMenu && (
+              <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-[200px] z-10">
+                <button
+                  onClick={() => handleShare('copy')}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Копировать ссылку
+                </button>
+                <button
+                  onClick={() => handleShare('vk')}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                >
+                  <span className="text-blue-500 font-bold">VK</span>
+                  ВКонтакте
+                </button>
+                <button
+                  onClick={() => handleShare('telegram')}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                >
+                  <span className="text-blue-400">✈️</span>
+                  Telegram
+                </button>
+                <button
+                  onClick={() => handleShare('whatsapp')}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                >
+                  <span className="text-green-500">💬</span>
+                  WhatsApp
+                </button>
+              </div>
+            )}
+
+            {/* Share Message */}
+            {shareMessage && (
+              <div className="absolute bottom-full right-0 mb-2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm whitespace-nowrap">
+                {shareMessage}
+              </div>
+            )}
+          </div>
         </div>
-      )}
 
       {/* Post Modal */}
       <PostModal
