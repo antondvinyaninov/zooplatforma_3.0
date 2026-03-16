@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export const revalidate = 3600; // Обновлять каждый час
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const baseUrl = 'https://zooplatforma.ru';
