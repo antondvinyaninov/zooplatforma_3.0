@@ -1,20 +1,28 @@
 package auth
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zooplatforma/backend/internal/shared/config"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Handler struct {
-	db *sql.DB
+	db     *sql.DB
+	mailer *Mailer
 }
 
-func NewHandler(db *sql.DB) *Handler {
-	return &Handler{db: db}
+func NewHandler(db *sql.DB, cfg *config.Config) *Handler {
+	return &Handler{
+		db:     db,
+		mailer: NewMailer(cfg),
+	}
 }
 
 func (h *Handler) Register(c *gin.Context) {
@@ -301,5 +309,143 @@ func (h *Handler) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    user,
+	})
+}
+
+// GenerateRandomToken создает надежный криптографический случайный токен для сброса пароля
+func GenerateRandomToken(length int) (string, error) {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+// Запрос на восстановление пароля (Forgot Password)
+func (h *Handler) ForgotPassword(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	// Ищем пользователя
+	var userID int
+	var firstName string
+	query := `SELECT id, name FROM users WHERE email = $1`
+	err := h.db.QueryRow(query, req.Email).Scan(&userID, &firstName)
+
+	if err == sql.ErrNoRows {
+		// Для безопасности не сообщаем, что email не найден, просто возвращаем ОК
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Если такой email существует, мы отправим на него письмо."})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": fmt.Sprintf("Database error: %v", err)})
+		return
+	}
+
+	// Генерируем новый токен
+	token, err := GenerateRandomToken(32) // 64 символа (hex)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": fmt.Sprintf("Could not generate reset token: %v", err)})
+		return
+	}
+
+	// Сохраняем токен (действителен 1 час)
+	expiresAt := time.Now().Add(1 * time.Hour)
+	insertQuery := `
+		INSERT INTO password_resets (user_id, token, expires_at)
+		VALUES ($1, $2, $3)
+	`
+	_, err = h.db.Exec(insertQuery, userID, token, expiresAt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": fmt.Sprintf("Failed to save reset token: %v", err)})
+		return
+	}
+
+	// Отправляем письмо через Mailer
+	err = h.mailer.SendPasswordResetEmail(req.Email, firstName, token)
+	if err != nil {
+		// Логируем ошибку, но юзеру говорим что все ок (лучше, чем креш)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to push email: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Email sent."})
+}
+
+// Установка нового пароля по токену (Reset Password)
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var req struct {
+		Token    string `json:"token" binding:"required"`
+		Password string `json:"password" binding:"required,min=6"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	// Проверяем токен: он должен существовать, не быть использованным, и время < expires_at
+	var resetID, userID int
+	query := `
+		SELECT id, user_id
+		FROM password_resets
+		WHERE token = $1 AND used = false AND expires_at > NOW()
+	`
+	err := h.db.QueryRow(query, req.Token).Scan(&resetID, &userID)
+
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Invalid or expired token"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database lookup failed"})
+		return
+	}
+
+	// Хешируем новый пароль
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to hash password"})
+		return
+	}
+
+	// Начинаем транзакцию обновления пароля и аннулирования токена
+	tx, err := h.db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Transaction failed"})
+		return
+	}
+
+	// Обновляем сам пароль в пользователях
+	_, err = tx.Exec(`UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`, string(passwordHash), userID)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Could not update password"})
+		return
+	}
+
+	// Аннулируем токен
+	_, err = tx.Exec(`UPDATE password_resets SET used = true WHERE id = $1`, resetID)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Could not deactivate token"})
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Final commit failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Пароль успешно изменен. Вы можете войти в систему.",
 	})
 }

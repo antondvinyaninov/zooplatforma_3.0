@@ -13,7 +13,7 @@ import (
 )
 
 func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
-	authHandler := auth.NewHandler(db)
+	authHandler := auth.NewHandler(db, cfg)
 	moderationHandler := moderation.NewHandler(db)
 	monitoringHandler := monitoring.NewHandler(db)
 	activityHandler := activity.NewHandler(db)

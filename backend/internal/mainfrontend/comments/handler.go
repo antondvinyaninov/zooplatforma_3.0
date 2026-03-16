@@ -310,6 +310,25 @@ func (h *Handler) CreateComment(c *gin.Context) {
 		return
 	}
 
+	// Отправляем уведомления (вне транзакции, чтобы не откатывать коммент при ошибке уведомлений)
+	if commentStatus == "published" {
+		// Уведомление автору поста (если это не его собственный коммент)
+		if userID != postAuthorID {
+			_, _ = h.db.Exec(`
+				INSERT INTO notifications (user_id, actor_id, type, message, is_read, created_at, updated_at)
+				VALUES ($1, $2, 'comment', 'прокомментировал(а) вашу запись', false, NOW(), NOW())
+			`, postAuthorID, userID)
+		}
+
+		// Уведомление пользователю, которому ответили (если это ответ, и он не автор поста, чтобы не спамить дважды)
+		if replyToUserID != nil && *replyToUserID != userID && *replyToUserID != postAuthorID {
+			_, _ = h.db.Exec(`
+				INSERT INTO notifications (user_id, actor_id, type, message, is_read, created_at, updated_at)
+				VALUES ($1, $2, 'reply', 'ответил(а) на ваш комментарий', false, NOW(), NOW())
+			`, *replyToUserID, userID)
+		}
+	}
+
 	// Получаем данные пользователя для ответа
 	var firstName string
 	var lastName, avatarURL sql.NullString

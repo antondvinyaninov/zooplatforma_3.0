@@ -86,7 +86,7 @@ type assistantChatRequest struct {
 func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 	_ = cfg
 
-	authHandler := auth.NewHandler(db)
+	authHandler := auth.NewHandler(db, cfg)
 
 	authGroup := r.Group("/auth")
 	{

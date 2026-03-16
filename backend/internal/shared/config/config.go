@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 type Config struct {
 	Database    DatabaseConfig
@@ -8,6 +11,7 @@ type Config struct {
 	S3          S3Config
 	VK          VKOAuthConfig
 	Environment string
+	SMTP        SMTPConfig
 }
 
 type DatabaseConfig struct {
@@ -38,7 +42,18 @@ type VKOAuthConfig struct {
 	RedirectURL  string
 }
 
+type SMTPConfig struct {
+	Host string
+	Port int
+	User string
+	Pass string
+	From string
+}
+
 func Load() *Config {
+	s3UseSSL, _ := strconv.ParseBool(getEnv("S3_USE_SSL", "true"))
+	smtpPort, _ := strconv.Atoi(getEnv("SMTP_PORT", "465"))
+
 	return &Config{
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
@@ -57,7 +72,7 @@ func Load() *Config {
 			SecretAccessKey: getEnv("S3_SECRET_ACCESS_KEY", ""),
 			BucketName:      getEnv("S3_BUCKET_NAME", "zooplatforma"),
 			Region:          getEnv("S3_REGION", "ru-1"),
-			UseSSL:          getEnv("S3_USE_SSL", "true") == "true",
+			UseSSL:          s3UseSSL,
 		},
 		VK: VKOAuthConfig{
 			ClientID:     getEnv("VK_CLIENT_ID", ""),
@@ -65,6 +80,13 @@ func Load() *Config {
 			RedirectURL:  getEnv("VK_REDIRECT_URL", "http://localhost:8000/api/auth/vk/callback"),
 		},
 		Environment: getEnv("ENVIRONMENT", "development"),
+		SMTP: SMTPConfig{
+			Host: getEnv("SMTP_HOST", "smtp.yandex.ru"),
+			Port: smtpPort,
+			User: getEnv("SMTP_USER", ""),
+			Pass: getEnv("SMTP_PASS", ""),
+			From: getEnv("SMTP_FROM", "info@zooplatforma.ru"),
+		},
 	}
 }
 

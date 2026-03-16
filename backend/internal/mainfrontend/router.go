@@ -32,7 +32,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		panic(fmt.Sprintf("Failed to initialize S3 client: %v", err))
 	}
 
-	authHandler := auth.NewHandler(db)
+	authHandler := auth.NewHandler(db, cfg)
 	postsHandler := posts.NewHandler(db)
 	usersHandler := users.NewHandler(db)
 	petsHandler := pets.NewHandler(db)
@@ -55,6 +55,8 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		authGroup.POST("/register", authHandler.Register)
 		authGroup.POST("/login", authHandler.Login)
 		authGroup.POST("/logout", authHandler.Logout)
+		authGroup.POST("/forgot-password", authHandler.ForgotPassword)
+		authGroup.POST("/reset-password", authHandler.ResetPassword)
 		authGroup.GET("/me", authHandler.Me)
 	}
 

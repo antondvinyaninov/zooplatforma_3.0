@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 
 type AuthMode = 'login' | 'register';
@@ -207,6 +208,16 @@ export default function AuthForm({
                     placeholder="••••••••"
                   />
                 </div>
+                {mode === 'login' && (
+                  <div className="mt-2 text-right">
+                    <Link
+                      href="/main/forgot-password"
+                      className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                    >
+                      Забыли пароль?
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* Confirm Password (только для регистрации) */}

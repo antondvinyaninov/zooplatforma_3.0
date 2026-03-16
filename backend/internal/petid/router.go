@@ -17,7 +17,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		panic(fmt.Sprintf("Failed to initialize S3 client: %v", err))
 	}
 
-	authHandler := auth.NewHandler(db)
+	authHandler := auth.NewHandler(db, cfg)
 
 	// Auth routes
 	authGroup := r.Group("/auth")
