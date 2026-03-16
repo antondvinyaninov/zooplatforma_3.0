@@ -110,8 +110,8 @@ func (h *Handler) GetUserFriends(c *gin.Context) {
 		var friendshipID, userID, friendID, friendUserID int
 		var status string
 		var createdAt, updatedAt time.Time
-		var name, lastName string
-		var avatar, location sql.NullString
+		var name string
+		var lastName, avatar, location sql.NullString
 		var isOnline bool
 
 		rows.Scan(&friendshipID, &userID, &friendID, &status, &createdAt, &updatedAt,
@@ -120,7 +120,7 @@ func (h *Handler) GetUserFriends(c *gin.Context) {
 		friend := map[string]interface{}{
 			"id":        friendUserID,
 			"name":      name,
-			"last_name": lastName,
+			"last_name": lastName.String,
 			"is_online": isOnline,
 		}
 		if avatar.Valid {
@@ -189,8 +189,8 @@ func (h *Handler) GetFriends(c *gin.Context) {
 		var friendshipID, userID, friendID, friendUserID int
 		var status string
 		var createdAt, updatedAt time.Time
-		var name, lastName string
-		var avatar, location sql.NullString
+		var name string
+		var lastName, avatar, location sql.NullString
 		var isOnline bool
 
 		rows.Scan(&friendshipID, &userID, &friendID, &status, &createdAt, &updatedAt,
@@ -199,7 +199,7 @@ func (h *Handler) GetFriends(c *gin.Context) {
 		friend := map[string]interface{}{
 			"id":        friendUserID,
 			"name":      name,
-			"last_name": lastName,
+			"last_name": lastName.String,
 			"is_online": isOnline,
 		}
 		if avatar.Valid {
@@ -280,6 +280,17 @@ currentUserID := userIDInterface.(int)
 		VALUES ($1, $2)
 		ON CONFLICT DO NOTHING
 	`, currentUserID, req.FriendID)
+
+	// Отправляем уведомление получателю
+	_, err = h.db.Exec(`
+		INSERT INTO notifications (user_id, actor_id, type, message, is_read, created_at, updated_at)
+		VALUES ($1, $2, 'friend_request', 'отправил(а) вам заявку в друзья', false, NOW(), NOW())
+	`, req.FriendID, currentUserID)
+
+	if err != nil {
+		// Логируем ошибку, но не прерываем выполнение (заявка уже отправлена)
+		// log.Printf("Failed to create notification for friend request: %v", err)
+	}
 
 	c.JSON(200, gin.H{"success": true, "message": "Friend request sent"})
 }
@@ -446,8 +457,8 @@ currentUserID := userIDInterface.(int)
 		var friendshipID, userID, friendID, friendUserID int
 		var status string
 		var createdAt, updatedAt time.Time
-		var name, lastName string
-		var avatar, location sql.NullString
+		var name string
+		var lastName, avatar, location sql.NullString
 		var isOnline bool
 
 		rows.Scan(&friendshipID, &userID, &friendID, &status, &createdAt, &updatedAt,
@@ -456,7 +467,7 @@ currentUserID := userIDInterface.(int)
 		friend := map[string]interface{}{
 			"id":        friendUserID,
 			"name":      name,
-			"last_name": lastName,
+			"last_name": lastName.String,
 			"is_online": isOnline,
 		}
 		if avatar.Valid {
