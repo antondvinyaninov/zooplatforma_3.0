@@ -110,7 +110,7 @@ export default function PostCard({ post }: { post: Post }) {
           </button>
         ) : (
           <Link 
-            href={`/main/posts/${post.id}`}
+            href={`/?metka=${post.id}`}
             className="flex items-center gap-2 py-2 px-3 hover:bg-gray-50 rounded-lg transition-all"
           >
             <span>💬</span>

@@ -941,7 +941,7 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
             </button>
           ) : (
             <Link 
-              href={`/main/posts/${post.id}`} 
+              href={`/?metka=${post.id}`} 
               className="flex items-center gap-2 hover:text-blue-500 transition-colors"
               title="Перейти к комментариям"
             >
