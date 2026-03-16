@@ -52,7 +52,7 @@ export default function PostsPage() {
   const loadPosts = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/main/api/posts/with-polls', {
+      const response = await fetch('/main/api/posts', {
         credentials: 'include',
       });
 

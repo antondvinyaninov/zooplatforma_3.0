@@ -2,7 +2,6 @@ package moderation
 
 import (
 	"database/sql"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -48,26 +47,49 @@ func (h *Handler) GetReports(c *gin.Context) {
 
 	reports := []map[string]interface{}{}
 	for rows.Next() {
-		var id, reporterID, entityID int
-		var entityType, reason, reportStatus string
+		var id int
+		var reporterID, entityID sql.NullInt64
+		var entityType, reason, reportStatus sql.NullString
 		var details, moderatorAction, moderatorComment sql.NullString
 		var moderatorID sql.NullInt64
 		var reviewedAt sql.NullTime
-		var createdAt time.Time
+		var createdAt sql.NullTime
 		var reporterName, reporterEmail, moderatorName sql.NullString
 
-		rows.Scan(&id, &reporterID, &entityType, &entityID, &reason,
+		err := rows.Scan(&id, &reporterID, &entityType, &entityID, &reason,
 			&details, &reportStatus, &moderatorID, &moderatorAction, &moderatorComment,
 			&reviewedAt, &createdAt, &reporterName, &reporterEmail, &moderatorName)
+		if err != nil {
+			continue // Skip row if scan fails instead of crashing
+		}
 
 		report := map[string]interface{}{
 			"id":          id,
-			"reporter_id": reporterID,
-			"entity_type": entityType,
-			"entity_id":   entityID,
-			"reason":      reason,
-			"status":      reportStatus,
-			"created_at":  createdAt,
+			"reporter_id": 0,
+			"entity_type": "",
+			"entity_id":   0,
+			"reason":      "",
+			"status":      "",
+			"created_at":  nil,
+		}
+
+		if reporterID.Valid {
+			report["reporter_id"] = int(reporterID.Int64)
+		}
+		if entityType.Valid {
+			report["entity_type"] = entityType.String
+		}
+		if entityID.Valid {
+			report["entity_id"] = int(entityID.Int64)
+		}
+		if reason.Valid {
+			report["reason"] = reason.String
+		}
+		if reportStatus.Valid {
+			report["status"] = reportStatus.String
+		}
+		if createdAt.Valid {
+			report["created_at"] = createdAt.Time
 		}
 
 		if details.Valid {
