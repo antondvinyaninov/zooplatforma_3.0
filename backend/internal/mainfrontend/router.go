@@ -17,6 +17,7 @@ import (
 	"github.com/zooplatforma/backend/internal/mainfrontend/posts"
 	"github.com/zooplatforma/backend/internal/mainfrontend/reports"
 	"github.com/zooplatforma/backend/internal/mainfrontend/search"
+	"github.com/zooplatforma/backend/internal/mainfrontend/sitemap"
 	"github.com/zooplatforma/backend/internal/mainfrontend/support"
 	"github.com/zooplatforma/backend/internal/mainfrontend/users"
 	"github.com/zooplatforma/backend/internal/shared/auth"
@@ -44,6 +45,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 	friendsHandler := friends.NewHandler(db)
 	followersHandler := followers.NewHandler(db)
 	notificationsHandler := notifications.NewHandler(db)
+	sitemapHandler := sitemap.NewHandler(db)
 	// announcementsHandler := announcements.NewHandler(db) // Таблица не существует
 	reportsHandler := reports.NewHandler(db)
 	supportHandler := support.NewHandler(db, s3Client)
@@ -111,6 +113,13 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		petsGroup.GET("/user/:id", petsHandler.GetUserPets)
 		petsGroup.GET("/catalog", petsHandler.GetCatalog)
 		petsGroup.GET("/:id", petsHandler.GetByID)
+	}
+
+	// Sitemap routes (SEO)
+	sitemapGroup := r.Group("/sitemap")
+	{
+		sitemapGroup.GET("/posts", sitemapHandler.GetSitemapPosts)
+		sitemapGroup.GET("/users", sitemapHandler.GetSitemapUsers)
 	}
 
 	// Friends routes
