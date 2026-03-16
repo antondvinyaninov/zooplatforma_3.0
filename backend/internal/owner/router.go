@@ -1,8 +1,10 @@
 package owner
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
+	"io"
 
 	"github.com/gin-gonic/gin"
 	"github.com/zooplatforma/backend/internal/mainfrontend/organizations"
@@ -307,11 +309,19 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			}
 			defer src.Close()
 
+			// Читаем файл в память для более надежной загрузки в S3
+			fileData, err := io.ReadAll(src)
+			if err != nil {
+				fmt.Printf("❌ Error reading file: %v\n", err)
+				c.JSON(500, gin.H{"success": false, "error": "Failed to read file"})
+				return
+			}
+
 			// Генерируем ключ для S3
 			fileKey := s3.GenerateKey(userID.(int), "pets", file.Filename)
 
 			// Загружаем в S3
-			photoURL, err := s3Client.UploadFile(fileKey, src, file.Header.Get("Content-Type"))
+			photoURL, err := s3Client.UploadFile(fileKey, bytes.NewReader(fileData), file.Header.Get("Content-Type"))
 			if err != nil {
 				fmt.Printf("❌ Error uploading photo: %v\n", err)
 				c.JSON(500, gin.H{"success": false, "error": "Failed to upload photo"})
