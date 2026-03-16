@@ -49,7 +49,7 @@ function ResetPasswordContent() {
       if (response.success) {
         setSuccess(true);
         setTimeout(() => {
-          router.push('/main/login');
+          router.push('/main/auth');
         }, 3000);
       } else {
         setError(response.error || 'Срок действия ссылки истёк или она неверна. Запросите новую ссылку.');
@@ -86,7 +86,7 @@ function ResetPasswordContent() {
             Ваш пароль успешно изменен! Вы будете перенаправлены на страницу входа через 3 секунды...
           </div>
           <Link
-            href="/main/login"
+            href="/main/auth"
             className="block w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm"
           >
             Войти сейчас

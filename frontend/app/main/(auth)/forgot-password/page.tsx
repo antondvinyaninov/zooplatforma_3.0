@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
             Пожалуйста, проверьте папку &quot;Входящие&quot; (и на всякий случай &quot;Спам&quot;).
           </div>
           <Link
-            href="/main/login"
+            href="/main/auth"
             className="block w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
           >
             Вернуться ко входу
@@ -107,7 +107,7 @@ export default function ForgotPasswordPage() {
           </button>
 
           <div className="text-center pt-2">
-            <Link href="/main/login" className="text-sm text-gray-500 hover:text-blue-600 transition-colors font-medium">
+            <Link href="/main/auth" className="text-sm text-gray-500 hover:text-blue-600 transition-colors font-medium">
               Я вспомнил пароль
             </Link>
           </div>
