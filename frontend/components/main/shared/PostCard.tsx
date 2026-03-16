@@ -101,13 +101,22 @@ export default function PostCard({ post }: { post: Post }) {
           <span>❤️</span>
           <span className="font-medium">0</span>
         </button>
-        <button 
-          onClick={() => !isAuthenticated && setShowAuthModal(true)}
-          className="flex items-center gap-2 py-2 px-3 hover:bg-gray-50 rounded-lg transition-all"
-        >
-          <span>💬</span>
-          <span className="font-medium">{commentsCount}</span>
-        </button>
+        {isAuthenticated ? (
+          <button 
+            className="flex items-center gap-2 py-2 px-3 hover:bg-gray-50 rounded-lg transition-all"
+          >
+            <span>💬</span>
+            <span className="font-medium">{commentsCount}</span>
+          </button>
+        ) : (
+          <Link 
+            href={`/main/posts/${post.id}`}
+            className="flex items-center gap-2 py-2 px-3 hover:bg-gray-50 rounded-lg transition-all"
+          >
+            <span>💬</span>
+            <span className="font-medium">{commentsCount}</span>
+          </Link>
+        )}
         <button 
           onClick={() => !isAuthenticated && setShowAuthModal(true)}
           className="flex items-center gap-2 hover:text-green-600 py-2 px-3 hover:bg-green-50 rounded-lg transition-all"
