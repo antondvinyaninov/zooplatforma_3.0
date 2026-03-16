@@ -12,6 +12,12 @@ type Config struct {
 	VK          VKOAuthConfig
 	Environment string
 	SMTP        SMTPConfig
+	Telegram    TelegramConfig
+}
+
+type TelegramConfig struct {
+	Token  string
+	ChatID string
 }
 
 type DatabaseConfig struct {
@@ -86,6 +92,10 @@ func Load() *Config {
 			User: getEnv("SMTP_USER", ""),
 			Pass: getEnv("SMTP_PASS", ""),
 			From: getEnv("SMTP_FROM", "info@zooplatforma.ru"),
+		},
+		Telegram: TelegramConfig{
+			Token:  getEnv("TELEGRAM_BOT_TOKEN", ""),
+			ChatID: getEnv("TELEGRAM_CHAT_ID", ""),
 		},
 	}
 }

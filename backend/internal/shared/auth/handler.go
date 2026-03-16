@@ -10,18 +10,21 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zooplatforma/backend/internal/shared/config"
+	"github.com/zooplatforma/backend/internal/shared/telegram"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Handler struct {
-	db     *sql.DB
-	mailer *Mailer
+	db       *sql.DB
+	mailer   *Mailer
+	notifier *telegram.Notifier
 }
 
 func NewHandler(db *sql.DB, cfg *config.Config) *Handler {
 	return &Handler{
-		db:     db,
-		mailer: NewMailer(cfg),
+		db:       db,
+		mailer:   NewMailer(cfg),
+		notifier: telegram.NewNotifier(cfg.Telegram.Token, cfg.Telegram.ChatID),
 	}
 }
 
@@ -90,6 +93,9 @@ func (h *Handler) Register(c *gin.Context) {
 		false,        // secure (false для localhost)
 		true,         // httpOnly
 	)
+
+	// Отправляем уведомление администратору в Telegram о новой регистрации
+	h.notifier.NotifyNewUser(req.Name, req.Email, userID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
