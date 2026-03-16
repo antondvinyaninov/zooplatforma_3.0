@@ -272,6 +272,17 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				return
 			}
 
+			var intUserID int
+			switch v := userID.(type) {
+			case float64:
+				intUserID = int(v)
+			case int:
+				intUserID = v
+			default:
+				c.JSON(401, gin.H{"success": false, "error": "Invalid user ID format"})
+				return
+			}
+
 			petID := c.Param("id")
 
 			// Проверяем, что питомец принадлежит текущему пользователю
@@ -282,7 +293,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				return
 			}
 
-			if ownerID != userID.(int) {
+			if ownerID != intUserID {
 				c.JSON(403, gin.H{"success": false, "error": "Forbidden"})
 				return
 			}
@@ -318,7 +329,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			}
 
 			// Генерируем ключ для S3
-			fileKey := s3.GenerateKey(userID.(int), "pets", file.Filename)
+			fileKey := s3.GenerateKey(intUserID, "pets", file.Filename)
 
 			// Загружаем в S3
 			photoURL, err := s3Client.UploadFile(fileKey, bytes.NewReader(fileData), file.Header.Get("Content-Type"))
@@ -347,6 +358,17 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				return
 			}
 
+			var intUserID int
+			switch v := userID.(type) {
+			case float64:
+				intUserID = int(v)
+			case int:
+				intUserID = v
+			default:
+				c.JSON(401, gin.H{"success": false, "error": "Invalid user ID format"})
+				return
+			}
+
 			petID := c.Param("id")
 
 			// Проверяем, что питомец принадлежит текущему пользователю
@@ -357,7 +379,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				return
 			}
 
-			if ownerID != userID.(int) {
+			if ownerID != intUserID {
 				c.JSON(403, gin.H{"success": false, "error": "Forbidden"})
 				return
 			}

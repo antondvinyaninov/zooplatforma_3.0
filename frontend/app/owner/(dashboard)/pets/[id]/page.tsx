@@ -216,8 +216,15 @@ export default function PetViewPage() {
     try {
       setSaving(true);
 
-      // Удаляем поле is_sterilized перед отправкой (оно не нужно на backend)
-      const { is_sterilized, ...dataToSend } = editData;
+      // Форматируем некоторые поля перед отправкой (пустые строки -> null)
+      // И удаляем is_sterilized
+      const { is_sterilized, ...rest } = editData;
+      const dataToSend = {
+        ...rest,
+        weight: editData.weight === '' ? null : editData.weight,
+        marking_date: editData.marking_date === '' ? null : editData.marking_date,
+        sterilization_date: editData.sterilization_date === '' ? null : editData.sterilization_date,
+      };
 
       const response = await fetch(`/api/owner/pets/${petId}`, {
         method: 'PUT',
