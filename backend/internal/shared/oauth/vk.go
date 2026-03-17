@@ -223,12 +223,12 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 
 	var vkAPIResp VKAPIResponse
 	if err := json.Unmarshal(userBody, &vkAPIResp); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to parse user info"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to parse user info", "details": string(userBody)})
 		return
 	}
 
 	if len(vkAPIResp.Response) == 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "No user data received"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "No user data received", "vk_error": string(userBody)})
 		return
 	}
 
