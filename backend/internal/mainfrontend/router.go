@@ -92,6 +92,10 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		profile.GET("/social-links", usersHandler.GetSocialLinks)
 		profile.POST("/social-links/vk/link", usersHandler.LinkVKToCurrentUser)
 		profile.DELETE("/social-links/vk", usersHandler.UnlinkVKFromCurrentUser)
+		profile.POST("/social-links/ok/link", usersHandler.LinkOKToCurrentUser)
+		profile.DELETE("/social-links/ok", usersHandler.UnlinkOKFromCurrentUser)
+		profile.POST("/social-links/mailru/link", usersHandler.LinkMailruToCurrentUser)
+		profile.DELETE("/social-links/mailru", usersHandler.UnlinkMailruFromCurrentUser)
 	}
 
 	// Posts routes

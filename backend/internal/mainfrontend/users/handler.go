@@ -587,9 +587,11 @@ func (h *Handler) GetSocialLinks(c *gin.Context) {
 			},
 			"ok": gin.H{
 				"linked": okID.Valid && okID.String != "",
+				"ok_id":  okID.String,
 			},
 			"mailru": gin.H{
-				"linked": mailruID.Valid && mailruID.String != "",
+				"linked":    mailruID.Valid && mailruID.String != "",
+				"mailru_id": mailruID.String,
 			},
 		},
 	})
@@ -727,4 +729,176 @@ func (h *Handler) UnlinkVKFromCurrentUser(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"success": true, "data": gin.H{"vk": gin.H{"linked": false}}})
+}
+
+// LinkOKToCurrentUser привязывает OK аккаунт к текущему пользователю
+func (h *Handler) LinkOKToCurrentUser(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
+
+	var req struct {
+		OKID        string `json:"ok_id"`
+		AccessToken string `json:"access_token"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": "Invalid request"})
+		return
+	}
+	okID := strings.TrimSpace(req.OKID)
+	if okID == "" {
+		c.JSON(400, gin.H{"success": false, "error": "Missing ok_id"})
+		return
+	}
+
+	var linkedUserID int
+	err := h.db.QueryRow(`SELECT id FROM users WHERE ok_id = $1`, okID).Scan(&linkedUserID)
+	if err == nil && linkedUserID != currentUserID {
+		c.JSON(409, gin.H{"success": false, "error": "Этот OK уже привязан к другому аккаунту"})
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.JSON(500, gin.H{"success": false, "error": "Database error"})
+		return
+	}
+
+	_, err = h.db.Exec(`
+		UPDATE users
+		SET ok_id = $1, ok_access_token = $2
+		WHERE id = $3
+	`, okID, req.AccessToken, currentUserID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to link OK"})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": gin.H{"ok": gin.H{"linked": true, "ok_id": okID}}})
+}
+
+// UnlinkOKFromCurrentUser отвязывает OK от текущего пользователя
+func (h *Handler) UnlinkOKFromCurrentUser(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
+
+	var passwordHash sql.NullString
+	var vkID sql.NullInt64
+	var okID, mailruID sql.NullString
+
+	err := h.db.QueryRow(`
+		SELECT password_hash, vk_id, ok_id, mailru_id
+		FROM users
+		WHERE id = $1
+	`, currentUserID).Scan(&passwordHash, &vkID, &okID, &mailruID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to load account data"})
+		return
+	}
+
+	hasPassword := passwordHash.Valid && strings.TrimSpace(passwordHash.String) != ""
+	hasOtherSocial := vkID.Valid || (mailruID.Valid && mailruID.String != "")
+	if !hasPassword && !hasOtherSocial {
+		c.JSON(400, gin.H{"success": false, "error": "Нельзя отвязать OK: это единственный способ входа"})
+		return
+	}
+
+	_, err = h.db.Exec(`UPDATE users SET ok_id = NULL, ok_access_token = NULL WHERE id = $1`, currentUserID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to unlink OK"})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": gin.H{"ok": gin.H{"linked": false}}})
+}
+
+// LinkMailruToCurrentUser привязывает Mail.ru аккаунт к текущему пользователю
+func (h *Handler) LinkMailruToCurrentUser(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
+
+	var req struct {
+		MailruID    string `json:"mailru_id"`
+		AccessToken string `json:"access_token"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": "Invalid request"})
+		return
+	}
+	mailruID := strings.TrimSpace(req.MailruID)
+	if mailruID == "" {
+		c.JSON(400, gin.H{"success": false, "error": "Missing mailru_id"})
+		return
+	}
+
+	var linkedUserID int
+	err := h.db.QueryRow(`SELECT id FROM users WHERE mailru_id = $1`, mailruID).Scan(&linkedUserID)
+	if err == nil && linkedUserID != currentUserID {
+		c.JSON(409, gin.H{"success": false, "error": "Этот Mail.ru уже привязан к другому аккаунту"})
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.JSON(500, gin.H{"success": false, "error": "Database error"})
+		return
+	}
+
+	_, err = h.db.Exec(`
+		UPDATE users
+		SET mailru_id = $1, mailru_access_token = $2
+		WHERE id = $3
+	`, mailruID, req.AccessToken, currentUserID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to link Mail.ru"})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": gin.H{"mailru": gin.H{"linked": true, "mailru_id": mailruID}}})
+}
+
+// UnlinkMailruFromCurrentUser отвязывает Mail.ru от текущего пользователя
+func (h *Handler) UnlinkMailruFromCurrentUser(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
+
+	var passwordHash sql.NullString
+	var vkID sql.NullInt64
+	var okID, mailruID sql.NullString
+
+	err := h.db.QueryRow(`
+		SELECT password_hash, vk_id, ok_id, mailru_id
+		FROM users
+		WHERE id = $1
+	`, currentUserID).Scan(&passwordHash, &vkID, &okID, &mailruID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to load account data"})
+		return
+	}
+
+	hasPassword := passwordHash.Valid && strings.TrimSpace(passwordHash.String) != ""
+	hasOtherSocial := vkID.Valid || (okID.Valid && okID.String != "")
+	if !hasPassword && !hasOtherSocial {
+		c.JSON(400, gin.H{"success": false, "error": "Нельзя отвязать Mail.ru: это единственный способ входа"})
+		return
+	}
+
+	_, err = h.db.Exec(`UPDATE users SET mailru_id = NULL, mailru_access_token = NULL WHERE id = $1`, currentUserID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to unlink Mail.ru"})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": gin.H{"mailru": gin.H{"linked": false}}})
 }

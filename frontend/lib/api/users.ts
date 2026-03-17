@@ -199,8 +199,8 @@ export const usersApi = {
   getSocialLinks: () =>
     apiClient.get<{
       vk: { linked: boolean; vk_id?: number };
-      ok: { linked: boolean };
-      mailru: { linked: boolean };
+      ok: { linked: boolean; ok_id?: string };
+      mailru: { linked: boolean; mailru_id?: string };
     }>('/api/profile/social-links'),
 
   linkVK: (data: {
@@ -214,6 +214,20 @@ export const usersApi = {
   }) => apiClient.post<{ vk: { linked: boolean; vk_id: number } }>('/api/profile/social-links/vk/link', data),
 
   unlinkVK: () => apiClient.delete<{ vk: { linked: boolean } }>('/api/profile/social-links/vk'),
+
+  linkOK: (data: { ok_id: string; access_token?: string }) =>
+    apiClient.post<{ ok: { linked: boolean; ok_id: string } }>('/api/profile/social-links/ok/link', data),
+
+  unlinkOK: () => apiClient.delete<{ ok: { linked: boolean } }>('/api/profile/social-links/ok'),
+
+  linkMailru: (data: { mailru_id: string; access_token?: string }) =>
+    apiClient.post<{ mailru: { linked: boolean; mailru_id: string } }>(
+      '/api/profile/social-links/mailru/link',
+      data,
+    ),
+
+  unlinkMailru: () =>
+    apiClient.delete<{ mailru: { linked: boolean } }>('/api/profile/social-links/mailru'),
 };
 
 // API методы для профиля

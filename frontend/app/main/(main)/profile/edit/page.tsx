@@ -21,11 +21,13 @@ export default function EditProfilePage() {
   const [activeSection, setActiveSection] = useState<'profile' | 'contacts' | 'privacy' | 'social'>('profile');
   const [socialLinks, setSocialLinks] = useState<{
     vk: { linked: boolean; vk_id?: number };
-    ok: { linked: boolean };
-    mailru: { linked: boolean };
+    ok: { linked: boolean; ok_id?: string };
+    mailru: { linked: boolean; mailru_id?: string };
   } | null>(null);
   const [isSocialLoading, setIsSocialLoading] = useState(false);
   const [isUnlinkingVK, setIsUnlinkingVK] = useState(false);
+  const [isUnlinkingOK, setIsUnlinkingOK] = useState(false);
+  const [isUnlinkingMailru, setIsUnlinkingMailru] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [editForm, setEditForm] = useState({
@@ -122,6 +124,64 @@ export default function EditProfilePage() {
       toast.error('Не удалось отвязать VK');
     } finally {
       setIsUnlinkingVK(false);
+    }
+  };
+
+  const handleOKLink = async () => {
+    const okID = window.prompt('Введите ID вашего аккаунта в Одноклассниках (ok_id)');
+    if (!okID || !okID.trim()) {
+      return;
+    }
+    const response = await usersApi.linkOK({ ok_id: okID.trim() });
+    if (response.success) {
+      toast.success('OK успешно привязан');
+      await loadSocialLinks();
+    } else {
+      toast.error(response.error || 'Не удалось привязать OK');
+    }
+  };
+
+  const handleOKUnlink = async () => {
+    setIsUnlinkingOK(true);
+    try {
+      const response = await usersApi.unlinkOK();
+      if (response.success) {
+        toast.success('OK отвязан');
+        await loadSocialLinks();
+      } else {
+        toast.error(response.error || 'Не удалось отвязать OK');
+      }
+    } finally {
+      setIsUnlinkingOK(false);
+    }
+  };
+
+  const handleMailruLink = async () => {
+    const mailruID = window.prompt('Введите ID вашего аккаунта в Mail.ru (mailru_id)');
+    if (!mailruID || !mailruID.trim()) {
+      return;
+    }
+    const response = await usersApi.linkMailru({ mailru_id: mailruID.trim() });
+    if (response.success) {
+      toast.success('Mail.ru успешно привязан');
+      await loadSocialLinks();
+    } else {
+      toast.error(response.error || 'Не удалось привязать Mail.ru');
+    }
+  };
+
+  const handleMailruUnlink = async () => {
+    setIsUnlinkingMailru(true);
+    try {
+      const response = await usersApi.unlinkMailru();
+      if (response.success) {
+        toast.success('Mail.ru отвязан');
+        await loadSocialLinks();
+      } else {
+        toast.error(response.error || 'Не удалось отвязать Mail.ru');
+      }
+    } finally {
+      setIsUnlinkingMailru(false);
     }
   };
 
@@ -773,6 +833,96 @@ export default function EditProfilePage() {
                           onError={handleVKLinkError}
                         />
                       </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900">Одноклассники</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Дополнительный вход в ваш аккаунт через OK.
+                      </p>
+                      {socialLinks?.ok?.linked && socialLinks?.ok?.ok_id && (
+                        <p className="text-xs text-green-700 mt-2">
+                          Привязан OK ID: {socialLinks.ok.ok_id}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-sm font-medium">
+                      {isSocialLoading ? (
+                        <span className="text-gray-500">Проверка...</span>
+                      ) : socialLinks?.ok?.linked ? (
+                        <span className="text-green-600">Подключено</span>
+                      ) : (
+                        <span className="text-gray-500">Не подключено</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    {socialLinks?.ok?.linked ? (
+                      <button
+                        type="button"
+                        onClick={handleOKUnlink}
+                        disabled={isUnlinkingOK}
+                        className="px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        {isUnlinkingOK ? 'Отвязка...' : 'Отвязать OK'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleOKLink}
+                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        Привязать OK
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900">Mail.ru</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Дополнительный вход в ваш аккаунт через Mail.ru.
+                      </p>
+                      {socialLinks?.mailru?.linked && socialLinks?.mailru?.mailru_id && (
+                        <p className="text-xs text-green-700 mt-2">
+                          Привязан Mail.ru ID: {socialLinks.mailru.mailru_id}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-sm font-medium">
+                      {isSocialLoading ? (
+                        <span className="text-gray-500">Проверка...</span>
+                      ) : socialLinks?.mailru?.linked ? (
+                        <span className="text-green-600">Подключено</span>
+                      ) : (
+                        <span className="text-gray-500">Не подключено</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    {socialLinks?.mailru?.linked ? (
+                      <button
+                        type="button"
+                        onClick={handleMailruUnlink}
+                        disabled={isUnlinkingMailru}
+                        className="px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        {isUnlinkingMailru ? 'Отвязка...' : 'Отвязать Mail.ru'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleMailruLink}
+                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        Привязать Mail.ru
+                      </button>
                     )}
                   </div>
                 </div>
