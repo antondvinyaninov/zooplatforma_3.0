@@ -121,6 +121,15 @@ func (h *Hub) SendToUser(userID int, message []byte) {
 func (h *Handler) HandleWebSocket(c *gin.Context) {
 	// Получаем токен из query параметра
 	token := c.Query("token")
+
+	// Если query-токен не передан (или передан маркер cookie-сессии),
+	// пробуем взять JWT из HttpOnly cookie.
+	if token == "" || token == "authenticated" {
+		if cookieToken, err := c.Cookie("auth_token"); err == nil && cookieToken != "" {
+			token = cookieToken
+		}
+	}
+
 	if token == "" {
 		c.JSON(401, gin.H{"error": "No token provided"})
 		return

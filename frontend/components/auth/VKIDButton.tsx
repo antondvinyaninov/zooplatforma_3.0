@@ -41,7 +41,7 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
           redirectUrl,
           responseMode: VKID.ConfigResponseMode.Callback,
           source: VKID.ConfigSource.LOWCODE,
-          scope: 'email',
+          scope: 'phone email',
         });
 
 
@@ -74,8 +74,18 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
                 return;
               }
 
+              // Получаем расширенный профиль пользователя из VK ID
+              let userInfoData: any = null;
+              try {
+                const userInfoResult = await VKID.Auth.userInfo(authData.access_token);
+                userInfoData = userInfoResult?.user || null;
+              } catch (userInfoError) {
+                // Не прерываем логин, если userInfo временно недоступен
+              }
+
               // Отправляем данные на наш backend
               const profile =
+                userInfoData ||
                 authData?.user ||
                 authData?.user_info ||
                 authData?.userData ||
@@ -101,6 +111,7 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
                     profile.photo_200 ||
                     profile.photo ||
                     '',
+                  phone: profile.phone || '',
                 }),
               });
 

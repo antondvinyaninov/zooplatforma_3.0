@@ -197,6 +197,7 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 		FirstName   string `json:"first_name"`
 		LastName    string `json:"last_name"`
 		AvatarURL   string `json:"avatar_url"`
+		Phone       string `json:"phone"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -243,8 +244,8 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 			// Пользователь не найден ни по vk_id, ни по email
 			// Создаем абсолютно нового пользователя
 			insertQuery := `
-				INSERT INTO users (name, last_name, email, vk_id, avatar, vk_access_token, created_at, verified, password_hash)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, true, '')
+				INSERT INTO users (name, last_name, email, vk_id, avatar, phone, vk_access_token, created_at, verified, password_hash)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, '')
 				RETURNING id
 			`
 			err = h.db.QueryRow(
@@ -254,6 +255,7 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 				email,
 				vkUser.ID,
 				vkUser.Photo,
+				req.Phone,
 				req.AccessToken,
 				time.Now().UTC(),
 			).Scan(&userID)
@@ -288,8 +290,43 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 		}
 	}
 
+	// Досохраняем профиль VK в локальный аккаунт (без перезаписи заполненных данных),
+	// и если VK наконец вернул email — заменяем placeholder.
+	_, _ = h.db.Exec(`
+		UPDATE users
+		SET
+			vk_id = $1,
+			vk_access_token = $2,
+			name = COALESCE(NULLIF(name, ''), $3),
+			last_name = COALESCE(NULLIF(last_name, ''), $4),
+			avatar = COALESCE(NULLIF(avatar, ''), $5),
+			phone = COALESCE(NULLIF(phone, ''), $6),
+			email = CASE
+				WHEN email LIKE 'vk%@vk.placeholder' AND $7 <> '' THEN $7
+				ELSE email
+			END
+		WHERE id = $8
+	`, vkUser.ID, req.AccessToken, vkUser.FirstName, vkUser.LastName, vkUser.Photo, req.Phone, req.Email, userID)
+
+	// Читаем финальные данные пользователя из БД
+	var dbEmail string
+	var dbFirstName, dbLastName, dbAvatar sql.NullString
+	err = h.db.QueryRow(`
+		SELECT email, name, last_name, avatar
+		FROM users
+		WHERE id = $1
+	`, userID).Scan(&dbEmail, &dbFirstName, &dbLastName, &dbAvatar)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to load user profile"})
+		return
+	}
+
+	if dbEmail == "" {
+		dbEmail = email
+	}
+
 	// Генерируем JWT токен
-	token, err := auth.GenerateToken(userID, email)
+	token, err := auth.GenerateToken(userID, dbEmail)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to generate token"})
 		return
@@ -311,9 +348,10 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 		"data": gin.H{
 			"user": gin.H{
 				"id":         userID,
-				"first_name": vkUser.FirstName,
-				"last_name":  vkUser.LastName,
-				"avatar_url": vkUser.Photo,
+				"first_name": dbFirstName.String,
+				"last_name":  dbLastName.String,
+				"avatar_url": dbAvatar.String,
+				"email":      dbEmail,
 				"vk_id":      vkUser.ID,
 			},
 			"token": token,

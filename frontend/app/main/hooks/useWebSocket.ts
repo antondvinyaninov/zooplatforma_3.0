@@ -82,7 +82,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     // Используем getWebSocketUrl из lib/urls.ts для определения правильного хоста
     const { getWebSocketUrl } = require('@/lib/urls');
     const baseWsUrl = getWebSocketUrl();
-    const wsUrl = `${baseWsUrl}?token=${token}`;
+    // Если в localStorage только маркер cookie-сессии, токен в query не передаем.
+    // Backend возьмет auth_token из cookie при WebSocket handshake.
+    const wsUrl =
+      token === 'authenticated' ? baseWsUrl : `${baseWsUrl}?token=${encodeURIComponent(token)}`;
 
     try {
       const ws = new WebSocket(wsUrl);

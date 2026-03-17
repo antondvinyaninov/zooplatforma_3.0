@@ -70,6 +70,8 @@ export default function UserMenu({ variant = 'mobile' }: UserMenuProps) {
   const avatarUrl = user?.avatar
     ? `${getMediaUrl(user.avatar)}?v=${encodeURIComponent(user.avatar)}`
     : undefined;
+  const displayEmail =
+    user?.email && !user.email.endsWith('@vk.placeholder') ? user.email : 'Email скрыт';
 
   return (
     <div ref={menuRef} className="relative">
@@ -116,7 +118,7 @@ export default function UserMenu({ variant = 'mobile' }: UserMenuProps) {
                   {getFullName(user?.name || 'Пользователь', user?.last_name)}
                   <span className="text-blue-500">✓</span>
                 </div>
-                <div className="text-sm text-gray-500">{user?.email}</div>
+                <div className="text-sm text-gray-500">{displayEmail}</div>
                 <button
                   onClick={() => {
                     if (user?.id) {
