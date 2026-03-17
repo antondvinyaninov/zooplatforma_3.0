@@ -228,7 +228,7 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 	}
 
 	if len(vkAPIResp.Response) == 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "No user data received", "vk_error": string(userBody)})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "No user data received. VK says: " + string(userBody)})
 		return
 	}
 
