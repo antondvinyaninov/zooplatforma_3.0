@@ -65,7 +65,14 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
               const deviceId = payload.device_id;
 
               // Обмениваем code на токен
-              const authData = await VKID.Auth.exchangeCode(code, deviceId);
+              let authData;
+              try {
+                authData = await VKID.Auth.exchangeCode(code, deviceId);
+              } catch (exchangeError) {
+                console.error('VK ID Exchange Error:', exchangeError);
+                if (onError) onError(exchangeError);
+                return;
+              }
 
               // Отправляем данные на наш backend
               const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
@@ -81,15 +88,24 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
                 }),
               });
 
+              if (!response.ok) {
+                // Пытаемся прочитать текст ошибки
+                const errorText = await response.text();
+                console.error('Backend returned non-200 status:', response.status, errorText);
+                if (onError) onError(new Error(errorText));
+                return;
+              }
+
               const result = await response.json();
 
               if (result.success) {
                 if (onSuccess) onSuccess(result);
               } else {
+                console.error('Backend returned logic error:', result);
                 if (onError) onError(result.error);
               }
             } catch (error) {
-              console.error('VK ID Exchange Error:', error);
+              console.error('VK ID Flow Error:', error);
               if (onError) onError(error);
             }
           });
