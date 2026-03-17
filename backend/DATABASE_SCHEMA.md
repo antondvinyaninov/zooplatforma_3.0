@@ -22,6 +22,13 @@
 - `verified_at` - timestamp
 - `created_at` - timestamp (default: CURRENT_TIMESTAMP)
 - `last_seen` - timestamp
+- `password_hash` - varchar(255) (NOT NULL)
+- `vk_id` - integer (UNIQUE)
+- `vk_access_token` - text
+- `ok_id` - varchar(255) (UNIQUE)
+- `ok_access_token` - text
+- `mailru_id` - varchar(255) (UNIQUE)
+- `mailru_access_token` - text
 
 **Важно:** Нет колонок `username`, `first_name`, `avatar_url`, `is_verified`
 

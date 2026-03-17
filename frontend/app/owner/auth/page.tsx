@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import AuthForm from '../../../components/shared/AuthForm';
-import VKIDButton from '../../../components/auth/VKIDButton';
 
 export default function AdminAuth() {
   const router = useRouter();
@@ -51,13 +50,10 @@ export default function AdminAuth() {
         subtitle="Войдите в кабинет владельца животных"
         infoTitle="🐾 Кабинет владельца"
         infoText="Управляйте информацией о ваших питомцах"
-        showVKLogin={false}
+        showVKLogin={true}
+        onVKSuccess={handleVKSuccess}
+        onVKError={handleVKError}
       />
-
-      {/* VK ID Button */}
-      <div className="max-w-md mx-auto mt-4">
-        <VKIDButton onSuccess={handleVKSuccess} onError={handleVKError} />
-      </div>
     </div>
   );
 }

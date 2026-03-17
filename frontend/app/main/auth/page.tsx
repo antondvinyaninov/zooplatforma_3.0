@@ -59,7 +59,9 @@ function AuthPageContent() {
         onSubmit={handleSubmit}
         logoText="Зооплатформа"
         logoAlt="ЗооПлатформа"
-        showVKLogin={false}
+        showVKLogin={true}
+        onVKSuccess={handleVKSuccess}
+        onVKError={handleVKError}
       />
     </div>
   );

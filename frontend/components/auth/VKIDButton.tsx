@@ -73,6 +73,7 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
                   access_token: authData.access_token,
                   user_id: authData.user_id,
                   expires_in: authData.expires_in,
+                  email: authData.email || '', // Добавлен email
                 }),
               });
 

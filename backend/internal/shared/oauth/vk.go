@@ -193,6 +193,7 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 		AccessToken string `json:"access_token"`
 		UserID      int    `json:"user_id"`
 		ExpiresIn   int    `json:"expires_in"`
+		Email       string `json:"email"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -232,7 +233,10 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 	}
 
 	vkUser := vkAPIResp.Response[0]
-	email := fmt.Sprintf("vk%d@vk.placeholder", vkUser.ID)
+	email := req.Email
+	if email == "" {
+		email = fmt.Sprintf("vk%d@vk.placeholder", vkUser.ID)
+	}
 
 	// Проверяем, существует ли пользователь с таким VK ID
 	var userID int
@@ -240,32 +244,51 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 	err = h.db.QueryRow(checkQuery, vkUser.ID).Scan(&userID)
 
 	if err == sql.ErrNoRows {
-		// Пользователь не найден, создаем нового
-		insertQuery := `
-			INSERT INTO users (name, last_name, email, vk_id, avatar, vk_access_token, created_at, verified)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-			RETURNING id
-		`
-		err = h.db.QueryRow(
-			insertQuery,
-			vkUser.FirstName,
-			vkUser.LastName,
-			email,
-			vkUser.ID,
-			vkUser.Photo,
-			req.AccessToken,
-			time.Now().UTC(),
-		).Scan(&userID)
+		// Пользователь не найден по VK ID, проверим по email
+		checkEmailQuery := `SELECT id FROM users WHERE email = $1`
+		errEmail := h.db.QueryRow(checkEmailQuery, email).Scan(&userID)
 
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create user: " + err.Error()})
+		if errEmail == sql.ErrNoRows {
+			// Пользователь не найден ни по vk_id, ни по email
+			// Создаем абсолютно нового пользователя
+			insertQuery := `
+				INSERT INTO users (name, last_name, email, vk_id, avatar, vk_access_token, created_at, verified, password_hash)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, true, '')
+				RETURNING id
+			`
+			err = h.db.QueryRow(
+				insertQuery,
+				vkUser.FirstName,
+				vkUser.LastName,
+				email,
+				vkUser.ID,
+				vkUser.Photo,
+				req.AccessToken,
+				time.Now().UTC(),
+			).Scan(&userID)
+
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create user: " + err.Error()})
+				return
+			}
+		} else if errEmail != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database error while verifying email"})
 			return
+		} else {
+			// Пользователь с таким email уже существует!
+			// Мы должны "привязать" его VK профиль к старому аккаунту
+			updateQuery := `UPDATE users SET vk_id = $1, vk_access_token = $2 WHERE id = $3`
+			_, err = h.db.Exec(updateQuery, vkUser.ID, req.AccessToken, userID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to link existing user account"})
+				return
+			}
 		}
 	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database error"})
 		return
 	} else {
-		// Обновляем access_token для существующего пользователя
+		// Пользователь уже был найден по vk_id, обновляем access_token
 		updateQuery := `UPDATE users SET vk_access_token = $1 WHERE id = $2`
 		_, err = h.db.Exec(updateQuery, req.AccessToken, userID)
 		if err != nil {
