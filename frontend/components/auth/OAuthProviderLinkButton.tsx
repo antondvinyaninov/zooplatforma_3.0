@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
 
 type Provider = 'ok_ru' | 'mail_ru';
 
@@ -8,8 +8,6 @@ interface OAuthProviderLinkButtonProps {
   provider: Provider;
   endpoint: string;
   idField: 'ok_id' | 'mailru_id';
-  label: string;
-  icon: ReactNode;
   onSuccess?: () => void;
   onError?: (message: string) => void;
 }
@@ -22,12 +20,7 @@ declare global {
 
 const APP_ID = 54481712;
 
-function extractSocialID(
-  provider: Provider,
-  payload: any,
-  authData: any,
-  userInfo: any,
-): string {
+function extractSocialID(provider: Provider, payload: any, authData: any, userInfo: any): string {
   const user = userInfo?.user || userInfo || {};
   const providerKey = provider === 'ok_ru' ? 'ok' : 'mailru';
 
@@ -57,41 +50,13 @@ export default function OAuthProviderLinkButton({
   provider,
   endpoint,
   idField,
-  label,
-  icon,
   onSuccess,
   onError,
 }: OAuthProviderLinkButtonProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const onSuccessRef = useRef<typeof onSuccess>(onSuccess);
   const onErrorRef = useRef<typeof onError>(onError);
-  const [ready, setReady] = useState(false);
-  const [isBusy, setIsBusy] = useState(false);
   const initializedRef = useRef(false);
-  const openRetriesRef = useRef(0);
-
-  const findLaunchElement = () => {
-    if (!containerRef.current) return null;
-    return containerRef.current.querySelector(
-      'button:not([disabled]), [role="button"], a',
-    ) as HTMLElement | null;
-  };
-
-  const tryOpenOAuth = () => {
-    const el = findLaunchElement();
-    if (el) {
-      el.click();
-      openRetriesRef.current = 0;
-      return;
-    }
-    if (openRetriesRef.current >= 25) {
-      openRetriesRef.current = 0;
-      onErrorRef.current?.('OAuth-виджет не успел загрузиться. Попробуйте еще раз.');
-      return;
-    }
-    openRetriesRef.current += 1;
-    setTimeout(tryOpenOAuth, 120);
-  };
 
   useEffect(() => {
     onSuccessRef.current = onSuccess;
@@ -102,7 +67,6 @@ export default function OAuthProviderLinkButton({
     let isCancelled = false;
     if (!containerRef.current || initializedRef.current) return;
     initializedRef.current = true;
-    setReady(false);
 
     const init = () => {
       if (isCancelled || !window.VKIDSDK || !containerRef.current) return;
@@ -128,7 +92,6 @@ export default function OAuthProviderLinkButton({
         })
         .on(VKID.OAuthListInternalEvents.LOGIN_SUCCESS, async (payload: any) => {
           try {
-            setIsBusy(true);
             const authData = await VKID.Auth.exchangeCode(payload.code, payload.device_id);
             let userInfo: any = null;
             try {
@@ -163,20 +126,8 @@ export default function OAuthProviderLinkButton({
             onSuccessRef.current?.();
           } catch (_e) {
             onErrorRef.current?.('Не удалось завершить OAuth-привязку');
-          } finally {
-            setIsBusy(false);
           }
         });
-
-      // Рендер SDK асинхронный: считаем кнопку готовой только когда в контейнере появился кликабельный элемент.
-      const markReady = () => setReady(Boolean(findLaunchElement()));
-      markReady();
-      const observer = new MutationObserver(markReady);
-      observer.observe(containerRef.current, { childList: true, subtree: true });
-      setTimeout(() => {
-        markReady();
-        observer.disconnect();
-      }, 4000);
     };
 
     if (window.VKIDSDK) {
@@ -204,28 +155,6 @@ export default function OAuthProviderLinkButton({
     };
   }, [provider, endpoint, idField]);
 
-  const handleClick = () => {
-    openRetriesRef.current = 0;
-    tryOpenOAuth();
-  };
-
-  return (
-    <div className="relative inline-block">
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={!ready || isBusy}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60"
-      >
-        {icon}
-        {isBusy ? 'Подключение...' : label}
-      </button>
-
-      <div
-        ref={containerRef}
-        className="absolute -z-10 opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
-        aria-hidden="true"
-      />
-    </div>
-  );
+  return <div ref={containerRef} className="vkid-container max-w-[320px]" />;
 }
+

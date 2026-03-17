@@ -871,12 +871,6 @@ export default function EditProfilePage() {
                         provider="ok_ru"
                         endpoint="/api/profile/social-links/ok/link"
                         idField="ok_id"
-                        label="Привязать OK"
-                        icon={
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-orange-500 text-white text-xs font-bold">
-                            OK
-                          </span>
-                        }
                         onSuccess={handleOKLinkSuccess}
                         onError={handleOKLinkError}
                       />
@@ -922,12 +916,6 @@ export default function EditProfilePage() {
                         provider="mail_ru"
                         endpoint="/api/profile/social-links/mailru/link"
                         idField="mailru_id"
-                        label="Привязать Mail.ru"
-                        icon={
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-blue-500 text-white text-sm font-semibold">
-                            @
-                          </span>
-                        }
                         onSuccess={handleMailruLinkSuccess}
                         onError={handleMailruLinkError}
                       />
