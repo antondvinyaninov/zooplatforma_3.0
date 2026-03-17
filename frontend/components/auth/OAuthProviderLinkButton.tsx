@@ -68,6 +68,30 @@ export default function OAuthProviderLinkButton({
   const [ready, setReady] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const initializedRef = useRef(false);
+  const openRetriesRef = useRef(0);
+
+  const findLaunchElement = () => {
+    if (!containerRef.current) return null;
+    return containerRef.current.querySelector(
+      'button:not([disabled]), [role="button"], a',
+    ) as HTMLElement | null;
+  };
+
+  const tryOpenOAuth = () => {
+    const el = findLaunchElement();
+    if (el) {
+      el.click();
+      openRetriesRef.current = 0;
+      return;
+    }
+    if (openRetriesRef.current >= 25) {
+      openRetriesRef.current = 0;
+      onErrorRef.current?.('OAuth-виджет не успел загрузиться. Попробуйте еще раз.');
+      return;
+    }
+    openRetriesRef.current += 1;
+    setTimeout(tryOpenOAuth, 120);
+  };
 
   useEffect(() => {
     onSuccessRef.current = onSuccess;
@@ -78,6 +102,7 @@ export default function OAuthProviderLinkButton({
     let isCancelled = false;
     if (!containerRef.current || initializedRef.current) return;
     initializedRef.current = true;
+    setReady(false);
 
     const init = () => {
       if (isCancelled || !window.VKIDSDK || !containerRef.current) return;
@@ -143,7 +168,15 @@ export default function OAuthProviderLinkButton({
           }
         });
 
-      setReady(true);
+      // Рендер SDK асинхронный: считаем кнопку готовой только когда в контейнере появился кликабельный элемент.
+      const markReady = () => setReady(Boolean(findLaunchElement()));
+      markReady();
+      const observer = new MutationObserver(markReady);
+      observer.observe(containerRef.current, { childList: true, subtree: true });
+      setTimeout(() => {
+        markReady();
+        observer.disconnect();
+      }, 4000);
     };
 
     if (window.VKIDSDK) {
@@ -172,15 +205,8 @@ export default function OAuthProviderLinkButton({
   }, [provider, endpoint, idField]);
 
   const handleClick = () => {
-    if (!containerRef.current) return;
-    const button = containerRef.current.querySelector('button:not([disabled])') as
-      | HTMLButtonElement
-      | undefined;
-    if (!button) {
-      onErrorRef.current?.('OAuth-кнопка еще не готова. Попробуйте через секунду.');
-      return;
-    }
-    button.click();
+    openRetriesRef.current = 0;
+    tryOpenOAuth();
   };
 
   return (
