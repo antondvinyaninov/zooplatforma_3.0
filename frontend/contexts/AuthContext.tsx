@@ -38,19 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         // Проверяем есть ли токен в localStorage
         const storedToken = localStorage.getItem('auth_token');
-        if (!storedToken) {
-          if (mounted) {
-            setIsLoading(false);
-          }
-          return;
-        }
 
-        // Сразу выставляем токен, чтобы не сбрасывать авторизацию на refresh
-        if (mounted) {
+        // Если токен есть, сразу выставляем его, чтобы не сбрасывать авторизацию на refresh
+        if (mounted && storedToken) {
           setToken(storedToken);
         }
 
-        // Простой запрос к Auth Service
+        // Всегда проверяем /me: даже если localStorage пустой,
+        // пользователь может быть авторизован через HttpOnly cookie
         const response = await authApi.me();
 
         if (mounted && response.success) {
@@ -73,10 +68,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (userData && userData.id) {
             setUser(userData);
-            setToken(storedToken);
+            const nextToken = storedToken || 'authenticated';
+            setToken(nextToken);
+            if (!storedToken) {
+              localStorage.setItem('auth_token', nextToken);
+            }
           } else {
             // Нет данных пользователя - удаляем токен
             localStorage.removeItem('auth_token');
+            setToken(null);
           }
         } else if (response.status === 401 || response.status === 403) {
           // Токен невалидный - удаляем

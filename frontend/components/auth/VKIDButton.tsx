@@ -115,6 +115,15 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
               const result = await response.json();
 
               if (result.success) {
+                // Сохраняем маркер авторизации для корректной инициализации AuthContext после редиректа.
+                // Backend уже ставит HttpOnly cookie, но localStorage нужен для текущей клиентской логики.
+                const token = result?.data?.token;
+                if (token) {
+                  localStorage.setItem('auth_token', token);
+                } else {
+                  localStorage.setItem('auth_token', 'authenticated');
+                }
+
                 if (onSuccess) onSuccess(result);
               } else {
                 console.error('Backend returned logic error:', result);
