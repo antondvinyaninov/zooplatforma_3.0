@@ -7,6 +7,8 @@ interface VKIDButtonProps {
   onError?: (error: any) => void;
   mode?: 'login' | 'link';
   linkEndpoint?: string;
+  showAlternativeLogin?: boolean;
+  oauthList?: Array<'mail_ru' | 'ok_ru'>;
 }
 
 declare global {
@@ -20,11 +22,14 @@ export default function VKIDButton({
   onError,
   mode = 'login',
   linkEndpoint = '/api/profile/social-links/vk/link',
+  showAlternativeLogin = mode === 'login',
+  oauthList = mode === 'login' ? ['mail_ru', 'ok_ru'] : [],
 }: VKIDButtonProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const onSuccessRef = useRef<typeof onSuccess>(onSuccess);
   const onErrorRef = useRef<typeof onError>(onError);
   const initializedRef = useRef(false);
+  const oauthListKey = oauthList.join(',');
 
   useEffect(() => {
     onSuccessRef.current = onSuccess;
@@ -61,8 +66,8 @@ export default function VKIDButton({
         oneTap
           .render({
             container: containerRef.current,
-            showAlternativeLogin: true,
-            oauthList: ['mail_ru', 'ok_ru'],
+            showAlternativeLogin,
+            oauthList,
           })
           .on(VKID.WidgetEvents.ERROR, (error: any) => {
             console.error('VK ID Error:', error);
@@ -208,7 +213,7 @@ export default function VKIDButton({
         containerRef.current.innerHTML = '';
       }
     };
-  }, [mode, linkEndpoint]);
+  }, [mode, linkEndpoint, showAlternativeLogin, oauthListKey]);
 
   return <div ref={containerRef} className="vkid-container"></div>;
 }

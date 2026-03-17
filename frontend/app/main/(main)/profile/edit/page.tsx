@@ -832,6 +832,8 @@ export default function EditProfilePage() {
                         <VKIDButton
                           mode="link"
                           linkEndpoint="/api/profile/social-links/vk/link"
+                          showAlternativeLogin={false}
+                          oauthList={[]}
                           onSuccess={handleVKLinkSuccess}
                           onError={handleVKLinkError}
                         />
