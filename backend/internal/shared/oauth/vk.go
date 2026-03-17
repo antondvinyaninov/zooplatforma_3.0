@@ -190,10 +190,9 @@ func (h *VKHandler) Callback(c *gin.Context) {
 // SDKCallback - обработка данных от VK ID SDK
 func (h *VKHandler) SDKCallback(c *gin.Context) {
 	var req struct {
-		AccessToken string `json:"access_token"`
-		UserID      int    `json:"user_id"`
-		ExpiresIn   int    `json:"expires_in"`
-		Email       string `json:"email"`
+		Code        string `json:"code"`
+		DeviceID    string `json:"device_id"`
+		RedirectURI string `json:"redirect_uri"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -201,11 +200,45 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 		return
 	}
 
+	// Делаем серверный обмен code на access_token (таким образом исключаем проблему IP адресов)
+	tokenURL := fmt.Sprintf(
+		"https://oauth.vk.com/access_token?client_id=%s&client_secret=%s&redirect_uri=%s&code=%s&device_id=%s",
+		h.config.VK.ClientID,
+		h.config.VK.ClientSecret,
+		req.RedirectURI,
+		req.Code,
+		req.DeviceID,
+	)
+
+	resp, err := http.Get(tokenURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to get access token"})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to read token response"})
+		return
+	}
+
+	var tokenResp VKTokenResponse
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to parse token response", "vk_error": string(body)})
+		return
+	}
+
+	if tokenResp.AccessToken == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "No access token received", "vk_error": string(body)})
+		return
+	}
+
 	// Получаем информацию о пользователе через VK API
 	userInfoURL := fmt.Sprintf(
 		"https://api.vk.com/method/users.get?user_ids=%d&fields=photo_200&access_token=%s&v=5.131",
-		req.UserID,
-		req.AccessToken,
+		tokenResp.UserID,
+		tokenResp.AccessToken,
 	)
 
 	userResp, err := http.Get(userInfoURL)
@@ -233,7 +266,7 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 	}
 
 	vkUser := vkAPIResp.Response[0]
-	email := req.Email
+	email := tokenResp.Email
 	if email == "" {
 		email = fmt.Sprintf("vk%d@vk.placeholder", vkUser.ID)
 	}
@@ -263,7 +296,7 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 				email,
 				vkUser.ID,
 				vkUser.Photo,
-				req.AccessToken,
+				tokenResp.AccessToken,
 				time.Now().UTC(),
 			).Scan(&userID)
 
@@ -278,7 +311,7 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 			// Пользователь с таким email уже существует!
 			// Мы должны "привязать" его VK профиль к старому аккаунту
 			updateQuery := `UPDATE users SET vk_id = $1, vk_access_token = $2 WHERE id = $3`
-			_, err = h.db.Exec(updateQuery, vkUser.ID, req.AccessToken, userID)
+			_, err = h.db.Exec(updateQuery, vkUser.ID, tokenResp.AccessToken, userID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to link existing user account"})
 				return
@@ -290,7 +323,7 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 	} else {
 		// Пользователь уже был найден по vk_id, обновляем access_token
 		updateQuery := `UPDATE users SET vk_access_token = $1 WHERE id = $2`
-		_, err = h.db.Exec(updateQuery, req.AccessToken, userID)
+		_, err = h.db.Exec(updateQuery, tokenResp.AccessToken, userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update token"})
 			return
