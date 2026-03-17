@@ -66,10 +66,16 @@ export default function UserMenu({ variant = 'mobile' }: UserMenuProps) {
     );
   }
 
-  // Generate cache buster based on user.avatar to force reload when avatar changes
-  const avatarUrl = user?.avatar
-    ? `${getMediaUrl(user.avatar)}?v=${encodeURIComponent(user.avatar)}`
-    : undefined;
+  // Generate cache buster based on user.avatar to force reload when avatar changes.
+  // Important: if source URL already has query params (e.g. signed S3 URL),
+  // append with '&' instead of a second '?'.
+  const avatarUrl = (() => {
+    if (!user?.avatar) return undefined;
+    const rawUrl = getMediaUrl(user.avatar);
+    if (!rawUrl) return undefined;
+    const separator = rawUrl.includes('?') ? '&' : '?';
+    return `${rawUrl}${separator}v=${encodeURIComponent(user.avatar)}`;
+  })();
   const displayEmail =
     user?.email && !user.email.endsWith('@vk.placeholder') ? user.email : 'Email скрыт';
 
