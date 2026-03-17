@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 interface VKIDButtonProps {
   onSuccess?: (data: any) => void;
   onError?: (error: any) => void;
+  mode?: 'login' | 'link';
+  linkEndpoint?: string;
 }
 
 declare global {
@@ -14,7 +16,12 @@ declare global {
   }
 }
 
-export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
+export default function VKIDButton({
+  onSuccess,
+  onError,
+  mode = 'login',
+  linkEndpoint = '/api/profile/social-links/vk/link',
+}: VKIDButtonProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -94,7 +101,10 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
                 {};
 
               const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
-              const response = await fetch(`${apiBase}/api/auth/vk/sdk-callback`, {
+              const callbackPath =
+                mode === 'link' ? linkEndpoint : '/api/auth/vk/sdk-callback';
+
+              const response = await fetch(`${apiBase}${callbackPath}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -128,11 +138,13 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
               if (result.success) {
                 // Сохраняем маркер авторизации для корректной инициализации AuthContext после редиректа.
                 // Backend уже ставит HttpOnly cookie, но localStorage нужен для текущей клиентской логики.
-                const token = result?.data?.token;
-                if (token) {
-                  localStorage.setItem('auth_token', token);
-                } else {
-                  localStorage.setItem('auth_token', 'authenticated');
+                if (mode === 'login') {
+                  const token = result?.data?.token;
+                  if (token) {
+                    localStorage.setItem('auth_token', token);
+                  } else {
+                    localStorage.setItem('auth_token', 'authenticated');
+                  }
                 }
 
                 if (onSuccess) onSuccess(result);
@@ -157,7 +169,7 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
         script.parentNode.removeChild(script);
       }
     };
-  }, [router, onSuccess, onError]);
+  }, [router, onSuccess, onError, mode, linkEndpoint]);
 
   return <div ref={containerRef} className="vkid-container"></div>;
 }

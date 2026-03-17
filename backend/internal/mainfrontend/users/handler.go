@@ -555,3 +555,176 @@ func (h *Handler) DeleteCover(c *gin.Context) {
 
 	c.JSON(200, gin.H{"success": true, "data": map[string]interface{}{"message": "Cover deleted"}})
 }
+
+// GetSocialLinks возвращает информацию о привязанных соцсетях текущего пользователя
+func (h *Handler) GetSocialLinks(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
+
+	var vkID sql.NullInt64
+	var okID, mailruID sql.NullString
+
+	err := h.db.QueryRow(`
+		SELECT vk_id, ok_id, mailru_id
+		FROM users
+		WHERE id = $1
+	`, userID).Scan(&vkID, &okID, &mailruID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to load social links"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"data": gin.H{
+			"vk": gin.H{
+				"linked": vkID.Valid,
+				"vk_id":  vkID.Int64,
+			},
+			"ok": gin.H{
+				"linked": okID.Valid && okID.String != "",
+			},
+			"mailru": gin.H{
+				"linked": mailruID.Valid && mailruID.String != "",
+			},
+		},
+	})
+}
+
+// LinkVKToCurrentUser привязывает VK аккаунт к текущему пользователю
+func (h *Handler) LinkVKToCurrentUser(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
+
+	var req struct {
+		AccessToken string `json:"access_token"`
+		UserID      int    `json:"user_id"`
+		Email       string `json:"email"`
+		FirstName   string `json:"first_name"`
+		LastName    string `json:"last_name"`
+		AvatarURL   string `json:"avatar_url"`
+		Phone       string `json:"phone"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": "Invalid request"})
+		return
+	}
+
+	if req.UserID <= 0 {
+		c.JSON(400, gin.H{"success": false, "error": "Missing VK user_id"})
+		return
+	}
+
+	// Проверяем, что этот VK уже не привязан к другому аккаунту.
+	var linkedUserID int
+	err := h.db.QueryRow(`SELECT id FROM users WHERE vk_id = $1`, req.UserID).Scan(&linkedUserID)
+	if err == nil && linkedUserID != currentUserID {
+		c.JSON(409, gin.H{"success": false, "error": "Этот VK уже привязан к другому аккаунту"})
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.JSON(500, gin.H{"success": false, "error": "Database error"})
+		return
+	}
+
+	// Если email уже занят другим пользователем - не перезаписываем им текущий email.
+	emailToApply := strings.TrimSpace(req.Email)
+	if emailToApply != "" {
+		var existingEmailOwner int
+		err = h.db.QueryRow(`SELECT id FROM users WHERE email = $1`, emailToApply).Scan(&existingEmailOwner)
+		if err == nil && existingEmailOwner != currentUserID {
+			emailToApply = ""
+		} else if err != nil && err != sql.ErrNoRows {
+			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			return
+		}
+	}
+
+	_, err = h.db.Exec(`
+		UPDATE users
+		SET
+			vk_id = $1,
+			vk_access_token = $2,
+			name = COALESCE(NULLIF(name, ''), $3),
+			last_name = COALESCE(NULLIF(last_name, ''), $4),
+			avatar = COALESCE(NULLIF(avatar, ''), $5),
+			phone = COALESCE(NULLIF(phone, ''), $6),
+			email = CASE
+				WHEN (email LIKE 'vk%@vk.placeholder' OR email = '') AND $7 <> '' THEN $7
+				ELSE email
+			END
+		WHERE id = $8
+	`, req.UserID, req.AccessToken, req.FirstName, req.LastName, req.AvatarURL, req.Phone, emailToApply, currentUserID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to link VK account"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"data": gin.H{
+			"vk": gin.H{
+				"linked": true,
+				"vk_id":  req.UserID,
+			},
+		},
+	})
+}
+
+// UnlinkVKFromCurrentUser отвязывает VK от текущего пользователя
+func (h *Handler) UnlinkVKFromCurrentUser(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
+
+	var passwordHash sql.NullString
+	var vkID sql.NullInt64
+	var okID, mailruID sql.NullString
+
+	err := h.db.QueryRow(`
+		SELECT password_hash, vk_id, ok_id, mailru_id
+		FROM users
+		WHERE id = $1
+	`, currentUserID).Scan(&passwordHash, &vkID, &okID, &mailruID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to load account data"})
+		return
+	}
+
+	// Не даем отвязать последний доступный способ входа.
+	hasPassword := passwordHash.Valid && strings.TrimSpace(passwordHash.String) != ""
+	hasOtherSocial := (okID.Valid && okID.String != "") || (mailruID.Valid && mailruID.String != "")
+	if !hasPassword && !hasOtherSocial {
+		c.JSON(400, gin.H{"success": false, "error": "Нельзя отвязать VK: это единственный способ входа"})
+		return
+	}
+
+	if !vkID.Valid {
+		c.JSON(200, gin.H{"success": true, "data": gin.H{"vk": gin.H{"linked": false}}})
+		return
+	}
+
+	_, err = h.db.Exec(`
+		UPDATE users
+		SET vk_id = NULL, vk_access_token = NULL
+		WHERE id = $1
+	`, currentUserID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to unlink VK"})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": gin.H{"vk": gin.H{"linked": false}}})
+}

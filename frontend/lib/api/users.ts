@@ -195,6 +195,25 @@ export const usersApi = {
       };
     }
   },
+
+  getSocialLinks: () =>
+    apiClient.get<{
+      vk: { linked: boolean; vk_id?: number };
+      ok: { linked: boolean };
+      mailru: { linked: boolean };
+    }>('/api/profile/social-links'),
+
+  linkVK: (data: {
+    access_token: string;
+    user_id: number;
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+    avatar_url?: string;
+    phone?: string;
+  }) => apiClient.post<{ vk: { linked: boolean; vk_id: number } }>('/api/profile/social-links/vk/link', data),
+
+  unlinkVK: () => apiClient.delete<{ vk: { linked: boolean } }>('/api/profile/social-links/vk'),
 };
 
 // API методы для профиля

@@ -10,6 +10,7 @@ import { UserIcon, CameraIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import CityAutocomplete from '../../../../../components/main/shared/CityAutocomplete';
 import ConfirmModal from '../../../../../components/main/shared/ConfirmModal';
+import VKIDButton from '../../../../../components/auth/VKIDButton';
 
 export default function EditProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
@@ -17,7 +18,14 @@ export default function EditProfilePage() {
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'profile' | 'contacts' | 'privacy'>('profile');
+  const [activeSection, setActiveSection] = useState<'profile' | 'contacts' | 'privacy' | 'social'>('profile');
+  const [socialLinks, setSocialLinks] = useState<{
+    vk: { linked: boolean; vk_id?: number };
+    ok: { linked: boolean };
+    mailru: { linked: boolean };
+  } | null>(null);
+  const [isSocialLoading, setIsSocialLoading] = useState(false);
+  const [isUnlinkingVK, setIsUnlinkingVK] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [editForm, setEditForm] = useState({
@@ -68,6 +76,54 @@ export default function EditProfilePage() {
       setIsInitialLoad(false);
     }
   }, [user, isLoading, isAuthenticated, router, isInitialLoad]);
+
+  const loadSocialLinks = async () => {
+    setIsSocialLoading(true);
+    try {
+      const response = await usersApi.getSocialLinks();
+      if (response.success && response.data) {
+        setSocialLinks(response.data);
+      }
+    } catch (error) {
+      // silently ignore
+    } finally {
+      setIsSocialLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      void loadSocialLinks();
+    }
+  }, [user?.id]);
+
+  const handleVKLinkSuccess = async () => {
+    toast.success('VK успешно привязан');
+    await refreshUser();
+    await loadSocialLinks();
+  };
+
+  const handleVKLinkError = (error: any) => {
+    const message = error instanceof Error ? error.message : 'Не удалось привязать VK';
+    toast.error(message);
+  };
+
+  const handleVKUnlink = async () => {
+    setIsUnlinkingVK(true);
+    try {
+      const response = await usersApi.unlinkVK();
+      if (response.success) {
+        toast.success('VK отвязан');
+        await loadSocialLinks();
+      } else {
+        toast.error(response.error || 'Не удалось отвязать VK');
+      }
+    } catch (error) {
+      toast.error('Не удалось отвязать VK');
+    } finally {
+      setIsUnlinkingVK(false);
+    }
+  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -324,6 +380,21 @@ export default function EditProfilePage() {
                   </button>
                 </div>
                 <p className="text-sm text-gray-600 mt-1">Настройки безопасности и видимости</p>
+              </>
+            )}
+            {activeSection === 'social' && (
+              <>
+                <div className="flex items-center justify-between">
+                  <h1 className="text-2xl font-bold text-gray-900">Соцсети</h1>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/profile')}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    Вернуться в профиль
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">Привязка аккаунтов для быстрого входа</p>
               </>
             )}
           </div>
@@ -656,24 +727,78 @@ export default function EditProfilePage() {
               </>
             )}
 
+            {/* Social links section */}
+            {activeSection === 'social' && (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900">VK ID</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Входите в аккаунт ЗооПлатформы через VK без пароля.
+                      </p>
+                      {socialLinks?.vk?.linked && (
+                        <p className="text-xs text-green-700 mt-2">
+                          Привязан VK ID: {socialLinks.vk.vk_id}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-sm font-medium">
+                      {isSocialLoading ? (
+                        <span className="text-gray-500">Проверка...</span>
+                      ) : socialLinks?.vk?.linked ? (
+                        <span className="text-green-600">Подключено</span>
+                      ) : (
+                        <span className="text-gray-500">Не подключено</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    {socialLinks?.vk?.linked ? (
+                      <button
+                        type="button"
+                        onClick={handleVKUnlink}
+                        disabled={isUnlinkingVK}
+                        className="px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        {isUnlinkingVK ? 'Отвязка...' : 'Отвязать VK'}
+                      </button>
+                    ) : (
+                      <div className="max-w-[280px]">
+                        <VKIDButton
+                          mode="link"
+                          linkEndpoint="/api/profile/social-links/vk/link"
+                          onSuccess={handleVKLinkSuccess}
+                          onError={handleVKLinkError}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Actions - show for all sections */}
-            <div className="flex gap-3 pt-4 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors text-sm"
-              >
-                Отмена
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving || !editForm.name.trim()}
-                className="flex-1 px-4 py-2.5 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                style={{ backgroundColor: '#1B76FF' }}
-              >
-                {isSaving ? 'Сохранение...' : 'Сохранить'}
-              </button>
-            </div>
+            {activeSection !== 'social' && (
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors text-sm"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving || !editForm.name.trim()}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  style={{ backgroundColor: '#1B76FF' }}
+                >
+                  {isSaving ? 'Сохранение...' : 'Сохранить'}
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </div>
@@ -742,6 +867,27 @@ export default function EditProfilePage() {
                   <p className="text-xs text-gray-600 mt-0.5">Настройки безопасности</p>
                 </div>
                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveSection('social')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors mt-1 ${
+                activeSection === 'social'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Соцсети</p>
+                  <p className="text-xs text-gray-600 mt-0.5">VK и способы входа</p>
+                </div>
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    socialLinks?.vk?.linked ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                ></div>
               </div>
             </button>
           </div>
@@ -817,6 +963,25 @@ export default function EditProfilePage() {
                 <li className="flex items-start gap-2">
                   <span className="text-blue-600 mt-0.5">•</span>
                   <span>Управляйте отображением онлайн-статуса</span>
+                </li>
+              </ul>
+            </>
+          )}
+
+          {activeSection === 'social' && (
+            <>
+              <h3 className="text-sm font-semibold text-blue-900 mb-3">🔗 Соцсети</h3>
+              <p className="text-xs text-blue-800 mb-3">
+                Привяжите VK, чтобы входить без пароля и не создавать дубли аккаунтов.
+              </p>
+              <ul className="space-y-2 text-xs text-blue-800">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-600 mt-0.5">•</span>
+                  <span>Вход через VK будет открывать именно текущий профиль.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-600 mt-0.5">•</span>
+                  <span>Отвязывать VK лучше только при наличии резервного входа.</span>
                 </li>
               </ul>
             </>

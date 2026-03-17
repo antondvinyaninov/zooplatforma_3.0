@@ -89,6 +89,9 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		profile.DELETE("/avatar/delete", usersHandler.DeleteAvatar)
 		profile.POST("/cover", usersHandler.UploadCover)
 		profile.DELETE("/cover/delete", usersHandler.DeleteCover)
+		profile.GET("/social-links", usersHandler.GetSocialLinks)
+		profile.POST("/social-links/vk/link", usersHandler.LinkVKToCurrentUser)
+		profile.DELETE("/social-links/vk", usersHandler.UnlinkVKFromCurrentUser)
 	}
 
 	// Posts routes
