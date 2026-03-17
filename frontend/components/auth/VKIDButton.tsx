@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 
 interface VKIDButtonProps {
   onSuccess?: (data: any) => void;
@@ -23,20 +22,24 @@ export default function VKIDButton({
   linkEndpoint = '/api/profile/social-links/vk/link',
 }: VKIDButtonProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+  const onSuccessRef = useRef<typeof onSuccess>(onSuccess);
+  const onErrorRef = useRef<typeof onError>(onError);
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+  }, [onSuccess, onError]);
 
   useEffect(() => {
     let isCancelled = false;
+    if (!containerRef.current || initializedRef.current) return;
+    initializedRef.current = true;
 
-    // Загружаем VK ID SDK
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js';
-    script.async = true;
-
-    script.onload = () => {
-      if (isCancelled) return;
-      if (window.VKIDSDK && containerRef.current) {
-        const VKID = window.VKIDSDK;
+    const initWidget = () => {
+      if (isCancelled || !window.VKIDSDK || !containerRef.current) return;
+      const VKID = window.VKIDSDK;
+      containerRef.current.innerHTML = '';
 
         // VK OAuth requires strictly matched redirect URLs, often with trailing slashes.
         // We use window.location.origin + '/' to produce 'https://zooplatforma.ru/'
@@ -64,7 +67,11 @@ export default function VKIDButton({
           .on(VKID.WidgetEvents.ERROR, (error: any) => {
             console.error('VK ID Error:', error);
             try { console.error('Error Details:', JSON.stringify(error)); } catch (e) {}
-            if (onError) onError(error);
+            // Частые timeout-события у виджета не должны заспамливать UI.
+            if (error?.code === 0 && error?.text === 'timeout') {
+              return;
+            }
+            if (onErrorRef.current) onErrorRef.current(error);
           })
           .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload: any) => {
             try {
@@ -77,7 +84,7 @@ export default function VKIDButton({
                 authData = await VKID.Auth.exchangeCode(code, deviceId);
               } catch (exchangeError) {
                 console.error('VK ID Exchange Error:', exchangeError);
-                if (onError) onError(exchangeError);
+                if (onErrorRef.current) onErrorRef.current(exchangeError);
                 return;
               }
 
@@ -126,10 +133,19 @@ export default function VKIDButton({
               });
 
               if (!response.ok) {
-                // Пытаемся прочитать текст ошибки
-                const errorText = await response.text();
-                console.error('Backend returned non-200 status:', response.status, errorText);
-                if (onError) onError(new Error(errorText));
+                const errorBody = await response.text();
+                let parsed: any = null;
+                try {
+                  parsed = JSON.parse(errorBody);
+                } catch (_e) {}
+                console.error('Backend returned non-200 status:', response.status, errorBody);
+                if (onErrorRef.current) {
+                  onErrorRef.current(
+                    parsed?.error
+                      ? new Error(parsed.error)
+                      : new Error(errorBody || `HTTP ${response.status}`),
+                  );
+                }
                 return;
               }
 
@@ -147,29 +163,45 @@ export default function VKIDButton({
                   }
                 }
 
-                if (onSuccess) onSuccess(result);
+                if (onSuccessRef.current) onSuccessRef.current(result);
               } else {
                 console.error('Backend returned logic error:', result);
-                if (onError) onError(result.error);
+                if (onErrorRef.current) onErrorRef.current(result.error);
               }
             } catch (error) {
               console.error('VK ID Flow Error:', error);
-              if (onError) onError(error);
+              if (onErrorRef.current) onErrorRef.current(error);
             }
           });
-      }
     };
 
-    document.head.appendChild(script);
+    if (window.VKIDSDK) {
+      initWidget();
+    } else {
+      // Загружаем VK ID SDK
+      const existingScript = document.querySelector(
+        'script[data-vkid-sdk="true"]',
+      ) as HTMLScriptElement | null;
+      if (existingScript) {
+        existingScript.addEventListener('load', initWidget, { once: true });
+      } else {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js';
+        script.async = true;
+        script.dataset.vkidSdk = 'true';
+        script.onload = initWidget;
+        document.head.appendChild(script);
+      }
+    }
 
     return () => {
       isCancelled = true;
-      // Cleanup
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
+      initializedRef.current = false;
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
       }
     };
-  }, [router, onSuccess, onError, mode, linkEndpoint]);
+  }, [mode, linkEndpoint]);
 
   return <div ref={containerRef} className="vkid-container"></div>;
 }
