@@ -11,6 +11,7 @@ import Image from 'next/image';
 import CityAutocomplete from '../../../../../components/main/shared/CityAutocomplete';
 import ConfirmModal from '../../../../../components/main/shared/ConfirmModal';
 import VKIDButton from '../../../../../components/auth/VKIDButton';
+import OAuthProviderLinkButton from '../../../../../components/auth/OAuthProviderLinkButton';
 
 export default function EditProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
@@ -130,18 +131,13 @@ export default function EditProfilePage() {
     }
   };
 
-  const handleOKLink = async () => {
-    const okID = window.prompt('Введите ID вашего аккаунта в Одноклассниках (ok_id)');
-    if (!okID || !okID.trim()) {
-      return;
-    }
-    const response = await usersApi.linkOK({ ok_id: okID.trim() });
-    if (response.success) {
-      toast.success('OK успешно привязан');
-      await loadSocialLinks();
-    } else {
-      toast.error(response.error || 'Не удалось привязать OK');
-    }
+  const handleOKLinkSuccess = async () => {
+    toast.success('OK успешно привязан');
+    await loadSocialLinks();
+  };
+
+  const handleOKLinkError = (message: string) => {
+    toast.error(message || 'Не удалось привязать OK');
   };
 
   const handleOKUnlink = async () => {
@@ -159,18 +155,13 @@ export default function EditProfilePage() {
     }
   };
 
-  const handleMailruLink = async () => {
-    const mailruID = window.prompt('Введите ID вашего аккаунта в Mail.ru (mailru_id)');
-    if (!mailruID || !mailruID.trim()) {
-      return;
-    }
-    const response = await usersApi.linkMailru({ mailru_id: mailruID.trim() });
-    if (response.success) {
-      toast.success('Mail.ru успешно привязан');
-      await loadSocialLinks();
-    } else {
-      toast.error(response.error || 'Не удалось привязать Mail.ru');
-    }
+  const handleMailruLinkSuccess = async () => {
+    toast.success('Mail.ru успешно привязан');
+    await loadSocialLinks();
+  };
+
+  const handleMailruLinkError = (message: string) => {
+    toast.error(message || 'Не удалось привязать Mail.ru');
   };
 
   const handleMailruUnlink = async () => {
@@ -876,16 +867,19 @@ export default function EditProfilePage() {
                         {isUnlinkingOK ? 'Отвязка...' : 'Отвязать OK'}
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={handleOKLink}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-orange-500 text-white text-xs font-bold">
-                          OK
-                        </span>
-                        Привязать OK
-                      </button>
+                      <OAuthProviderLinkButton
+                        provider="ok_ru"
+                        endpoint="/api/profile/social-links/ok/link"
+                        idField="ok_id"
+                        label="Привязать OK"
+                        icon={
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-orange-500 text-white text-xs font-bold">
+                            OK
+                          </span>
+                        }
+                        onSuccess={handleOKLinkSuccess}
+                        onError={handleOKLinkError}
+                      />
                     )}
                   </div>
                 </div>
@@ -924,16 +918,19 @@ export default function EditProfilePage() {
                         {isUnlinkingMailru ? 'Отвязка...' : 'Отвязать Mail.ru'}
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={handleMailruLink}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-blue-500 text-white text-sm font-semibold">
-                          @
-                        </span>
-                        Привязать Mail.ru
-                      </button>
+                      <OAuthProviderLinkButton
+                        provider="mail_ru"
+                        endpoint="/api/profile/social-links/mailru/link"
+                        idField="mailru_id"
+                        label="Привязать Mail.ru"
+                        icon={
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-blue-500 text-white text-sm font-semibold">
+                            @
+                          </span>
+                        }
+                        onSuccess={handleMailruLinkSuccess}
+                        onError={handleMailruLinkError}
+                      />
                     )}
                   </div>
                 </div>
