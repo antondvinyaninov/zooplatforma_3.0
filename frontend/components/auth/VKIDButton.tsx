@@ -75,6 +75,14 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
               }
 
               // Отправляем данные на наш backend
+              const profile =
+                authData?.user ||
+                authData?.user_info ||
+                authData?.userData ||
+                payload?.user ||
+                payload?.user_info ||
+                {};
+
               const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
               const response = await fetch(`${apiBase}/api/auth/vk/sdk-callback`, {
                 method: 'POST',
@@ -85,6 +93,14 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
                   user_id: authData.user_id,
                   expires_in: authData.expires_in,
                   email: authData.email || '', // Добавлен email
+                  first_name: profile.first_name || profile.firstName || '',
+                  last_name: profile.last_name || profile.lastName || '',
+                  avatar_url:
+                    profile.avatar_url ||
+                    profile.avatar ||
+                    profile.photo_200 ||
+                    profile.photo ||
+                    '',
                 }),
               });
 

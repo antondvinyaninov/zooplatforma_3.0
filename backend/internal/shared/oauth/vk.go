@@ -194,6 +194,9 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 		UserID      int    `json:"user_id"`
 		ExpiresIn   int    `json:"expires_in"`
 		Email       string `json:"email"`
+		FirstName   string `json:"first_name"`
+		LastName    string `json:"last_name"`
+		AvatarURL   string `json:"avatar_url"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -201,38 +204,26 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 		return
 	}
 
-	// Получаем информацию о пользователе через VK API
-	userInfoURL := fmt.Sprintf(
-		"https://api.vk.com/method/users.get?user_ids=%d&fields=photo_200&access_token=%s&v=5.131",
-		req.UserID,
-		req.AccessToken,
-	)
-
-	userResp, err := http.Get(userInfoURL)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to get user info"})
-		return
-	}
-	defer userResp.Body.Close()
-
-	userBody, err := io.ReadAll(userResp.Body)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to read user info"})
+	// Для VK ID SDK access_token может быть привязан к IP клиента.
+	// Поэтому в SDK сценарии не делаем server-side users.get с этим токеном.
+	if req.UserID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Missing VK user_id"})
 		return
 	}
 
-	var vkAPIResp VKAPIResponse
-	if err := json.Unmarshal(userBody, &vkAPIResp); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to parse user info", "details": string(userBody)})
-		return
+	vkUser := VKUser{
+		ID:        req.UserID,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Photo:     req.AvatarURL,
+	}
+	if vkUser.FirstName == "" {
+		vkUser.FirstName = "VK"
+	}
+	if vkUser.LastName == "" {
+		vkUser.LastName = "User"
 	}
 
-	if len(vkAPIResp.Response) == 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "No user data received. VK says: " + string(userBody)})
-		return
-	}
-
-	vkUser := vkAPIResp.Response[0]
 	email := req.Email
 	if email == "" {
 		email = fmt.Sprintf("vk%d@vk.placeholder", vkUser.ID)
@@ -241,7 +232,7 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 	// Проверяем, существует ли пользователь с таким VK ID
 	var userID int
 	checkQuery := `SELECT id FROM users WHERE vk_id = $1`
-	err = h.db.QueryRow(checkQuery, vkUser.ID).Scan(&userID)
+	err := h.db.QueryRow(checkQuery, vkUser.ID).Scan(&userID)
 
 	if err == sql.ErrNoRows {
 		// Пользователь не найден по VK ID, проверим по email
