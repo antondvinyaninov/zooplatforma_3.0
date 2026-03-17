@@ -106,7 +106,10 @@ export default function EditProfilePage() {
   };
 
   const handleVKLinkError = (error: any) => {
-    const message = error instanceof Error ? error.message : 'Не удалось привязать VK';
+    let message = error instanceof Error ? error.message : 'Не удалось привязать VK';
+    if (error?.merge_required && error?.linked_user_id) {
+      message = `VK уже привязан к аккаунту id=${error.linked_user_id}. Нужно объединение аккаунтов (merge).`;
+    }
     toast.error(message);
   };
 

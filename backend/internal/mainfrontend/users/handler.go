@@ -633,6 +633,16 @@ func (h *Handler) LinkVKToCurrentUser(c *gin.Context) {
 		c.JSON(500, gin.H{"success": false, "error": "Database error"})
 		return
 	}
+	if vkLinkLookupErr == nil && linkedUserID != currentUserID {
+		c.JSON(409, gin.H{
+			"success":         false,
+			"error":           fmt.Sprintf("Этот VK уже привязан к аккаунту id=%d. Нужен merge-сценарий.", linkedUserID),
+			"merge_required":  true,
+			"linked_user_id":  linkedUserID,
+			"current_user_id": currentUserID,
+		})
+		return
+	}
 
 	// Если email уже занят другим пользователем - не перезаписываем им текущий email.
 	emailToApply := strings.TrimSpace(req.Email)
@@ -647,26 +657,7 @@ func (h *Handler) LinkVKToCurrentUser(c *gin.Context) {
 		}
 	}
 
-	tx, err := h.db.Begin()
-	if err != nil {
-		c.JSON(500, gin.H{"success": false, "error": "Database error"})
-		return
-	}
-	defer tx.Rollback()
-
-	// Если VK привязан к другому аккаунту (типичный дубль), переносим привязку на текущий.
-	if vkLinkLookupErr == nil && linkedUserID != currentUserID {
-		if _, err = tx.Exec(`
-			UPDATE users
-			SET vk_id = NULL, vk_access_token = NULL
-			WHERE id = $1
-		`, linkedUserID); err != nil {
-			c.JSON(500, gin.H{"success": false, "error": "Failed to move VK link"})
-			return
-		}
-	}
-
-	_, err = tx.Exec(`
+	_, err := h.db.Exec(`
 		UPDATE users
 		SET
 			vk_id = $1,
@@ -683,11 +674,6 @@ func (h *Handler) LinkVKToCurrentUser(c *gin.Context) {
 	`, req.UserID, req.AccessToken, req.FirstName, req.LastName, req.AvatarURL, req.Phone, emailToApply, currentUserID)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "error": "Failed to link VK account"})
-		return
-	}
-
-	if err = tx.Commit(); err != nil {
-		c.JSON(500, gin.H{"success": false, "error": "Database error"})
 		return
 	}
 

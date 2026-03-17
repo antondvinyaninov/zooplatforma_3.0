@@ -140,11 +140,18 @@ export default function VKIDButton({
                 } catch (_e) {}
                 console.error('Backend returned non-200 status:', response.status, errorBody);
                 if (onErrorRef.current) {
-                  onErrorRef.current(
+                  const enhancedError = Object.assign(
                     parsed?.error
                       ? new Error(parsed.error)
                       : new Error(errorBody || `HTTP ${response.status}`),
+                    {
+                      merge_required: parsed?.merge_required,
+                      linked_user_id: parsed?.linked_user_id,
+                      current_user_id: parsed?.current_user_id,
+                      status: response.status,
+                    },
                   );
+                  onErrorRef.current(enhancedError);
                 }
                 return;
               }
