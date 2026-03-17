@@ -314,7 +314,12 @@ export default function AuthForm({
                 </div>
 
                 <div className="mt-4">
-                  <VKIDButton onSuccess={onVKSuccess} onError={onVKError} />
+                  <VKIDButton
+                    onSuccess={onVKSuccess}
+                    onError={onVKError}
+                    showAlternativeLogin={false}
+                    oauthList={[]}
+                  />
                 </div>
               </>
             )}

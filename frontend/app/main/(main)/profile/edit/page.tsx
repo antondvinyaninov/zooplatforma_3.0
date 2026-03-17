@@ -879,8 +879,11 @@ export default function EditProfilePage() {
                       <button
                         type="button"
                         onClick={handleOKLink}
-                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
                       >
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-orange-500 text-white text-xs font-bold">
+                          OK
+                        </span>
                         Привязать OK
                       </button>
                     )}
@@ -924,8 +927,11 @@ export default function EditProfilePage() {
                       <button
                         type="button"
                         onClick={handleMailruLink}
-                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
                       >
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-blue-500 text-white text-sm font-semibold">
+                          @
+                        </span>
                         Привязать Mail.ru
                       </button>
                     )}
