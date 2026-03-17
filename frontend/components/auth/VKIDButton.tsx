@@ -31,7 +31,9 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
       if (window.VKIDSDK && containerRef.current) {
         const VKID = window.VKIDSDK;
 
-        const redirectUrl = window.location.origin;
+        // VK OAuth requires strictly matched redirect URLs, often with trailing slashes.
+        // We use window.location.origin + '/' to produce 'https://zooplatforma.ru/'
+        const redirectUrl = window.location.origin + '/';
 
         // Инициализация VK ID
         VKID.Config.init({
@@ -41,6 +43,7 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
           source: VKID.ConfigSource.LOWCODE,
           scope: 'email',
         });
+
 
         // Создаем OneTap виджет
         const oneTap = new VKID.OneTap();
@@ -53,6 +56,7 @@ export default function VKIDButton({ onSuccess, onError }: VKIDButtonProps) {
           })
           .on(VKID.WidgetEvents.ERROR, (error: any) => {
             console.error('VK ID Error:', error);
+            try { console.error('Error Details:', JSON.stringify(error)); } catch (e) {}
             if (onError) onError(error);
           })
           .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload: any) => {
