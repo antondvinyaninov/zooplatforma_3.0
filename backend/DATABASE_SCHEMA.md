@@ -169,6 +169,8 @@
 - `updated_at` - timestamp
 - `parent_id` - integer - FK to comments (для вложенных комментариев)
 - `reply_to_user_id` - integer - FK to users
+- `status` - varchar(20) (default: 'published')
+- `attachments` - jsonb (default: '[]')
 
 ### likes
 - `id` - integer (PK)

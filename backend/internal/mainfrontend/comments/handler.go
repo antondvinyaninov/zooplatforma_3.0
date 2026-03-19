@@ -34,11 +34,13 @@ func (h *Handler) ensurePostsReplyColumns() {
 		`ALTER TABLE posts ADD COLUMN IF NOT EXISTS verify_replies BOOLEAN DEFAULT false`,
 		`UPDATE posts SET reply_setting = 'anyone' WHERE reply_setting IS NULL`,
 		`UPDATE posts SET verify_replies = false WHERE verify_replies IS NULL`,
+		`ALTER TABLE comments ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'published'`,
+		`UPDATE comments SET status = 'published' WHERE status IS NULL`,
 	}
 
 	for _, q := range queries {
 		if _, err := h.db.Exec(q); err != nil {
-			fmt.Printf("warning: failed to ensure posts reply columns in comments handler: %v\n", err)
+			fmt.Printf("warning: failed to ensure posts/comments columns in comments handler: %v\n", err)
 		}
 	}
 }
