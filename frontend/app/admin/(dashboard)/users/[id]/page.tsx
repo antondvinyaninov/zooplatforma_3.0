@@ -67,6 +67,22 @@ export default function UserDetailPage() {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        const token = data?.data?.token;
+
+        if (token) {
+          // Сохраняем токен администратора для возможности возврата
+          const adminToken = localStorage.getItem('auth_token');
+          if (adminToken) {
+            localStorage.setItem('admin_auth_token', adminToken);
+          }
+
+          // Устанавливаем новый токен
+          localStorage.setItem('auth_token', token);
+          const maxAge = 30 * 24 * 60 * 60; // 30 дней
+          document.cookie = `auth_token=${token}; path=/; max-age=${maxAge}; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`;
+        }
+
         // Redirect to main frontpage
         window.location.href = '/';
       } else {

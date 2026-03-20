@@ -271,6 +271,7 @@ func (h *Handler) ImpersonateUser(c *gin.Context) {
 		"success": true,
 		"data": gin.H{
 			"message": "Успешный вход под пользователем " + targetUserID,
+			"token":   token,
 		},
 	})
 }
