@@ -47,7 +47,7 @@ export default function HomeClient({ searchParams }: Props) {
                 <span className="text-indigo-400 font-bold">→</span>
               </Link>
               <Link href="/zooassistant" className="flex items-center justify-between bg-white px-3 py-2.5 rounded-lg text-sm font-medium text-purple-700 hover:bg-purple-50 transition-colors border border-purple-100/50 shadow-sm">
-                <span>Кабинет волонтера</span>
+                <span>AI ЗооПомощник</span>
                 <span className="text-purple-400 font-bold">→</span>
               </Link>
             </div>
