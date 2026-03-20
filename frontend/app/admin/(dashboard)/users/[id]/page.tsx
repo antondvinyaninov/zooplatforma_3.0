@@ -56,6 +56,29 @@ export default function UserDetailPage() {
     }
   };
 
+  const handleImpersonate = async () => {
+    if (!user) return;
+    if (!confirm(`Вы уверены, что хотите войти под учетной записью пользователя ${user.name}? Вы потеряете текущую сессию администратора.`)) return;
+
+    try {
+      const response = await fetch(`/main/api/auth/impersonate/${user.id}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        // Redirect to main feed or frontpage
+        window.location.href = '/feed';
+      } else {
+        const error = await response.json();
+        alert(`Ошибка входа: ${error.error || 'Неизвестная ошибка'}`);
+      }
+    } catch (error) {
+      console.error('Error impersonating user:', error);
+      alert('Ошибка при попытке входа');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -78,21 +101,31 @@ export default function UserDetailPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6 flex items-center gap-4">
-          <button
-            onClick={() => router.push('/users')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeftIcon className="w-5 h-5 text-gray-600" />
-          </button>
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push('/admin/users')}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeftIcon className="w-5 h-5 text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {user.name} {user.last_name}
+                {user.verified && (
+                  <CheckBadgeIconSolid className="inline w-7 h-7 text-blue-500 ml-2" />
+                )}
+              </h1>
+              <p className="text-gray-600">{user.email}</p>
+            </div>
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {user.name} {user.last_name}
-              {user.verified && (
-                <CheckBadgeIconSolid className="inline w-7 h-7 text-blue-500 ml-2" />
-              )}
-            </h1>
-            <p className="text-gray-600">{user.email}</p>
+            <button
+              onClick={handleImpersonate}
+              className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
+            >
+              Войти как пользователь
+            </button>
           </div>
         </div>
 

@@ -710,7 +710,7 @@ export default function PostModal({
         {/* Sticky Footer with Input - вне scroll области */}
         {isAuthenticated && (
           <div className="border-t border-gray-200 bg-white px-6 py-4">
-            {post.reply_setting && post.reply_setting !== 'everyone' && user?.id !== post.author_id && (
+            {post.reply_setting && post.reply_setting !== 'anyone' && user?.id !== post.author_id && (
               <div className="mb-3 text-xs text-gray-500 bg-gray-50 p-2 rounded-md border border-gray-100 flex items-center gap-2">
                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

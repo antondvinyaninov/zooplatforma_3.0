@@ -19,6 +19,8 @@ interface User {
   verified: boolean;
   verified_at?: string;
   created_at: string;
+  is_online?: boolean;
+  last_seen?: string;
 }
 
 export default function UsersPage() {
@@ -286,17 +288,25 @@ export default function UsersPage() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        {user.avatar ? (
-                          <img
-                            src={user.avatar}
-                            alt={`${user.name} avatar`}
-                            className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                            {user.name[0].toUpperCase()}
-                          </div>
-                        )}
+                        <div className="relative">
+                          {user.avatar ? (
+                            <img
+                              src={user.avatar}
+                              alt={`${user.name} avatar`}
+                              className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                              {user.name[0].toUpperCase()}
+                            </div>
+                          )}
+                          {user.is_online && (
+                            <div 
+                              className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" 
+                              title="В сети"
+                            />
+                          )}
+                        </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-gray-900">

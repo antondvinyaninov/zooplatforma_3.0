@@ -77,4 +77,5 @@ func Setup(r *gin.Engine, db *sql.DB, cfg *config.Config) {
 	// ZooAssistant frontend routes (под префиксом /api/zooassistant)
 	zooassistantAPI := api.Group("/zooassistant")
 	zooassistant.SetupRoutes(zooassistantAPI, db, cfg)
+
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -214,6 +215,62 @@ func (h *Handler) Logout(c *gin.Context) {
 		"success": true,
 		"data": gin.H{
 			"message": "Logged out successfully",
+		},
+	})
+}
+
+func (h *Handler) ImpersonateUser(c *gin.Context) {
+	// Получаем текущего пользователя-админа из контекста
+	adminIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	adminID := adminIDInterface.(int)
+
+	// Проверяем, является ли пользователь админом (id == 1)
+	if adminID != 1 {
+		c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "Только администратор может использовать эту функцию"})
+		return
+	}
+
+	targetUserID := c.Param("id")
+
+	// Проверяем существует ли целевой пользователь и получаем его email
+	var email string
+	err := h.db.QueryRow(`SELECT email FROM users WHERE id = $1`, targetUserID).Scan(&email)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Пользователь не найден"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Ошибка базы данных"})
+		return
+	}
+
+	// Генерируем JWT токен для целевого пользователя
+	targetIDInt, _ := strconv.Atoi(targetUserID)
+	token, err := GenerateToken(targetIDInt, email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to generate token"})
+		return
+	}
+
+	// Устанавливаем cookie с токеном
+	c.SetCookie(
+		"auth_token", // name
+		token,        // value
+		30*24*60*60,  // maxAge (30 дней)
+		"/",          // path
+		"",           // domain (пустой = текущий домен)
+		false,        // secure (false для localhost)
+		true,         // httpOnly
+	)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"message": "Успешный вход под пользователем " + targetUserID,
 		},
 	})
 }
