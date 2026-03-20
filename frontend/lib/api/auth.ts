@@ -12,4 +12,7 @@ export const authApi = {
   logout: () => apiClient.post<{ message: string }>('/api/auth/logout', {}),
 
   me: () => apiClient.get<User>('/api/auth/me'),
+
+  updateEmail: (email: string) => 
+    apiClient.post<{ message: string, token: string }>('/api/auth/update-email', { email }),
 };

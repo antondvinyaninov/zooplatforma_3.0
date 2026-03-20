@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { apiClient, authApi, User } from '../lib/api';
 
 interface AuthContextType {
@@ -24,6 +25,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Redirect users with placeholder emails to complete registration
+  useEffect(() => {
+    if (!isLoading && user && user.email?.includes('@vk.placeholder')) {
+      if (pathname !== '/main/complete-registration') {
+        router.push('/main/complete-registration');
+      }
+    }
+  }, [user, isLoading, pathname, router]);
 
   useEffect(() => {
     // Проверяем авторизацию при загрузке (только на клиенте)

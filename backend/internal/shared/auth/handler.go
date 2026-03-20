@@ -376,6 +376,75 @@ func (h *Handler) Me(c *gin.Context) {
 	})
 }
 
+// UpdateEmail - обновление технического email-адреса на реальный
+func (h *Handler) UpdateEmail(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Некорректный email адрес"})
+		return
+	}
+
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Не авторизован"})
+		return
+	}
+
+	// 1. Проверяем, не занят ли новый email другим аккаунтом
+	var existingID int
+	err := h.db.QueryRow(`SELECT id FROM users WHERE email = $1`, req.Email).Scan(&existingID)
+	if err == nil && existingID != userID.(int) {
+		c.JSON(http.StatusConflict, gin.H{"success": false, "error": "Этот email уже зарегистрирован на другой аккаунт"})
+		return
+	} else if err != nil && err != sql.ErrNoRows {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Ошибка базы данных при проверке email"})
+		return
+	}
+
+	// 2. Получаем текущий email пользователя
+	var currentEmail string
+	err = h.db.QueryRow(`SELECT email FROM users WHERE id = $1`, userID).Scan(&currentEmail)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Не найдено"})
+		return
+	}
+
+	// 3. Обновляем email в БД
+	updateQuery := `UPDATE users SET email = $1 WHERE id = $2`
+	_, err = h.db.Exec(updateQuery, req.Email, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Не удалось обновить email"})
+		return
+	}
+
+	// 4. Генерируем новый токен с обновленным email
+	newToken, err := GenerateToken(userID.(int), req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Ошибка при генерации нового токена"})
+		return
+	}
+
+	// Обновляем cookie
+	c.SetCookie(
+		"auth_token",
+		newToken,
+		30*24*60*60, // 30 дней
+		"/",
+		"",
+		false,
+		true,
+	)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"token":   newToken,
+		"message": "Email успешно обновлен",
+	})
+}
+
 // GenerateRandomToken создает надежный криптографический случайный токен для сброса пароля
 func GenerateRandomToken(length int) (string, error) {
 	bytes := make([]byte, length)

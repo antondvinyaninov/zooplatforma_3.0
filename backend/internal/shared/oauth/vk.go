@@ -205,6 +205,14 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 		return
 	}
 
+	// ЛОГИРОВАНИЕ ДЛЯ ОТЛАДКИ (ПОЛЬЗОВАТЕЛЬ ПРОСИЛ ПРОВЕРИТЬ EMAIL)
+	fmt.Printf("\n--- VK SDK CALLBACK RECEIVED ---\n")
+	fmt.Printf("UserID: %d\n", req.UserID)
+	fmt.Printf("FirstName: %s\n", req.FirstName)
+	fmt.Printf("Phone: %s\n", req.Phone)
+	fmt.Printf("Email: '%s' (длина: %d)\n", req.Email, len(req.Email))
+	fmt.Printf("--------------------------------\n\n")
+
 	// Для VK ID SDK access_token может быть привязан к IP клиента.
 	// Поэтому в SDK сценарии не делаем server-side users.get с этим токеном.
 	if req.UserID <= 0 {
