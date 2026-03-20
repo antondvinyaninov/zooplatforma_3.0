@@ -66,6 +66,7 @@ func (h *Handler) GetPosts(c *gin.Context) {
 			p.id, p.author_id, p.content, p.created_at, p.updated_at,
 			COALESCE(p.likes_count, 0), COALESCE(p.comments_count, 0), 0 as shares_count,
 			u.name, u.last_name, u.avatar, u.verified,
+			o.name as org_name, o.logo as org_logo, o.is_verified as org_verified,
 			COALESCE(p.media_urls, '[]') as media,
 			COALESCE(p.tags, '[]') as tags,
 			COALESCE(p.attachments, '[]') as attachments,
@@ -98,8 +99,9 @@ func (h *Handler) GetPosts(c *gin.Context) {
 			) as pets_data,
 			EXISTS(SELECT 1 FROM polls WHERE post_id = p.id) as has_poll
 		FROM posts p
-		JOIN users u ON p.author_id = u.id
-		WHERE p.is_deleted = false AND p.author_type = 'user'
+		LEFT JOIN users u ON p.author_type = 'user' AND p.author_id = u.id
+		LEFT JOIN organizations o ON p.author_type = 'organization' AND p.author_id = o.id
+		WHERE p.is_deleted = false
 		ORDER BY p.created_at DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -119,10 +121,13 @@ func (h *Handler) GetPosts(c *gin.Context) {
 			userID                                        int
 			likesCount, commentsCount, sharesCount        sql.NullInt64
 			content, createdAt, updatedAt                 sql.NullString
-			firstName                                     string
+			firstName                                     sql.NullString
 			lastName                                      sql.NullString
 			avatarURL                                     sql.NullString
-			isVerified                                    bool
+			isVerified                                    sql.NullBool
+			orgName                                       sql.NullString
+			orgLogo                                       sql.NullString
+			orgVerified                                   sql.NullBool
 			mediaJSON, tagsJSON, attachmentsJSON, petsJSON sql.NullString
 			authorType                                    string
 			replySetting                                  string
@@ -134,6 +139,7 @@ func (h *Handler) GetPosts(c *gin.Context) {
 			&id, &userID, &content, &createdAt, &updatedAt,
 			&likesCount, &commentsCount, &sharesCount,
 			&firstName, &lastName, &avatarURL, &isVerified,
+			&orgName, &orgLogo, &orgVerified,
 			&mediaJSON, &tagsJSON, &attachmentsJSON,
 			&authorType, &replySetting, &verifyReplies, &petsJSON, &hasPoll,
 		)
@@ -180,18 +186,29 @@ func (h *Handler) GetPosts(c *gin.Context) {
 			"verify_replies": verifyReplies,
 			"can_edit":       canEdit,
 			"has_poll":       hasPoll,
-			"user": map[string]interface{}{
+		}
+
+		if authorType == "organization" {
+			post["organization"] = map[string]interface{}{
+				"id":       userID,
+				"name":     orgName.String,
+				"logo":     orgLogo.String,
+				"verified": orgVerified.Bool,
+			}
+		} else {
+			post["user"] = map[string]interface{}{
 				"id":          userID,
-				"first_name":  firstName,
+				"first_name":  firstName.String,
 				"last_name":   lastName.String,
 				"avatar_url":  avatarURL.String,
-				"is_verified": isVerified,
-			},
-			"media":       media,
-			"tags":        tags,
-			"attachments": attachments,
-			"pets":        pets,
+				"is_verified": isVerified.Bool,
+			}
 		}
+
+		post["media"] = media
+		post["tags"] = tags
+		post["attachments"] = attachments
+		post["pets"] = pets
 
 		posts = append(posts, post)
 	}
@@ -251,6 +268,7 @@ func (h *Handler) GetPostByID(c *gin.Context) {
 			p.id, p.author_id, p.content, p.created_at, p.updated_at,
 			COALESCE(p.likes_count, 0), COALESCE(p.comments_count, 0), 0 as shares_count,
 			u.name, u.last_name, u.avatar, u.verified,
+			o.name as org_name, o.logo as org_logo, o.is_verified as org_verified,
 			COALESCE(p.media_urls, '[]') as media,
 			COALESCE(p.tags, '[]') as tags,
 			COALESCE(p.attachments, '[]') as attachments,
@@ -283,7 +301,8 @@ func (h *Handler) GetPostByID(c *gin.Context) {
 			) as pets_data,
 			EXISTS(SELECT 1 FROM polls WHERE post_id = p.id) as has_poll
 		FROM posts p
-		JOIN users u ON p.author_id = u.id
+		LEFT JOIN users u ON p.author_type = 'user' AND p.author_id = u.id
+		LEFT JOIN organizations o ON p.author_type = 'organization' AND p.author_id = o.id
 		WHERE p.id = $1 AND p.is_deleted = false
 	`
 
@@ -292,10 +311,13 @@ func (h *Handler) GetPostByID(c *gin.Context) {
 		userID                                        int
 		likesCount, commentsCount, sharesCount        sql.NullInt64
 		content, createdAt, updatedAt                 sql.NullString
-		firstName                                     string
+		firstName                                     sql.NullString
 		lastName                                      sql.NullString
 		avatarURL                                     sql.NullString
-		isVerified                                    bool
+		isVerified                                    sql.NullBool
+		orgName                                       sql.NullString
+		orgLogo                                       sql.NullString
+		orgVerified                                   sql.NullBool
 		mediaJSON, tagsJSON, attachmentsJSON, petsJSON sql.NullString
 		authorType                                    string
 		replySetting                                  string
@@ -307,6 +329,7 @@ func (h *Handler) GetPostByID(c *gin.Context) {
 		&id, &userID, &content, &createdAt, &updatedAt,
 		&likesCount, &commentsCount, &sharesCount,
 		&firstName, &lastName, &avatarURL, &isVerified,
+		&orgName, &orgLogo, &orgVerified,
 		&mediaJSON, &tagsJSON, &attachmentsJSON,
 		&authorType, &replySetting, &verifyReplies, &petsJSON, &hasPoll,
 	)
@@ -376,18 +399,29 @@ func (h *Handler) GetPostByID(c *gin.Context) {
 		"verify_replies": verifyReplies,
 		"can_edit":       canEdit,
 		"has_poll":       hasPoll,
-		"user": map[string]interface{}{
+	}
+
+	if authorType == "organization" {
+		post["organization"] = map[string]interface{}{
+			"id":       userID,
+			"name":     orgName.String,
+			"logo":     orgLogo.String,
+			"verified": orgVerified.Bool,
+		}
+	} else {
+		post["user"] = map[string]interface{}{
 			"id":          userID,
-			"first_name":  firstName,
+			"first_name":  firstName.String,
 			"last_name":   lastName.String,
 			"avatar_url":  avatarURL.String,
-			"is_verified": isVerified,
-		},
-		"media":       media,
-		"tags":        tags,
-		"attachments": attachments,
-		"pets":        pets,
+			"is_verified": isVerified.Bool,
+		}
 	}
+
+	post["media"] = media
+	post["tags"] = tags
+	post["attachments"] = attachments
+	post["pets"] = pets
 
 	c.JSON(200, gin.H{"success": true, "data": post})
 }
@@ -616,6 +650,7 @@ func (h *Handler) GetPetPosts(c *gin.Context) {
 			p.id, p.author_id, p.content, p.created_at, p.updated_at,
 			COALESCE(p.likes_count, 0), COALESCE(p.comments_count, 0), 0 as shares_count,
 			u.name, u.last_name, u.avatar, u.verified,
+			o.name as org_name, o.logo as org_logo, o.is_verified as org_verified,
 			COALESCE(p.media_urls, '[]') as media,
 			COALESCE(p.tags, '[]') as tags,
 			COALESCE(p.attachments, '[]') as attachments,
@@ -648,9 +683,9 @@ func (h *Handler) GetPetPosts(c *gin.Context) {
 			p.reply_setting, p.verify_replies,
 			EXISTS(SELECT 1 FROM polls WHERE post_id = p.id) as has_poll
 		FROM posts p
-		JOIN users u ON p.author_id = u.id
+		LEFT JOIN users u ON p.author_type = 'user' AND p.author_id = u.id
+		LEFT JOIN organizations o ON p.author_type = 'organization' AND p.author_id = o.id
 		WHERE p.is_deleted = false 
-			AND p.author_type = 'user'
 			AND p.attached_pets::jsonb @> $1::jsonb
 		ORDER BY p.created_at DESC
 	`
@@ -671,9 +706,13 @@ func (h *Handler) GetPetPosts(c *gin.Context) {
 		var (
 			id, userIDInt, likesCount, commentsCount, sharesCount int
 			content, createdAt, updatedAt                         string
-			firstName, lastName                                   string
+			firstName                                             sql.NullString
+			lastName                                              sql.NullString
 			avatarURL                                             sql.NullString
-			isVerified                                            bool
+			isVerified                                            sql.NullBool
+			orgName                                               sql.NullString
+			orgLogo                                               sql.NullString
+			orgVerified                                           sql.NullBool
 			mediaJSON, tagsJSON, attachmentsJSON, petsJSON        string
 			authorType                                            string
 			replySetting                                          string
@@ -685,6 +724,7 @@ func (h *Handler) GetPetPosts(c *gin.Context) {
 			&id, &userIDInt, &content, &createdAt, &updatedAt,
 			&likesCount, &commentsCount, &sharesCount,
 			&firstName, &lastName, &avatarURL, &isVerified,
+			&orgName, &orgLogo, &orgVerified,
 			&mediaJSON, &tagsJSON, &attachmentsJSON,
 			&authorType, &petsJSON, &replySetting, &verifyReplies, &hasPoll,
 		)
@@ -717,18 +757,29 @@ func (h *Handler) GetPetPosts(c *gin.Context) {
 			"verify_replies": verifyReplies,
 			"can_edit":       canEdit,
 			"has_poll":       hasPoll,
-			"user": map[string]interface{}{
-				"id":          userIDInt,
-				"first_name":  firstName,
-				"last_name":   lastName,
-				"avatar_url":  avatarURL.String,
-				"is_verified": isVerified,
-			},
-			"media":       media,
-			"tags":        tags,
-			"attachments": attachments,
-			"pets":        pets,
 		}
+
+		if authorType == "organization" {
+			post["organization"] = map[string]interface{}{
+				"id":       userIDInt,
+				"name":     orgName.String,
+				"logo":     orgLogo.String,
+				"verified": orgVerified.Bool,
+			}
+		} else {
+			post["user"] = map[string]interface{}{
+				"id":          userIDInt,
+				"first_name":  firstName.String,
+				"last_name":   lastName.String,
+				"avatar_url":  avatarURL.String,
+				"is_verified": isVerified.Bool,
+			}
+		}
+
+		post["media"] = media
+		post["tags"] = tags
+		post["attachments"] = attachments
+		post["pets"] = pets
 
 		posts = append(posts, post)
 	}
@@ -956,8 +1007,12 @@ func (h *Handler) GetLikers(c *gin.Context) {
 
 // CreatePost - создать новый пост
 func (h *Handler) CreatePost(c *gin.Context) {
-	// TODO: получить user_id из токена авторизации
-	userID := 1
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
 
 	var req struct {
 		Content        string                   `json:"content"`
@@ -1091,8 +1146,12 @@ func (h *Handler) CreatePost(c *gin.Context) {
 // UpdatePost - обновить пост
 func (h *Handler) UpdatePost(c *gin.Context) {
 	postID := c.Param("id")
-	// TODO: получить user_id из токена и проверить права
-	userID := 1
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
 
 	var req struct {
 		Content        *string                   `json:"content"`
@@ -1226,8 +1285,12 @@ func (h *Handler) UpdatePost(c *gin.Context) {
 // DeletePost - удалить пост (мягкое удаление)
 func (h *Handler) DeletePost(c *gin.Context) {
 	postID := c.Param("id")
-	// TODO: получить user_id из токена и проверить права
-	userID := 1
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
 
 	// Проверяем что пост принадлежит пользователю
 	var authorID int

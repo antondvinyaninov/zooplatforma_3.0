@@ -46,15 +46,27 @@ export default function PostCard({ post }: { post: Post }) {
     post.post_type && post.post_type !== 'post'
       ? postTypeBadges[post.post_type as Exclude<PostType, 'post'>]
       : null;
+
+  const isOrg = post.author_type === 'organization' && post.organization;
+  const avatarUrl = isOrg 
+    ? post.organization?.logo 
+    : (post.user?.avatar_url || post.user?.avatar);
+  const authorName = isOrg 
+    ? post.organization?.name 
+    : getFullName(post.user?.first_name || post.user?.name || 'Пользователь', post.user?.last_name);
+  const profileLink = isOrg
+    ? `/club${post.author_id}`
+    : (post.author_id ? `/id${post.author_id}` : '#');
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
       {/* Header */}
       <div className="p-4 flex items-center gap-3">
         <div className="w-11 h-11 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
-          {(post.user?.avatar_url || post.user?.avatar) ? (
+          {avatarUrl ? (
             <Image
-              src={getMediaUrl(post.user?.avatar_url || post.user?.avatar) || ''}
-              alt={post.user?.first_name || post.user?.name || 'User'}
+              src={getMediaUrl(avatarUrl) || ''}
+              alt={authorName || 'User'}
               width={44}
               height={44}
               className="object-cover"
@@ -65,9 +77,9 @@ export default function PostCard({ post }: { post: Post }) {
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <Link href={post.author_id ? `/id${post.author_id}` : '#'}>
+            <Link href={profileLink}>
               <h4 className="text-sm font-semibold text-gray-900 hover:text-blue-600 cursor-pointer transition-colors">
-                {getFullName(post.user?.first_name || post.user?.name || 'Пользователь', post.user?.last_name)}
+                {authorName}
               </h4>
             </Link>
             {badge && (
