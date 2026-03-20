@@ -3,18 +3,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../../contexts/AuthContext';
+import { useToast } from '../../../../contexts/ToastContext';
 import { authApi } from '../../../../lib/api';
-import toast from 'react-hot-toast';
 
 export default function CompleteRegistrationPage() {
   const { user, refreshUser } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Если у пользователя уже нормальный email, отправляем его в feed
-  if (user && !user.email.includes('@vk.placeholder')) {
+  if (user && user.email && !user.email.includes('@vk.placeholder')) {
     router.push('/main/feed');
     return null;
   }
@@ -33,7 +34,7 @@ export default function CompleteRegistrationPage() {
       const response = await authApi.updateEmail(email);
       
       if (response.success) {
-        toast.success('Email успешно сохранен!');
+        showToast('success', 'Email успешно сохранен!');
         await refreshUser(); // Обновляем данные профиля (чтобы email обновился в контексте)
         router.push('/main/feed'); // Уводим на главную шторку спадет сама
       } else {
