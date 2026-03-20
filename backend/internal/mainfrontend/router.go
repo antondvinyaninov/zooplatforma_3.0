@@ -62,6 +62,8 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		authGroup.POST("/change-password", authHandler.ChangePassword)
 		authGroup.POST("/admin/users/:id/temp-password", authHandler.AdminGenerateTempPassword)
 		authGroup.POST("/update-email", authHandler.UpdateEmail)
+		authGroup.POST("/merge-request", authHandler.MergeRequest)
+		authGroup.POST("/merge-confirm", authHandler.MergeConfirm)
 		authGroup.POST("/impersonate/:id", authHandler.ImpersonateUser)
 		authGroup.GET("/me", authHandler.Me)
 	}

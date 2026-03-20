@@ -3,6 +3,7 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   status?: number;
+  merge_required?: boolean;
 }
 
 export interface User {

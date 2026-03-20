@@ -51,6 +51,7 @@ export class ApiClient {
           success: false,
           error: result.error || result.message || `API Error: ${response.statusText}`,
           status: response.status,
+          merge_required: result.merge_required,
         };
       }
 

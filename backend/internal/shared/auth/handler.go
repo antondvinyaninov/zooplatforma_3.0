@@ -22,6 +22,17 @@ type Handler struct {
 }
 
 func NewHandler(db *sql.DB, cfg *config.Config) *Handler {
+	// Создаем таблицу для кодов подтверждения email, если её нет
+	db.Exec(`
+		CREATE TABLE IF NOT EXISTS email_verification_codes (
+			id SERIAL PRIMARY KEY,
+			email VARCHAR(255) NOT NULL,
+			code VARCHAR(10) NOT NULL,
+			expires_at TIMESTAMP NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_email_verification_codes_email ON email_verification_codes(email);
+	`)
+
 	return &Handler{
 		db:       db,
 		mailer:   NewMailer(cfg),
@@ -397,7 +408,11 @@ func (h *Handler) UpdateEmail(c *gin.Context) {
 	var existingID int
 	err := h.db.QueryRow(`SELECT id FROM users WHERE email = $1`, req.Email).Scan(&existingID)
 	if err == nil && existingID != userID.(int) {
-		c.JSON(http.StatusConflict, gin.H{"success": false, "error": "Этот email уже зарегистрирован на другой аккаунт"})
+		c.JSON(http.StatusConflict, gin.H{
+			"success": false, 
+			"error": "Этот email уже зарегистрирован на другой аккаунт", 
+			"merge_required": true,
+		})
 		return
 	} else if err != nil && err != sql.ErrNoRows {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Ошибка базы данных при проверке email"})

@@ -14,5 +14,11 @@ export const authApi = {
   me: () => apiClient.get<User>('/api/auth/me'),
 
   updateEmail: (email: string) => 
-    apiClient.post<{ message: string, token: string }>('/api/auth/update-email', { email }),
+    apiClient.post<{ message: string, token: string; merge_required?: boolean }>('/api/auth/update-email', { email }),
+
+  mergeRequest: (email: string) =>
+    apiClient.post<{ message: string }>('/api/auth/merge-request', { email }),
+
+  mergeConfirm: (email: string, code: string) =>
+    apiClient.post<{ message: string, token: string }>('/api/auth/merge-confirm', { email, code }),
 };

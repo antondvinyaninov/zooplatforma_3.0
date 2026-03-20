@@ -53,6 +53,39 @@ func (m *Mailer) SendPasswordResetEmail(toEmail, firstName, token string) error 
 	return m.sendHTMLMail(toEmail, subject, htmlBody)
 }
 
+// SendVerificationCodeEmail отправляет письмо с 6-значным кодом подтверждения
+func (m *Mailer) SendVerificationCodeEmail(toEmail, firstName, code string) error {
+	if m.config.SMTP.Host == "" || m.config.SMTP.User == "" {
+		return fmt.Errorf("SMTP configuration is missing, emails are disabled")
+	}
+
+	subject := "Код подтверждения - ЗооПлатформа"
+	
+	htmlBody := `
+	<!DOCTYPE html>
+	<html>
+	<body style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 20px;">
+		<div style="max-w-md mx-auto bg-white p-8 rounded-xl shadow-sm text-center">
+			<h2 style="color: #111827; margin-bottom: 20px;">Здравствуйте, ` + firstName + `!</h2>
+			<p style="color: #4b5563; font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
+				Мы получили запрос на объединение вашего профиля с другим аккаунтом на ЗооПлатформе.<br>
+				Ваш код подтверждения:
+			</p>
+			<div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1B76FF; margin: 20px 0;">
+				` + code + `
+			</div>
+			<p style="color: #9ca3af; font-size: 14px; margin-top: 30px;">
+				Если это были не вы, просто проигнорируйте это письмо.<br>
+				Код действителен в течение 15 минут.
+			</p>
+		</div>
+	</body>
+	</html>
+	`
+
+	return m.sendHTMLMail(toEmail, subject, htmlBody)
+}
+
 func (m *Mailer) sendHTMLMail(to, subject, htmlBody string) error {
 	// Для Яндекса SSL/TLS подключение на порт 465
 	tlsconfig := &tls.Config{
