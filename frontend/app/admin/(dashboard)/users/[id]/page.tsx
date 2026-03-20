@@ -67,8 +67,8 @@ export default function UserDetailPage() {
       });
 
       if (response.ok) {
-        // Redirect to main feed or frontpage
-        window.location.href = '/feed';
+        // Redirect to main frontpage
+        window.location.href = '/';
       } else {
         const error = await response.json();
         alert(`Ошибка входа: ${error.error || 'Неизвестная ошибка'}`);
