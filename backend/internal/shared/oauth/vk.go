@@ -11,17 +11,20 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zooplatforma/backend/internal/shared/auth"
 	"github.com/zooplatforma/backend/internal/shared/config"
+	"github.com/zooplatforma/backend/internal/shared/telegram"
 )
 
 type VKHandler struct {
-	db     *sql.DB
-	config *config.Config
+	db       *sql.DB
+	config   *config.Config
+	notifier *telegram.Notifier
 }
 
 func NewVKHandler(db *sql.DB, cfg *config.Config) *VKHandler {
 	return &VKHandler{
-		db:     db,
-		config: cfg,
+		db:       db,
+		config:   cfg,
+		notifier: telegram.NewNotifier(cfg.Telegram.Token, cfg.Telegram.ChatID),
 	}
 }
 
@@ -160,6 +163,9 @@ func (h *VKHandler) Callback(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create user: " + err.Error()})
 			return
 		}
+
+		// Отправляем уведомление в Telegram (для новых пользователей)
+		h.notifier.NotifyNewUser(vkUser.FirstName, email, userID)
 	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database error"})
 		return
@@ -272,6 +278,9 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create user: " + err.Error()})
 				return
 			}
+			
+			// Отправляем уведомление в Telegram (для новых пользователей)
+			h.notifier.NotifyNewUser(vkUser.FirstName, email, userID)
 		} else if errEmail != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database error while verifying email"})
 			return
