@@ -20,6 +20,8 @@ export interface PetDetail {
   contact_name?: string;
   contact_phone?: string;
   organization_id?: number;
+  approximate_years?: number;
+  approximate_months?: number;
   created_at: string;
 }
 

@@ -42,9 +42,10 @@ export default function VKIDButton({
     initializedRef.current = true;
 
     const initWidget = () => {
-      if (isCancelled || !window.VKIDSDK || !containerRef.current) return;
-      const VKID = window.VKIDSDK;
-      containerRef.current.innerHTML = '';
+      try {
+        if (isCancelled || !window.VKIDSDK || !containerRef.current) return;
+        const VKID = window.VKIDSDK;
+        containerRef.current.innerHTML = '';
 
         // VK OAuth requires strictly matched redirect URLs, often with trailing slashes.
         // We use window.location.origin + '/' to produce 'https://zooplatforma.ru/'
@@ -185,6 +186,9 @@ export default function VKIDButton({
               if (onErrorRef.current) onErrorRef.current(error);
             }
           });
+      } catch (err) {
+        console.warn('VKID initialization caught an error (likely due to localhost CORS or adblock):', err);
+      }
     };
 
     if (window.VKIDSDK) {

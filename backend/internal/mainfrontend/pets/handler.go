@@ -83,9 +83,11 @@ func (h *Handler) GetCatalog(c *gin.Context) {
 		SELECT 
 			p.id, p.name, p.species, p.breed, p.gender, p.birth_date,
 			p.color, p.size, p.photo_url, p.user_id, p.description,
-			u.name as owner_name, u.location, u.phone, p.location_type
+			u.name as owner_name, u.last_name as owner_last_name, u.location, u.phone, p.location_type, u.avatar as owner_avatar,
+			b.name as breed_name
 		FROM pets p
 		LEFT JOIN users u ON p.user_id = u.id
+		LEFT JOIN breeds b ON p.breed_id = b.id
 		WHERE p.relationship = 'curator'
 		ORDER BY p.created_at DESC
 	`
@@ -105,13 +107,13 @@ func (h *Handler) GetCatalog(c *gin.Context) {
 			name, species                                     string
 			breed, gender, color, size, photoURL, description sql.NullString
 			birthDate                                         sql.NullString
-			ownerName, location, phone, locationType          sql.NullString
+			ownerName, ownerLastName, location, phone, locationType, ownerAvatar, breedName sql.NullString
 		)
 
 		err := rows.Scan(
 			&id, &name, &species, &breed, &gender, &birthDate,
 			&color, &size, &photoURL, &userID, &description,
-			&ownerName, &location, &phone, &locationType,
+			&ownerName, &ownerLastName, &location, &phone, &locationType, &ownerAvatar, &breedName,
 		)
 		if err != nil {
 			continue
@@ -130,11 +132,21 @@ func (h *Handler) GetCatalog(c *gin.Context) {
 			}
 		}
 
+		ownerFullName := ownerName.String
+		if ownerLastName.Valid && ownerLastName.String != "" {
+			ownerFullName = ownerFullName + " " + ownerLastName.String
+		}
+
+		resolvedBreed := breed.String
+		if breedName.Valid && breedName.String != "" {
+			resolvedBreed = breedName.String
+		}
+
 		pet := map[string]interface{}{
 			"id":          id,
 			"name":        name,
 			"species":     species,
-			"breed":       breed.String,
+			"breed":       resolvedBreed,
 			"gender":      gender.String,
 			"birth_date":  birthDate.String,
 			"color":       color.String,
@@ -142,7 +154,8 @@ func (h *Handler) GetCatalog(c *gin.Context) {
 			"photo":       photoURL.String,
 			"user_id":     userID,
 			"description": description.String,
-			"owner_name":  ownerName.String,
+			"owner_name":  ownerFullName,
+			"owner_avatar": ownerAvatar.String,
 			"city":        location.String,
 			"phone":       phone.String,
 			"status":      status,
