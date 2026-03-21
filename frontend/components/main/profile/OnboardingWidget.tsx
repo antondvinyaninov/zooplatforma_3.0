@@ -48,6 +48,7 @@ export default function OnboardingWidget() {
   const [improvementsText, setImprovementsText] = useState('');
   const [isReviewSubmitting, setIsReviewSubmitting] = useState(false);
   const [hasReviewedLocal, setHasReviewedLocal] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const router = useRouter();
@@ -59,6 +60,7 @@ export default function OnboardingWidget() {
       setRoleVolunteer(localStorage.getItem('onboarding_role_volunteer') === 'true');
       setHasShared(localStorage.getItem('onboarding_has_shared') === 'true');
       setHasReviewedLocal(localStorage.getItem('onboarding_has_reviewed') === 'true');
+      setIsDismissed(localStorage.getItem('onboarding_dismissed') === 'true');
     }
   }, []);
 
@@ -103,11 +105,12 @@ export default function OnboardingWidget() {
   const completedCount = resolvedTasks.filter(t => t.is_completed).length;
   const currentPercent = resolvedTasks.length > 0 ? Math.round((completedCount / resolvedTasks.length) * 100) : 0;
   
+  const reviewSubmitted = progress.has_reviewed || hasReviewedLocal;
   // Флаг полного завершения: и задания 100%, и отзыв отправлен
-  const isFullyCompleted = currentPercent === 100 && (progress.has_reviewed || hasReviewedLocal);
+  const isFullyCompleted = currentPercent === 100 && reviewSubmitted;
 
   // Скрываем весь виджет, если всё сделано, и нет ролей (и отзыв отправлен)
-  if (isFullyCompleted && !roleOwner && !roleVolunteer) return null;
+  if (isFullyCompleted && !roleOwner && !roleVolunteer && isDismissed) return null;
 
   const handleTaskClick = (taskId: string) => {
     switch (taskId) {
@@ -193,8 +196,24 @@ export default function OnboardingWidget() {
     }));
   };
 
+  if (isDismissed) return null;
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6 overflow-hidden relative">
+      {/* Крестик закрытия виджета - показывается только если отзыв отправлен */}
+      {currentPercent === 100 && reviewSubmitted && (
+        <button 
+          onClick={() => {
+            setIsDismissed(true);
+            localStorage.setItem('onboarding_dismissed', 'true');
+          }}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors p-1"
+          aria-label="Закрыть виджет"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      )}
+
       <div className="mb-6">
         <div className="flex items-center gap-4 mb-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center flex-shrink-0 shadow-sm border border-blue-100">
@@ -207,11 +226,29 @@ export default function OnboardingWidget() {
         <p className="text-sm text-gray-600 leading-relaxed block w-full px-1">
           {currentPercent < 100 
             ? "Мы очень рады видеть вас в нашем пушистом сообществе! ✨ Выполнение пары коротких стартовых шагов поможет вам быстро освоиться, настроить профиль под себя и сделать первые полезные действия на портале. Это позволит вам с легкостью понять, как здесь всё работает!"
-            : hasReviewedLocal || progress.has_reviewed
+            : reviewSubmitted
               ? "Спасибо, что заполнили профиль и оставили отзыв! Вы готовы к полному погружению на ЗооПлатформе."
               : "Поздравляем с завершением стартовых заданий! 🎉 Мы постоянно развиваемся и хотим стать лучше для вас. Будем очень признательны за ваш честный отзыв:"
           }
         </p>
+
+        {/* Ссылка на чат ВК (показываем только на 100% после отзыва) */}
+        {currentPercent === 100 && reviewSubmitted && (
+          <div className="mt-5 bg-blue-50/50 rounded-xl p-4 border border-blue-100/50">
+            <p className="text-sm text-gray-700 mb-3 font-medium">
+              Если вы хотите принять участие в обсуждениях, ждем вас в чате:
+            </p>
+            <a 
+              href="https://vk.cc/cVEwgg" 
+              target="_blank" 
+              rel="noreferrer"
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl transition-colors shadow-sm"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Присоединиться к чату
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Прогресс-бар (показываем только если не 100%) */}
