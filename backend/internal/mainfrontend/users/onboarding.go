@@ -324,7 +324,7 @@ func (h *Handler) GetReviewsAdmin(c *gin.Context) {
 	// Извлекаем все отзывы
 	rows, err := h.db.Query(`
 		SELECT 
-			r.id, r.user_id, COALESCE(u.first_name, ''), COALESCE(u.last_name, ''), COALESCE(u.avatar, ''),
+			r.id, r.user_id, COALESCE(u.name, ''), COALESCE(u.last_name, ''), COALESCE(u.avatar, ''),
 			r.rating, COALESCE(r.liked_text, ''), COALESCE(r.disliked_text, ''), COALESCE(r.improvements_text, ''), 
 			r.created_at
 		FROM platform_reviews r
@@ -332,7 +332,9 @@ func (h *Handler) GetReviewsAdmin(c *gin.Context) {
 		ORDER BY r.created_at DESC
 	`)
 	
-	if err == nil {
+	if err != nil {
+		fmt.Printf("[ERROR] GetReviewsAdmin query failed: %v\n", err)
+	} else {
 		defer rows.Close()
 		for rows.Next() {
 			var rResp AdminReviewResponse
@@ -343,6 +345,8 @@ func (h *Handler) GetReviewsAdmin(c *gin.Context) {
 					rResp.CreatedAt = cTime.Time.Format("2006-01-02T15:04:05Z07:00")
 				}
 				stats.Reviews = append(stats.Reviews, rResp)
+			} else {
+				fmt.Printf("[DEBUG] Failed to scan review %v: %v\n", rResp.ID, err)
 			}
 		}
 	}
