@@ -82,6 +82,15 @@ export default function CompleteRegistrationPage() {
     try {
       const response = await authApi.mergeConfirm(email, code);
       if (response.success) {
+        // Чрезвычайно важно! Сервер присылает НОВЫЙ токен от объединенного аккаунта. 
+        // Нужно обновить его в localStorage и cookie, чтобы refreshUser пошел с новым токеном.
+        const token = (response.data as any)?.token || (response as any).token;
+        if (token) {
+          localStorage.setItem('auth_token', token);
+          const maxAge = 30 * 24 * 60 * 60; // 30 дней
+          document.cookie = `auth_token=${token}; path=/; max-age=${maxAge}; SameSite=Strict${window.location.protocol === 'https:' ? '; Secure' : ''}`;
+        }
+
         showToast('success', 'Профили успешно объединены!');
         await refreshUser();
         router.push('/main/feed');
