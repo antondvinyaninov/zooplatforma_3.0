@@ -17,7 +17,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 	moderationHandler := moderation.NewHandler(db)
 	monitoringHandler := monitoring.NewHandler(db)
 	activityHandler := activity.NewHandler(db)
-	supportHandler := support.NewHandler(db)
+	supportHandler := support.NewHandler(db, cfg)
 
 	// Auth routes
 	authGroup := r.Group("/auth")

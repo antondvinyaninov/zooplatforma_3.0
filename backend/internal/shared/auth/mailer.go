@@ -86,6 +86,42 @@ func (m *Mailer) SendVerificationCodeEmail(toEmail, firstName, code string) erro
 	return m.sendHTMLMail(toEmail, subject, htmlBody)
 }
 
+// SendSupportReplyEmail отправляет письмо с ответом от службы поддержки
+func (m *Mailer) SendSupportReplyEmail(toEmail, userName, topic, replyText string, ticketID int) error {
+	if m.config.SMTP.Host == "" || m.config.SMTP.User == "" {
+		return fmt.Errorf("SMTP configuration is missing, emails are disabled")
+	}
+
+	subject := fmt.Sprintf("Ответ на обращение #%d - ЗооПлатформа", ticketID)
+	
+	htmlBody := `
+	<!DOCTYPE html>
+	<html>
+	<body style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 20px;">
+		<div style="max-w-md mx-auto bg-white p-8 rounded-xl shadow-sm text-left">
+			<h2 style="color: #111827; margin-bottom: 20px;">Здравствуйте, ` + userName + `!</h2>
+			<p style="color: #4b5563; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
+				Служба поддержки ЗооПлатформы подготовила ответ на ваше обращение по теме <b>«` + topic + `»</b>:
+			</p>
+			
+			<div style="background-color: #f8fafc; border-left: 4px solid #1B76FF; padding: 16px; margin-bottom: 30px; border-radius: 4px; color: #1e293b; font-size: 15px; white-space: pre-wrap;">` + replyText + `</div>
+			
+			<p style="color: #64748b; font-size: 15px;">
+				Спасибо, что помогаете улучшать нашу платформу!<br>
+				Команда ЗооПлатформы
+			</p>
+			<hr style="border-top: 1px solid #e2e8f0; margin: 30px 0;">
+			<p style="color: #9ca3af; font-size: 12px; text-align: center;">
+				Пожалуйста, не отвечайте на это письмо напрямую.
+			</p>
+		</div>
+	</body>
+	</html>
+	`
+
+	return m.sendHTMLMail(toEmail, subject, htmlBody)
+}
+
 func (m *Mailer) sendHTMLMail(to, subject, htmlBody string) error {
 	// Для Яндекса SSL/TLS подключение на порт 465
 	tlsconfig := &tls.Config{

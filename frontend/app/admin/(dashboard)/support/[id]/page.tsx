@@ -11,6 +11,7 @@ interface SupportMessageComment {
   message_id: number;
   comment: string;
   admin_email: string;
+  is_public: boolean;
   created_at: string;
 }
 
@@ -53,6 +54,7 @@ export default function SupportMessageDetailsPage({ params }: { params: Promise<
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [isPublicReply, setIsPublicReply] = useState(false);
   
   // Hardcoded current admin email for now, ideally comes from auth context
   const currentAdminEmail = 'anton@dvinyaninov.ru';
@@ -111,7 +113,8 @@ export default function SupportMessageDetailsPage({ params }: { params: Promise<
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           comment: commentText.trim(),
-          admin_email: currentAdminEmail
+          admin_email: currentAdminEmail,
+          is_public: isPublicReply
         }),
       });
       
@@ -250,17 +253,28 @@ export default function SupportMessageDetailsPage({ params }: { params: Promise<
             {/* Admin Comments */}
             {ticket.comments?.map((comment) => {
               const isAdminMe = comment.admin_email === currentAdminEmail;
+              const isPublic = comment.is_public;
+              
               return (
                 <div key={comment.id} className={`flex gap-4 ${isAdminMe ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-bold text-white shadow-sm ${isAdminMe ? 'bg-blue-600' : 'bg-indigo-500'}`}>
-                    {comment.admin_email.charAt(0).toUpperCase()}
+                  <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-bold text-white shadow-sm ${isPublic ? 'bg-amber-500' : isAdminMe ? 'bg-blue-600' : 'bg-indigo-500'}`}>
+                    {isPublic ? (
+                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                       </svg>
+                    ) : comment.admin_email.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 max-w-[85%]">
-                    <div className={`p-4 rounded-2xl shadow-sm relative ${isAdminMe ? 'bg-[#E3F2FD] border border-blue-200 rounded-br-none text-right' : 'bg-white border border-gray-200 rounded-bl-none'}`}>
+                    <div className={`p-4 rounded-2xl shadow-sm relative ${isPublic ? 'bg-amber-50 border border-amber-200' + (isAdminMe ? ' rounded-br-none text-right' : ' rounded-bl-none') : isAdminMe ? 'bg-[#E3F2FD] border border-blue-200 rounded-br-none text-right' : 'bg-white border border-gray-200 rounded-bl-none'}`}>
                       <div className={`flex justify-between items-baseline mb-2 ${isAdminMe ? 'flex-row-reverse' : ''}`}>
-                        <span className="font-bold text-sm text-gray-900">
+                        <span className="font-bold text-sm text-gray-900 flex-1">
                           {isAdminMe ? 'Вы' : comment.admin_email.split('@')[0]}
                         </span>
+                        {isPublic && (
+                          <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full ml-2">
+                             Публичный ответ
+                          </span>
+                        )}
                       </div>
                       <p className={`text-gray-800 text-[14px] whitespace-pre-wrap ${isAdminMe ? 'text-right' : ''}`}>
                         {comment.comment}
@@ -287,12 +301,41 @@ export default function SupportMessageDetailsPage({ params }: { params: Promise<
 
           {/* Comment Form */}
           <div className="p-4 bg-white border-t border-gray-200 rounded-b-2xl shrink-0">
+            <div className="flex gap-4 mb-3 border-b border-gray-100 pb-3">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input 
+                  type="radio" 
+                  name="reply_type" 
+                  checked={!isPublicReply} 
+                  onChange={() => setIsPublicReply(false)} 
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500" 
+                />
+                <span className={`text-sm font-medium ${!isPublicReply ? 'text-gray-900' : 'text-gray-500 group-hover:text-gray-700'}`}>Внутренняя заметка</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input 
+                  type="radio" 
+                  name="reply_type" 
+                  checked={isPublicReply} 
+                  onChange={() => setIsPublicReply(true)} 
+                  className="w-4 h-4 text-amber-500 focus:ring-amber-500" 
+                />
+                <span className={`text-sm font-medium flex items-center gap-1.5 ${isPublicReply ? 'text-amber-700' : 'text-gray-500 group-hover:text-gray-700'}`}>
+                  Ответить пользователю (Email)
+                </span>
+              </label>
+            </div>
+          
             <form onSubmit={handleAddComment} className="relative">
               <textarea
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Добавить комментарий или лог работы..."
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 pr-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none h-[68px]"
+                placeholder={isPublicReply ? "Официальный ответ (будет отправлен на почту)..." : "Добавить комментарий или лог работы..."}
+                className={`w-full border rounded-xl py-3 px-4 pr-[120px] focus:outline-none resize-none h-[68px] ${
+                  isPublicReply 
+                    ? "bg-amber-50 border-amber-200 focus:ring-2 focus:ring-amber-500/50" 
+                    : "bg-gray-50 border-gray-200 focus:ring-2 focus:ring-blue-500/50"
+                }`}
                 disabled={submittingComment}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -304,14 +347,16 @@ export default function SupportMessageDetailsPage({ params }: { params: Promise<
               <button
                 type="submit"
                 disabled={!commentText.trim() || submittingComment}
-                className="absolute right-2 top-2 bottom-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center gap-2"
+                className={`absolute right-2 top-2 bottom-2 px-4 text-white font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center gap-2 ${
+                  isPublicReply ? "bg-amber-500 hover:bg-amber-600" : "bg-blue-600 hover:bg-blue-700"
+                }`}
               >
-                {submittingComment ? '...' : 'Отправить'}
+                {submittingComment ? '...' : (isPublicReply ? 'Отправить ответ' : 'Сохранить')}
               </button>
             </form>
             <div className="text-xs text-gray-400 mt-2 text-center flex items-center justify-center gap-1">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              Комментарии видны только администраторам (Enter для быстрой отправки)
+              {isPublicReply ? "Ответ будет отправлен пользователю по электронной почте" : "Комментарии видны только администраторам (Enter для быстрой отправки)"}
             </div>
           </div>
         </div>

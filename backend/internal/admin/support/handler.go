@@ -2,18 +2,25 @@ package support
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zooplatforma/backend/internal/shared/auth"
+	"github.com/zooplatforma/backend/internal/shared/config"
 )
 
 type Handler struct {
-	db *sql.DB
+	db     *sql.DB
+	mailer *auth.Mailer
 }
 
-func NewHandler(db *sql.DB) *Handler {
-	return &Handler{db: db}
+func NewHandler(db *sql.DB, cfg *config.Config) *Handler {
+	return &Handler{
+		db:     db,
+		mailer: auth.NewMailer(cfg),
+	}
 }
 
 type SupportMessage struct {
@@ -35,6 +42,7 @@ type SupportMessageComment struct {
 	MessageID  int       `json:"message_id"`
 	Comment    string    `json:"comment"`
 	AdminEmail string    `json:"admin_email"`
+	IsPublic   bool      `json:"is_public"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
@@ -96,7 +104,7 @@ func (h *Handler) GetMessageByID(c *gin.Context) {
 
 	// Получаем комментарии к этому сообщению
 	rows, err := h.db.Query(`
-		SELECT id, message_id, comment, admin_email, created_at
+		SELECT id, message_id, comment, admin_email, is_public, created_at
 		FROM support_message_comments
 		WHERE message_id = $1
 		ORDER BY created_at ASC
@@ -109,7 +117,7 @@ func (h *Handler) GetMessageByID(c *gin.Context) {
 			var comment SupportMessageComment
 			if err := rows.Scan(
 				&comment.ID, &comment.MessageID, &comment.Comment, 
-				&comment.AdminEmail, &comment.CreatedAt,
+				&comment.AdminEmail, &comment.IsPublic, &comment.CreatedAt,
 			); err == nil {
 				msg.Comments = append(msg.Comments, comment)
 			}
@@ -208,6 +216,7 @@ func (h *Handler) AddMessageComment(c *gin.Context) {
 	var req struct {
 		Comment    string `json:"comment"`
 		AdminEmail string `json:"admin_email"`
+		IsPublic   bool   `json:"is_public"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -222,25 +231,82 @@ func (h *Handler) AddMessageComment(c *gin.Context) {
 
 	var commentID int
 	err := h.db.QueryRow(`
-		INSERT INTO support_message_comments (message_id, comment, admin_email, created_at)
-		VALUES ($1, $2, $3, NOW())
+		INSERT INTO support_message_comments (message_id, comment, admin_email, is_public, created_at)
+		VALUES ($1, $2, $3, $4, NOW())
 		RETURNING id
-	`, id, req.Comment, req.AdminEmail).Scan(&commentID)
+	`, id, req.Comment, req.AdminEmail, req.IsPublic).Scan(&commentID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to app comment"})
 		return
 	}
 
+	// Если комментарий публичный, отправляем email пользователю
+	if req.IsPublic {
+		var userEmail, userName, topic string
+		var ticketID int
+		err := h.db.QueryRow(`
+			SELECT id, email, name, topic 
+			FROM support_messages 
+			WHERE id = $1
+		`, id).Scan(&ticketID, &userEmail, &userName, &topic)
+		
+		if err == nil {
+			// Отправляем письмо синхронно, чтобы админ увидел ошибку, если почта не работает
+			errMail := h.mailer.SendSupportReplyEmail(userEmail, userName, topic, req.Comment, ticketID)
+			if errMail != nil {
+				// Если письмо не ушло, удаляем комментарий, чтобы не было путаницы
+				h.db.Exec("DELETE FROM support_message_comments WHERE id = $1", commentID)
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Ошибка при отправке email пользователю: " + errMail.Error()})
+				return
+			}
+
+			// Также попробуем отправить во внутренний мессенджер
+			go func() {
+				var adminID, targetUserID int
+				errAdmin := h.db.QueryRow("SELECT id FROM users WHERE email = $1", req.AdminEmail).Scan(&adminID)
+				errUser := h.db.QueryRow("SELECT id FROM users WHERE email = $1", userEmail).Scan(&targetUserID)
+
+				if errAdmin == nil && errUser == nil && adminID != targetUserID {
+					// Ищем чат
+					var chatID int
+					errChat := h.db.QueryRow(`
+						SELECT id FROM chats 
+						WHERE (user1_id = $1 AND user2_id = $2) 
+						   OR (user1_id = $2 AND user2_id = $1)
+						LIMIT 1
+					`, adminID, targetUserID).Scan(&chatID)
+
+					if errChat == sql.ErrNoRows {
+						h.db.QueryRow(`
+							INSERT INTO chats (user1_id, user2_id, created_at)
+							VALUES ($1, $2, NOW()) RETURNING id
+						`, adminID, targetUserID).Scan(&chatID)
+					}
+
+					if chatID > 0 {
+						chatMsg := fmt.Sprintf("Официальный ответ поддержки на обращение #%d («%s»):\n\n%s", ticketID, topic, req.Comment)
+						h.db.Exec(`
+							INSERT INTO messages (chat_id, sender_id, receiver_id, content, created_at)
+							VALUES ($1, $2, $3, $4, NOW())
+						`, chatID, adminID, targetUserID, chatMsg)
+
+						h.db.Exec("UPDATE chats SET last_message_at = NOW() WHERE id = $1", chatID)
+					}
+				}
+			}()
+		}
+	}
+
 	// Для удобства возвращаем созданный объект обратно на фронт, если нужно
 	var newComment SupportMessageComment
 	_ = h.db.QueryRow(`
-		SELECT id, message_id, comment, admin_email, created_at 
+		SELECT id, message_id, comment, admin_email, is_public, created_at 
 		FROM support_message_comments 
 		WHERE id = $1
 	`, commentID).Scan(
 		&newComment.ID, &newComment.MessageID, &newComment.Comment, 
-		&newComment.AdminEmail, &newComment.CreatedAt,
+		&newComment.AdminEmail, &newComment.IsPublic, &newComment.CreatedAt,
 	)
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Comment added successfully", "data": newComment})
