@@ -64,15 +64,15 @@ func (h *Handler) GetOnboardingProgress(c *gin.Context) {
 	hasLastName := err == nil && lastName.Valid && lastName.String != ""
 	hasSocial := err == nil && ((vkID.Valid && vkID.String != "") || (okID.Valid && okID.String != "") || (mailruID.Valid && mailruID.String != ""))
 
-	// 2. Проверка наличия питомца
+	// 2. Проверка наличия питомца (свои)
 	var petsCount int
-	err = h.db.QueryRow(`SELECT count(*) FROM pets WHERE user_id = $1`, userID).Scan(&petsCount)
+	err = h.db.QueryRow(`SELECT count(*) FROM pets WHERE user_id = $1 AND relationship = 'owner'`, userID).Scan(&petsCount)
 	if err != nil {
 		petsCount = 0
 	}
 	var ownerPets []MiniPet
 	if petsCount > 0 {
-		rowsOwner, _ := h.db.Query(`SELECT id, name, COALESCE(photo_url, ''), species FROM pets WHERE user_id = $1 LIMIT 5`, userID)
+		rowsOwner, _ := h.db.Query(`SELECT id, name, COALESCE(photo_url, ''), species FROM pets WHERE user_id = $1 AND relationship = 'owner' LIMIT 5`, userID)
 		for rowsOwner.Next() {
 			var p MiniPet
 			if err := rowsOwner.Scan(&p.ID, &p.Name, &p.PhotoURL, &p.Species); err == nil {
@@ -82,15 +82,15 @@ func (h *Handler) GetOnboardingProgress(c *gin.Context) {
 		rowsOwner.Close()
 	}
 
-	// 2.1 Проверка кураторства
+	// 2.1 Проверка кураторства (подопечные)
 	var curatedPetsCount int
-	err = h.db.QueryRow(`SELECT count(*) FROM pets WHERE curator_id = $1`, userID).Scan(&curatedPetsCount)
+	err = h.db.QueryRow(`SELECT count(*) FROM pets WHERE (user_id = $1 AND relationship = 'curator') OR curator_id = $1`, userID).Scan(&curatedPetsCount)
 	if err != nil {
 		curatedPetsCount = 0
 	}
 	var curatedPets []MiniPet
 	if curatedPetsCount > 0 {
-		rowsCurator, _ := h.db.Query(`SELECT id, name, COALESCE(photo_url, ''), species FROM pets WHERE curator_id = $1 LIMIT 5`, userID)
+		rowsCurator, _ := h.db.Query(`SELECT id, name, COALESCE(photo_url, ''), species FROM pets WHERE (user_id = $1 AND relationship = 'curator') OR curator_id = $1 LIMIT 5`, userID)
 		for rowsCurator.Next() {
 			var p MiniPet
 			if err := rowsCurator.Scan(&p.ID, &p.Name, &p.PhotoURL, &p.Species); err == nil {
