@@ -72,6 +72,8 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 	usersGroup := r.Group("/users")
 	{
 		usersGroup.GET("", usersHandler.GetAll)
+		usersGroup.GET("/onboarding", usersHandler.GetOnboardingProgress)
+		usersGroup.POST("/onboarding/review", usersHandler.SubmitOnboardingReview)
 		usersGroup.GET("/stats", usersHandler.GetStats)
 		usersGroup.GET("/:id", usersHandler.GetByID)
 		usersGroup.GET("/logs/:id", usersHandler.GetLogs)
@@ -234,6 +236,12 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 	supportGroup := r.Group("/support")
 	{
 		supportGroup.POST("", supportHandler.CreateSupportMessage)
+	}
+
+	// Admin routes
+	adminGroup := r.Group("/admin")
+	{
+		adminGroup.GET("/reviews", usersHandler.GetReviewsAdmin)
 	}
 
 	// Search route

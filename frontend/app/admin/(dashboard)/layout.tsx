@@ -12,6 +12,7 @@ import {
   ServerIcon,
   FlagIcon,
   ChatBubbleLeftRightIcon,
+  StarIcon,
 } from '@heroicons/react/24/outline';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -93,6 +94,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setActiveTab('users');
     } else if (pathname.includes('/support')) {
       setActiveTab('support');
+    } else if (pathname.includes('/reviews')) {
+      setActiveTab('reviews');
     } else {
       setActiveTab('dashboard'); // По умолчанию
     }
@@ -139,6 +142,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       label: 'Поддержка',
       icon: <ChatBubbleLeftRightIcon className="w-5 h-5" />,
     },
+    {
+      id: 'reviews',
+      label: 'Отзывы (NPS)',
+      icon: <StarIcon className="w-5 h-5" />,
+    },
   ];
 
   const handleTabChange = (tabId: string) => {
@@ -154,6 +162,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       organizations: '/admin/organizations',
       health: '/admin/monitoring',
       support: '/admin/support',
+      reviews: '/admin/reviews',
     };
 
     if (routes[tabId]) {

@@ -30,6 +30,7 @@ import FriendsListWidget from '@/components/main/profile/FriendsListWidget';
 import FollowersListWidget from '@/components/main/profile/FollowersListWidget';
 import FollowingListWidget from '@/components/main/profile/FollowingListWidget';
 import ConnectionsModal from '@/components/main/profile/ConnectionsModal';
+import OnboardingWidget from '../../../../components/main/profile/OnboardingWidget';
 
 type TabType = 'posts' | 'media';
 type ConnectionsTab = 'friends' | 'followers' | 'following';
@@ -515,6 +516,7 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
           {/* Left Column - Activity */}
           <div className="lg:col-span-2 space-y-2.5">
+            {isOwnProfile && <OnboardingWidget />}
             {/* Tabs */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
               <div className="flex border-b border-gray-200 overflow-x-auto">

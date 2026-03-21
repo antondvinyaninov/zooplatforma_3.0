@@ -104,8 +104,21 @@ func (h *Handler) GetStats(c *gin.Context) {
 		WHERE user_id = $1
 	`
 
-	// Временно используем user_id = 1 для тестирования
-	userID := 1
+	// Получаем user_id из токена авторизации
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	var userID int
+	switch v := userIDRaw.(type) {
+	case int:
+		userID = v
+	case float64:
+		userID = int(v)
+	case string:
+		userID, _ = strconv.Atoi(v)
+	}
 
 	var stats struct {
 		TotalFiles  int   `json:"total_files"`
@@ -133,8 +146,21 @@ func (h *Handler) GetStats(c *gin.Context) {
 
 // Upload - простая загрузка файла (для файлов <500MB)
 func (h *Handler) Upload(c *gin.Context) {
-	// TODO: получить user_id из токена
-	userID := 1
+	// Получаем user_id из токена
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	var userID int
+	switch v := userIDRaw.(type) {
+	case int:
+		userID = v
+	case float64:
+		userID = int(v)
+	case string:
+		userID, _ = strconv.Atoi(v)
+	}
 
 	mediaType := c.PostForm("media_type")
 	if mediaType == "" {
@@ -218,8 +244,21 @@ func (h *Handler) Upload(c *gin.Context) {
 
 // InitiateChunkedUpload - инициировать chunked загрузку
 func (h *Handler) InitiateChunkedUpload(c *gin.Context) {
-	// TODO: получить user_id из токена
-	userID := 1
+	// Получаем user_id из токена
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	var userID int
+	switch v := userIDRaw.(type) {
+	case int:
+		userID = v
+	case float64:
+		userID = int(v)
+	case string:
+		userID, _ = strconv.Atoi(v)
+	}
 
 	fileName := c.PostForm("file_name")
 	fileSize := c.PostForm("file_size")
@@ -311,8 +350,21 @@ func (h *Handler) UploadChunk(c *gin.Context) {
 
 // CompleteChunkedUpload - завершить chunked загрузку
 func (h *Handler) CompleteChunkedUpload(c *gin.Context) {
-	// TODO: получить user_id из токена
-	userID := 1
+	// Получаем user_id из токена
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	var userID int
+	switch v := userIDRaw.(type) {
+	case int:
+		userID = v
+	case float64:
+		userID = int(v)
+	case string:
+		userID, _ = strconv.Atoi(v)
+	}
 
 	uploadID := c.PostForm("upload_id")
 	fileName := c.PostForm("file_name")
