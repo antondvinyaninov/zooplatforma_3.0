@@ -170,9 +170,14 @@ func (h *Handler) GetByID(c *gin.Context) {
 			p.weight, p.health_notes,
 
 			u.name as owner_name, u.last_name, u.avatar, u.location, u.phone, u.email as owner_email,
-			p.created_at::text as created_at
+			p.created_at::text as created_at,
+			
+			p.species_id, s.name as species_name,
+			p.breed_id, b.name as breed_name
 		FROM pets p
 		LEFT JOIN users u ON p.user_id = u.id
+		LEFT JOIN species s ON p.species_id = s.id
+		LEFT JOIN breeds b ON p.breed_id = b.id
 		WHERE p.id = $1
 	`
 
@@ -191,6 +196,9 @@ func (h *Handler) GetByID(c *gin.Context) {
 
 		ownerName, ownerLastName, ownerAvatar             sql.NullString
 		location, phone, createdAt, ownerEmail            sql.NullString
+
+		speciesID, breedID                                sql.NullInt64
+		speciesNameStr, breedNameStr                      sql.NullString
 	)
 
 	err := h.db.QueryRow(query, petID).Scan(
@@ -204,6 +212,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 		&weight, &healthNotes,
 
 		&ownerName, &ownerLastName, &ownerAvatar, &location, &phone, &ownerEmail, &createdAt,
+		&speciesID, &speciesNameStr, &breedID, &breedNameStr,
 	)
 
 	if err == sql.ErrNoRows {
@@ -268,6 +277,26 @@ func (h *Handler) GetByID(c *gin.Context) {
 		"is_sterilized":      sterilizationDate.Valid && sterilizationDate.String != "",
 		"chip_number":        microchip.String,
 		"created_at":         createdAt.String,
+	}
+
+	if speciesID.Valid {
+		pet["species_id"] = speciesID.Int64
+	}
+	if speciesNameStr.Valid && speciesNameStr.String != "" {
+		pet["species_name"] = speciesNameStr.String
+	} else if species != "" {
+		// Fallback to legacy string
+		pet["species_name"] = species
+	}
+
+	if breedID.Valid {
+		pet["breed_id"] = breedID.Int64
+	}
+	if breedNameStr.Valid && breedNameStr.String != "" {
+		pet["breed_name"] = breedNameStr.String
+	} else if breed.Valid && breed.String != "" {
+		// Fallback to legacy string
+		pet["breed_name"] = breed.String
 	}
 
 	c.JSON(200, gin.H{"success": true, "data": pet})

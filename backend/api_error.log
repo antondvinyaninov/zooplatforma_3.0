@@ -177,3 +177,7 @@
 [GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
 Please check https://github.com/gin-gonic/gin/blob/master/docs/doc.md#dont-trust-all-proxies for details.
 [GIN-debug] Listening and serving HTTP on :8000
+[GIN] 2026/03/17 - 01:53:12 | 404 |  1.083µs |             ::1 | GET      "/api/sitemap/pets"
+[GIN] 2026/03/17 - 01:53:39 | 404 |    792ns |       127.0.0.1 | GET      "/api/sitemap/posts"
+[GIN] 2026/03/17 - 01:54:42 | 404 |    833ns |       127.0.0.1 | GET      "/api/sitemap/posts"
+[GIN] 2026/03/17 - 02:01:22 | 404 |      1µs |       127.0.0.1 | GET      "/api/sitemap/pets"
