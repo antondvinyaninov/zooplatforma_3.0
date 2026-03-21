@@ -121,6 +121,23 @@ func (h *Handler) GetOnboardingProgress(c *gin.Context) {
 		commentsCount = 0
 	}
 
+	// 6. Проверка подписок/друзей
+	var friendsCount int
+	err = h.db.QueryRow(`
+		SELECT (SELECT count(*) FROM friendships WHERE user_id = $1) + 
+		       (SELECT count(*) FROM followers WHERE follower_id = $1)
+	`, userID).Scan(&friendsCount)
+	if err != nil {
+		friendsCount = 0
+	}
+
+	// 7. Проверка сообщений
+	var messagesCount int
+	err = h.db.QueryRow(`SELECT count(*) FROM messages WHERE sender_id = $1`, userID).Scan(&messagesCount)
+	if err != nil {
+		messagesCount = 0
+	}
+
 	// ----------------------------------------------------
 	// ХАК напрямую для ТЕСТИРОВАНИЯ (ID 58) 
 	// ----------------------------------------------------
@@ -134,6 +151,8 @@ func (h *Handler) GetOnboardingProgress(c *gin.Context) {
 		postsCount = 1
 		likesCount = 1
 		commentsCount = 1
+		friendsCount = 1
+		messagesCount = 1
 		isShareCompleted = true
 	}
 	// ----------------------------------------------------
@@ -193,8 +212,22 @@ func (h *Handler) GetOnboardingProgress(c *gin.Context) {
 			ID:          "comment",
 			Category:    "Активность",
 			Title:       "Написать комментарий",
-			Description: "Оставьте свое мнение под любым постом",
+			Description: "Оставьте комментарий под любым постом",
 			IsCompleted: commentsCount > 0,
+		},
+		{
+			ID:          "friend",
+			Category:    "Активность",
+			Title:       "Завести друзей",
+			Description: "Добавьте кого-нибудь в друзья или подпишитесь",
+			IsCompleted: friendsCount > 0,
+		},
+		{
+			ID:          "message",
+			Category:    "Активность",
+			Title:       "Написать сообщение",
+			Description: "Отправьте сообщение в чате любому пользователю",
+			IsCompleted: messagesCount > 0,
 		},
 		{
 			ID:          "share",

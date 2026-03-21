@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, Circle, ChevronRight, ChevronDown, Trophy, PawPrint, FileText, UserCircle, Phone, FileSignature, Link2, Camera, Plus, HeartHandshake, Heart, MessageSquare, Share2, Star } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronRight, ChevronDown, Trophy, PawPrint, FileText, UserCircle, Phone, FileSignature, Link2, Camera, Plus, HeartHandshake, Heart, MessageSquare, Share2, Star, UserPlus, Send } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 
 interface OnboardingTask {
@@ -173,6 +173,8 @@ export default function OnboardingWidget() {
       case 'post': return <FileText className="w-5 h-5 text-gray-400 flex-shrink-0" />;
       case 'like': return <Heart className="w-5 h-5 text-gray-400 flex-shrink-0" />;
       case 'comment': return <MessageSquare className="w-5 h-5 text-gray-400 flex-shrink-0" />;
+      case 'friend': return <UserPlus className="w-5 h-5 text-gray-400 flex-shrink-0" />;
+      case 'message': return <Send className="w-5 h-5 text-gray-400 flex-shrink-0" />;
       case 'share': return <Share2 className="w-5 h-5 text-gray-400 flex-shrink-0" />;
       default: return <Circle className="w-5 h-5 text-gray-400 flex-shrink-0" />;
     }
@@ -394,7 +396,7 @@ export default function OnboardingWidget() {
       )}
 
       {/* КРАСИВЫЙ БЛОК: Мои питомцы */}
-      {roleOwner && (
+      {roleOwner && currentPercent < 100 && (
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 rounded-2xl border border-blue-100 p-5 mt-4">
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-bold text-gray-800 flex items-center gap-2">
@@ -441,7 +443,7 @@ export default function OnboardingWidget() {
       )}
 
       {/* КРАСИВЫЙ БЛОК: Мои подопечные (Волонтер) */}
-      {roleVolunteer && (
+      {roleVolunteer && currentPercent < 100 && (
         <div className="bg-gradient-to-br from-green-50 to-emerald-50/50 rounded-2xl border border-green-100 p-5 mt-4">
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-bold text-gray-800 flex items-center gap-2">
