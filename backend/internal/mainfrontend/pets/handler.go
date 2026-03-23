@@ -2,9 +2,16 @@ package pets
 
 import (
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+// petViewsCache используется для предотвращения накрутки просмотров (хранит "<ip>_<pet_id>": timestamp)
+var petViewsCache sync.Map
 
 type Handler struct {
 	db *sql.DB
@@ -78,19 +85,26 @@ func (h *Handler) GetUserPets(c *gin.Context) {
 }
 
 // GetCatalog - получить всех питомцев для каталога (только питомцы под опекой, не владельческие)
-func (h *Handler) GetCatalog(c *gin.Context) {
-	query := `
-		SELECT 
-			p.id, p.name, p.species, p.breed, p.gender, p.birth_date,
-			p.color, p.size, p.photo_url, p.user_id, p.description,
-			u.name as owner_name, u.last_name as owner_last_name, u.location, u.phone, p.location_type, u.avatar as owner_avatar,
-			b.name as breed_name
-		FROM pets p
-		LEFT JOIN users u ON p.user_id = u.id
-		LEFT JOIN breeds b ON p.breed_id = b.id
-		WHERE p.relationship = 'curator'
-		ORDER BY p.created_at DESC
-	`
+	func (h *Handler) GetCatalog(c *gin.Context) {
+		query := `
+			SELECT 
+				p.id, p.name, p.species, p.breed, p.gender, p.birth_date,
+				p.color, p.size, p.photo_url, p.user_id, p.description,
+				u.name as owner_name, u.last_name as owner_last_name, u.location, u.phone, p.location_type, u.avatar as owner_avatar,
+				b.name as breed_name, p.catalog_status, p.catalog_data, s.name as species_name
+			FROM pets p
+			LEFT JOIN users u ON p.user_id = u.id
+			LEFT JOIN breeds b ON p.breed_id = b.id
+			LEFT JOIN species s ON p.species_id = s.id
+			WHERE p.relationship = 'curator' 
+			  AND (p.catalog_status != 'draft' OR p.catalog_status IS NULL)
+			  AND (
+			      (p.photo IS NOT NULL AND p.photo != '') 
+			      OR 
+			      (p.photo_url IS NOT NULL AND p.photo_url != '')
+			  )
+			ORDER BY p.created_at DESC
+		`
 
 	rows, err := h.db.Query(query)
 	if err != nil {
@@ -108,27 +122,34 @@ func (h *Handler) GetCatalog(c *gin.Context) {
 			breed, gender, color, size, photoURL, description sql.NullString
 			birthDate                                         sql.NullString
 			ownerName, ownerLastName, location, phone, locationType, ownerAvatar, breedName sql.NullString
+			catalogStatus                                     sql.NullString
+			catalogDataRaw                                    []byte
+			speciesName                                       sql.NullString
 		)
 
 		err := rows.Scan(
 			&id, &name, &species, &breed, &gender, &birthDate,
 			&color, &size, &photoURL, &userID, &description,
 			&ownerName, &ownerLastName, &location, &phone, &locationType, &ownerAvatar, &breedName,
+			&catalogStatus, &catalogDataRaw, &speciesName,
 		)
 		if err != nil {
 			continue
 		}
 
-		// Определяем статус на основе location_type
-		status := "looking_for_home"
-		if locationType.Valid {
-			switch locationType.String {
-			case "shelter":
-				status = "looking_for_home"
-			case "foster":
-				status = "looking_for_home"
-			case "clinic":
-				status = "needs_help"
+		// Определяем статус
+		status := catalogStatus.String
+		if status == "" || status == "draft" {
+			status = "looking_for_home"
+			if locationType.Valid {
+				switch locationType.String {
+				case "shelter":
+					status = "looking_for_home"
+				case "foster":
+					status = "looking_for_home"
+				case "clinic":
+					status = "needs_help"
+				}
 			}
 		}
 
@@ -142,10 +163,20 @@ func (h *Handler) GetCatalog(c *gin.Context) {
 			resolvedBreed = breedName.String
 		}
 
+		resolvedSpecies := species
+		if speciesName.Valid && speciesName.String != "" {
+			resolvedSpecies = speciesName.String
+		}
+
+		var parsedCatalogData map[string]interface{}
+		if len(catalogDataRaw) > 0 {
+			_ = json.Unmarshal(catalogDataRaw, &parsedCatalogData)
+		}
+
 		pet := map[string]interface{}{
 			"id":          id,
 			"name":        name,
-			"species":     species,
+			"species":     resolvedSpecies,
 			"breed":       resolvedBreed,
 			"gender":      gender.String,
 			"birth_date":  birthDate.String,
@@ -159,6 +190,8 @@ func (h *Handler) GetCatalog(c *gin.Context) {
 			"city":        location.String,
 			"phone":       phone.String,
 			"status":      status,
+			"catalog_status": catalogStatus.String,
+			"catalog_data":   parsedCatalogData,
 		}
 
 		pets = append(pets, pet)
@@ -171,6 +204,31 @@ func (h *Handler) GetCatalog(c *gin.Context) {
 func (h *Handler) GetByID(c *gin.Context) {
 	petID := c.Param("id")
 
+	// Получаем IP клиента
+	clientIP := c.ClientIP()
+	cacheKey := fmt.Sprintf("%s_%s", clientIP, petID)
+
+	// Проверяем, смотрел ли этот IP карточку недавно (кэш в памяти)
+	shouldIncrement := true
+	if lastViewedObj, exists := petViewsCache.Load(cacheKey); exists {
+		lastViewed := lastViewedObj.(time.Time)
+		// Если с последнего просмотра прошло меньше 24 часов, счетчик не крутим
+		if time.Since(lastViewed) < 24*time.Hour {
+			shouldIncrement = false
+		}
+	}
+
+	if shouldIncrement {
+		// Увеличиваем счетчик просмотров
+		_, updateErr := h.db.Exec("UPDATE pets SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1", petID)
+		if updateErr != nil {
+			println("Error updating views_count for pet", petID, ":", updateErr.Error())
+		} else {
+			// Запоминаем время просмотра
+			petViewsCache.Store(cacheKey, time.Now())
+		}
+	}
+
 	query := `
 		SELECT 
 			p.id, p.name, p.species, p.breed, p.gender, p.birth_date,
@@ -180,7 +238,9 @@ func (h *Handler) GetByID(c *gin.Context) {
 			p.fur, p.ears, p.tail, p.special_marks,
 			p.marking_date, p.tag_number, p.brand_number,
 			p.location_address, p.location_cage, p.location_contact, p.location_phone, p.location_notes,
-			p.weight, p.health_notes,
+			p.weight, p.health_notes, p.views_count,
+			p.age_type, p.approximate_years, p.approximate_months, p.is_sterilized, p.media_urls,
+			p.catalog_status, p.catalog_data,
 
 			u.name as owner_name, u.last_name, u.avatar, u.location, u.phone, u.email as owner_email,
 			p.created_at::text as created_at,
@@ -206,6 +266,13 @@ func (h *Handler) GetByID(c *gin.Context) {
 		locationAddress, locationCage, locationContact    sql.NullString
 		locationPhone, locationNotes                      sql.NullString
 		weight, healthNotes                               sql.NullString
+		viewsCount                                        sql.NullInt64
+		ageType                                           sql.NullString
+		approxYears, approxMonths                         sql.NullInt64
+		isSterilizedActual                                sql.NullBool
+		mediaUrlsRaw                                      []byte
+		catalogStatus                                     sql.NullString
+		catalogDataRaw                                    []byte
 
 		ownerName, ownerLastName, ownerAvatar             sql.NullString
 		location, phone, createdAt, ownerEmail            sql.NullString
@@ -222,7 +289,9 @@ func (h *Handler) GetByID(c *gin.Context) {
 		&fur, &ears, &tail, &specialMarks,
 		&markingDate, &tagNumber, &brandNumber,
 		&locationAddress, &locationCage, &locationContact, &locationPhone, &locationNotes,
-		&weight, &healthNotes,
+		&weight, &healthNotes, &viewsCount,
+		&ageType, &approxYears, &approxMonths, &isSterilizedActual, &mediaUrlsRaw,
+		&catalogStatus, &catalogDataRaw,
 
 		&ownerName, &ownerLastName, &ownerAvatar, &location, &phone, &ownerEmail, &createdAt,
 		&speciesID, &speciesNameStr, &breedID, &breedNameStr,
@@ -248,13 +317,27 @@ func (h *Handler) GetByID(c *gin.Context) {
 		"email":     ownerEmail.String,
 	}
 
+	var parsedMediaUrls []string
+	if len(mediaUrlsRaw) > 0 {
+		_ = json.Unmarshal(mediaUrlsRaw, &parsedMediaUrls)
+	}
+
+	var parsedCatalogData map[string]interface{}
+	if len(catalogDataRaw) > 0 {
+		_ = json.Unmarshal(catalogDataRaw, &parsedCatalogData)
+	}
+
 	pet := map[string]interface{}{
 		"id":                 id,
 		"name":               name,
 		"species":            species,
-		"breed":              breed.String,
+		"breed":              breedNameStr.String,
+		"breed_id":           breedID.Int64,
 		"gender":             gender.String,
 		"birth_date":         birthDate.String,
+		"age_type":           ageType.String,
+		"approximate_years":  approxYears.Int64,
+		"approximate_months": approxMonths.Int64,
 		"color":              color.String,
 		"size":               size.String,
 		"photo":              photoURL.String,
@@ -281,15 +364,19 @@ func (h *Handler) GetByID(c *gin.Context) {
 		"location_notes":     locationNotes.String,
 		"weight":             weight.String,
 		"health_notes":       healthNotes.String,
+		"views_count":        viewsCount.Int64,
 
 		"owner_name":         ownerName.String,
 		"owner_email":        ownerEmail.String,
 		"city":               location.String,
 		"phone":              phone.String,
 		"is_vaccinated":      false, // TODO: получить из медицинских записей
-		"is_sterilized":      sterilizationDate.Valid && sterilizationDate.String != "",
+		"is_sterilized":      isSterilizedActual.Bool || (sterilizationDate.Valid && sterilizationDate.String != ""),
 		"chip_number":        microchip.String,
 		"created_at":         createdAt.String,
+		"media_urls":         parsedMediaUrls,
+		"catalog_status":     catalogStatus.String,
+		"catalog_data":       parsedCatalogData,
 	}
 
 	if speciesID.Valid {

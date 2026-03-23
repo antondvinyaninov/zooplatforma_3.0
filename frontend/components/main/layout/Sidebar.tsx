@@ -55,7 +55,7 @@ export default function Sidebar() {
       icon: ChatBubbleLeftIcon,
       badge: unreadCount > 0 ? unreadCount.toString() : undefined,
     },
-    { name: 'Организации', href: '/org', icon: BuildingOfficeIcon },
+    { name: 'Организации', href: '/orgs', icon: BuildingOfficeIcon },
     { name: 'Каталог', href: '/catalog', icon: RectangleStackIcon },
     { name: 'Зоопомощник', href: '/zooassistant', icon: SparklesIcon },
     { name: 'Сервисы', href: '/services', icon: Cog6ToothIcon },

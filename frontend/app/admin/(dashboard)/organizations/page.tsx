@@ -280,7 +280,7 @@ export default function OrganizationsPage() {
                   </span>
                   <div className="flex gap-2">
                     <a
-                      href={`http://localhost:3000/org/${org.id}`}
+                      href={`http://localhost:3000/orgs/${org.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -289,7 +289,7 @@ export default function OrganizationsPage() {
                       <EyeIcon className="w-5 h-5" />
                     </a>
                     <a
-                      href={`http://localhost:3000/org/${org.id}/edit`}
+                      href={`http://localhost:3000/orgs/${org.id}/edit`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"

@@ -14,13 +14,13 @@ export interface UploadedMedia {
 
 export interface UploadProgress {
   percentage: number;
-  status: 'uploading' | 'complete' | 'error';
+  status: 'idle' | 'uploading' | 'complete' | 'error';
 }
 
 export function useMediaUpload() {
   const [progress, setProgress] = useState<UploadProgress>({
     percentage: 0,
-    status: 'uploading',
+    status: 'idle',
   });
 
   const uploadFile = async (

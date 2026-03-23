@@ -590,7 +590,7 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
           <div
             onClick={() => {
               if (post.author_type === 'organization' && post.organization) {
-                router.push(`/org/${post.organization.id}`);
+                router.push(`/orgs/${post.organization.id}`);
               } else if (post.author_type === 'user' && post.user) {
                 router.push(`/id${post.user.id}`);
               }
@@ -627,7 +627,7 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
             <div
               onClick={() => {
                 if (post.author_type === 'organization' && post.organization) {
-                  router.push(`/org/${post.organization.id}`);
+                  router.push(`/orgs/${post.organization.id}`);
                 } else if (post.author_type === 'user' && post.user) {
                   router.push(`/id${post.user.id}`);
                 }

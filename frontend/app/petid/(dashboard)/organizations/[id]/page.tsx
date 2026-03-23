@@ -222,7 +222,7 @@ export default function OrganizationDetailPage() {
 
             <div className="flex gap-3">
               <a
-                href={`/org/${organization.id}`}
+                href={`/orgs/${organization.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
@@ -230,7 +230,7 @@ export default function OrganizationDetailPage() {
                 Открыть на сайте
               </a>
               <a
-                href={`/org/${organization.id}/edit`}
+                href={`/orgs/${organization.id}/edit`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2"

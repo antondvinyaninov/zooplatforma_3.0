@@ -447,7 +447,7 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
 
                 {isOwnerOrAdmin() && (
                   <button
-                    onClick={() => router.push(`/org/${org.id}/edit`)}
+                    onClick={() => router.push(`/orgs/${org.id}/edit`)}
                     className="w-full px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
                   >
                     Редактировать профиль

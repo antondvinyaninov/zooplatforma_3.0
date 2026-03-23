@@ -210,7 +210,7 @@ export default function OrganizationsPage() {
             {filteredOrganizations.map((org) => (
               <div
                 key={org.id}
-                onClick={() => router.push(`/org/${org.id}`)}
+                onClick={() => router.push(`/orgs/${org.id}`)}
                 className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
               >
                 <div className="flex gap-4 p-4">
@@ -273,7 +273,7 @@ export default function OrganizationsPage() {
           {/* Create Button */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <button
-              onClick={() => router.push('/org/create')}
+              onClick={() => router.push('/orgs/create')}
               className="w-full px-4 py-2.5 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors text-sm"
             >
               Создать организацию

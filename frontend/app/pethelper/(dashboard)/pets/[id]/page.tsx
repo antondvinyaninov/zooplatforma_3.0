@@ -49,7 +49,11 @@ interface Pet {
   // Здоровье
   weight?: number;
   sterilization_date?: string;
+  is_sterilized?: boolean;
   health_notes?: string;
+  media_urls?: string[];
+  catalog_status?: string;
+  catalog_data?: any;
 }
 
 interface Breed {
@@ -105,6 +109,9 @@ export default function PetViewPage() {
     sterilization_date: '',
     health_notes: '',
     is_sterilized: false,
+    media_urls: [] as string[],
+    catalog_status: 'draft',
+    catalog_data: {} as any,
   });
 
   const [breeds, setBreeds] = useState<Breed[]>([]);
@@ -169,7 +176,10 @@ export default function PetViewPage() {
               ? petData.sterilization_date.split('T')[0]
               : '',
             health_notes: petData.health_notes || '',
-            is_sterilized: !!petData.sterilization_date,
+            is_sterilized: petData.is_sterilized || !!petData.sterilization_date,
+            media_urls: petData.media_urls || [],
+            catalog_status: petData.catalog_status || 'draft',
+            catalog_data: petData.catalog_data || {},
           };
           setEditData(editDataInit);
           setBreedSearch(petData.breed_name || '');
@@ -281,7 +291,10 @@ export default function PetViewPage() {
       weight: pet.weight ?? '',
       sterilization_date: pet.sterilization_date ? pet.sterilization_date.split('T')[0] : '',
       health_notes: pet.health_notes || '',
-      is_sterilized: !!pet.sterilization_date,
+      is_sterilized: pet.is_sterilized || !!pet.sterilization_date,
+      media_urls: pet.media_urls || [],
+      catalog_status: pet.catalog_status || 'draft',
+      catalog_data: pet.catalog_data || {},
     });
     setBreedSearch(pet.breed_name || '');
     setBirthDateType((pet.age_type as 'exact' | 'approximate') || 'exact');
@@ -393,6 +406,9 @@ export default function PetViewPage() {
                     : '',
                   health_notes: pet.health_notes || '',
                   is_sterilized: !!pet.sterilization_date,
+                  media_urls: pet.media_urls || [],
+                  catalog_status: pet.catalog_status || 'draft',
+                  catalog_data: pet.catalog_data || {},
                 });
                 setBreedSearch(pet.breed_name || '');
                 setIsEditing(true);

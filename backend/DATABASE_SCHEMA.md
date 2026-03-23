@@ -159,6 +159,15 @@
 - `show_email` - text (default: 'everyone')
 - `allow_messages` - text (default: 'everyone')
 - Много полей для юридической информации (ОГРН, ИНН, ОКВЭД и т.д.)
+- `parent_organization_id` - integer (FK → organizations.id, ON DELETE SET NULL) — головная организация (сеть)
+- `network_role` - varchar(20) (default: 'standalone') — роль в иерархии: `standalone` / `network` / `branch`
+
+**Иерархия организаций (сети):**
+- `standalone` — самостоятельная организация (большинство)
+- `network` — головная организация / сеть (имеет дочерние)
+- `branch` — филиал сети (parent_organization_id ≠ NULL)
+
+**Индексы:** `idx_organizations_parent_id`, `idx_organizations_network_role`
 
 ### comments
 - `id` - integer (PK)

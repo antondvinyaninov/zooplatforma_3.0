@@ -21,7 +21,7 @@ export async function GET() {
       if (orgsData.success && orgsData.data) {
         for (const org of orgsData.data) {
           sitemap += `  <url>
-    <loc>${baseUrl}/main/org/${org.id}</loc>
+    <loc>${baseUrl}/main/orgs/${org.id}</loc>
     <lastmod>${new Date(org.updated_at).toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>

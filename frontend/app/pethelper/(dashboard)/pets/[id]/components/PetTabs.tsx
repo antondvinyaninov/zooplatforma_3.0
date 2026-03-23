@@ -3,6 +3,8 @@ import PetTimeline from './PetTimeline';
 import PetGeneralInfo from './PetGeneralInfo';
 import PetIdentification from './PetIdentification';
 import PetHealth from './PetHealth';
+import PublicationTab from './PublicationTab';
+import GalleryTab from './GalleryTab';
 
 interface PetTabsProps {
   isEditing: boolean;
@@ -20,7 +22,7 @@ interface PetTabsProps {
   age: { years: number; months: number } | null;
 }
 
-type TabType = 'timeline' | 'general' | 'identification' | 'health' | 'system';
+type TabType = 'publication' | 'timeline' | 'general' | 'identification' | 'health' | 'gallery' | 'system';
 
 export default function PetTabs({
   isEditing,
@@ -37,21 +39,23 @@ export default function PetTabs({
   calculateBirthDate,
   age,
 }: PetTabsProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('timeline');
+  const [activeTab, setActiveTab] = useState<TabType>('publication');
 
   const tabs = [
     { id: 'timeline' as TabType, label: 'Хронология', icon: '📅' },
+    { id: 'publication' as TabType, label: 'Каталог', icon: '📢' },
     { id: 'general' as TabType, label: 'Общая информация', icon: '📋' },
     { id: 'identification' as TabType, label: 'Идентификация', icon: '🏷️' },
     { id: 'health' as TabType, label: 'Здоровье', icon: '🏥' },
+    { id: 'gallery' as TabType, label: 'Галерея', icon: '📸' },
     { id: 'system' as TabType, label: 'Система', icon: '⚙️' },
   ];
 
   return (
     <div>
       {/* Табы */}
-      <div className="bg-white rounded-t-lg shadow border-b">
-        <div className="flex overflow-x-auto">
+      <div className="bg-white rounded-t-lg shadow border-b overflow-hidden">
+        <div className="flex overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -74,6 +78,15 @@ export default function PetTabs({
 
       {/* Контент табов */}
       <div className="bg-white rounded-b-lg shadow p-6">
+        {activeTab === 'publication' && (
+          <PublicationTab
+            isEditing={isEditing}
+            pet={pet}
+            editData={editData}
+            setEditData={setEditData}
+          />
+        )}
+
         {activeTab === 'timeline' && <PetTimeline petId={pet.id} pet={pet} />}
 
         {activeTab === 'general' && (
@@ -102,6 +115,15 @@ export default function PetTabs({
 
         {activeTab === 'health' && (
           <PetHealth
+            isEditing={isEditing}
+            pet={pet}
+            editData={editData}
+            setEditData={setEditData}
+          />
+        )}
+
+        {activeTab === 'gallery' && (
+          <GalleryTab
             isEditing={isEditing}
             pet={pet}
             editData={editData}

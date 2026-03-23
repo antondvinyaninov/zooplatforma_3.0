@@ -3,6 +3,7 @@ package pethelper
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -182,10 +183,10 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 
 			var id int
 			err = db.QueryRow(`
-				INSERT INTO pets (name, species, species_id, breed_id, user_id, birth_date, gender, description, relationship)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'curator')
+				INSERT INTO pets (name, species, species_id, breed_id, user_id, birth_date, age_type, approximate_years, approximate_months, gender, description, relationship)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'curator')
 				RETURNING id
-			`, input.Name, speciesName, input.SpeciesID, input.BreedID, userID, birthDate, input.Gender, input.Description).Scan(&id)
+			`, input.Name, speciesName, input.SpeciesID, input.BreedID, userID, birthDate, input.AgeType, input.ApproximateYears, input.ApproximateMonths, input.Gender, input.Description).Scan(&id)
 
 			if err != nil {
 				fmt.Printf("❌ PetHelper Error creating pet: %v\n", err)
@@ -337,8 +338,15 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				"size":               "size",
 				"location_type":      "location_type",
 				"sterilization_date": "sterilization_date",
+				"is_sterilized":      "is_sterilized",
 				"photo_url":          "photo_url",
 				"chip_number":        "microchip", // map from frontend key to db column
+				"media_urls":         "media_urls",
+				"age_type":           "age_type",
+				"approximate_years":  "approximate_years",
+				"approximate_months": "approximate_months",
+				"catalog_status":     "catalog_status",
+				"catalog_data":       "catalog_data",
 
 				// Новые поля из миграции 013
 				"fur":              "fur",
@@ -373,7 +381,16 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 					query += ", "
 				}
 				query += dbCol + " = $" + fmt.Sprint(argCount)
-				args = append(args, value)
+				if dbCol == "media_urls" || dbCol == "catalog_data" {
+					jsonBytes, err := json.Marshal(value)
+					if err != nil {
+						c.JSON(500, gin.H{"success": false, "error": fmt.Sprintf("Failed to serialize %s", dbCol)})
+						return
+					}
+					args = append(args, jsonBytes)
+				} else {
+					args = append(args, value)
+				}
 				argCount++
 			}
 

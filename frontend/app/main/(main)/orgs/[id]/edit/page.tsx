@@ -167,7 +167,7 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
     try {
       const response = await organizationsApi.update(Number(id), formData);
       if (response.success) {
-        router.push(`/org/${id}`);
+        router.push(`/orgs/${id}`);
       } else {
         setError(response.error || 'Ошибка сохранения');
       }

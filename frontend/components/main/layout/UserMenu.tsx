@@ -191,7 +191,7 @@ export default function UserMenu({ variant = 'mobile' }: UserMenuProps) {
                 {isAuthenticated && (
                   <button
                     onClick={() => {
-                      router.push('/org');
+                      router.push('/orgs');
                       setIsOpen(false);
                     }}
                     className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"

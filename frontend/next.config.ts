@@ -57,8 +57,12 @@ const nextConfig: NextConfig = {
       { source: '/messenger', destination: '/main/messenger' },
       { source: '/zooassistant', destination: '/main/zooassistant' },
       { source: '/notifications', destination: '/main/notifications' },
-      { source: '/org', destination: '/main/org' },
-      { source: '/org/:path*', destination: '/main/org/:path*' },
+      { source: '/orgs', destination: '/main/orgs' },
+      { source: '/orgs/:path*', destination: '/main/orgs/:path*' },
+      // Gov cabinet (кабинет государственных органов)
+      { source: '/gov', destination: '/gov' },
+      { source: '/gov/:path*', destination: '/gov/:path*' },
+      // /org = кабинет организации — rewrite не нужен, обслуживается из app/org/ напрямую
       { source: '/pets', destination: '/main/pets' },
       { source: '/pets/:path*', destination: '/main/pets/:path*' },
       { source: '/profile', destination: '/main/profile' },

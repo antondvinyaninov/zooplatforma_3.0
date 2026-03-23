@@ -128,24 +128,37 @@ export interface Pet {
   user_id: number;
   name: string;
   species: string;
+  species_id?: number;
+  species_name?: string;
   breed?: string;
+  breed_id?: number;
+  breed_name?: string;
   gender?: string;
   birth_date?: string;
+  age_type?: 'exact' | 'approximate';
+  approximate_years?: number;
+  approximate_months?: number;
   color?: string;
   photo?: string;
   photo_url?: string;
+  description?: string;
   relationship?: 'owner' | 'curator';
   status?: string;
   is_sterilized?: boolean;
   is_vaccinated?: boolean;
   chip_number?: string;
+  media_urls?: string[];
+  catalog_status?: string;
+  catalog_data?: any;
   region?: string;
   city?: string;
+  location_address?: string;
   urgent?: boolean;
   contact_name?: string;
   contact_phone?: string;
   organization_id?: number;
   created_at: string;
+  views_count?: number;
   user?: User;
 }
 

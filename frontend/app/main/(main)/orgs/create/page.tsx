@@ -388,7 +388,7 @@ export default function CreateOrganizationPage() {
 
       if (response.success && response.data) {
         // Перенаправляем на страницу созданной организации
-        router.push(`/org/${response.data.id}`);
+        router.push(`/orgs/${response.data.id}`);
       } else {
         setError(response.error || 'Ошибка при создании организации');
       }
@@ -574,7 +574,7 @@ export default function CreateOrganizationPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => router.push(`/org/${existingOrg.id}`)}
+                        onClick={() => router.push(`/orgs/${existingOrg.id}`)}
                         className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                       >
                         Перейти на страницу организации →

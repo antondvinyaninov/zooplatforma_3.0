@@ -6,7 +6,9 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/zooplatforma/backend/internal/admin"
+	"github.com/zooplatforma/backend/internal/gov"
 	"github.com/zooplatforma/backend/internal/mainfrontend"
+	"github.com/zooplatforma/backend/internal/org"
 	"github.com/zooplatforma/backend/internal/owner"
 	"github.com/zooplatforma/backend/internal/pethelper"
 	"github.com/zooplatforma/backend/internal/petid"
@@ -77,5 +79,13 @@ func Setup(r *gin.Engine, db *sql.DB, cfg *config.Config) {
 	// ZooAssistant frontend routes (под префиксом /api/zooassistant)
 	zooassistantAPI := api.Group("/zooassistant")
 	zooassistant.SetupRoutes(zooassistantAPI, db, cfg)
+
+	// Org cabinet routes (под префиксом /api/org)
+	orgAPI := api.Group("/org")
+	org.SetupRoutes(orgAPI, db, cfg)
+
+	// Gov cabinet routes (под префиксом /api/gov)
+	govAPI := api.Group("/gov")
+	gov.SetupRoutes(govAPI, db, cfg)
 
 }
