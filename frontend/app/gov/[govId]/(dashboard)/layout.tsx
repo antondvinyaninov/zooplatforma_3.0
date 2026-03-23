@@ -1,11 +1,11 @@
-export default function GovIdLayout({
+export default async function GovIdLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: { govId: string };
+  params: Promise<{ govId: string }>;
 }) {
-  const { govId } = params;
+  const { govId } = await params;
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>

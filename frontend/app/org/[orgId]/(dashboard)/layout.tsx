@@ -1,11 +1,11 @@
-export default function OrgIdLayout({
+export default async function OrgIdLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: { orgId: string };
+  params: Promise<{ orgId: string }>;
 }) {
-  const { orgId } = params;
+  const { orgId } = await params;
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
