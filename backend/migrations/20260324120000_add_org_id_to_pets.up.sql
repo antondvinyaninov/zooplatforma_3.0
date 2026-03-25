@@ -1,0 +1,2 @@
+ALTER TABLE pets ADD COLUMN IF NOT EXISTS org_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_pets_org_id ON pets(org_id);

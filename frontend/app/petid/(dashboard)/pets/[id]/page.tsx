@@ -1,432 +1,341 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import PetHeroSection from './components/PetHeroSection';
-import PetTabs from './components/PetTabs';
+import { useState, useEffect, useRef } from 'react';
+import { use } from 'react';
+import { useRouter } from 'next/navigation';
+import { useMediaUpload } from '@/app/main/hooks/useMediaUpload';
+import PetNavMenu, { Tab } from '@/components/pets/shared/PetNavMenu';
+import PetTimeline from '@/components/pets/profile/PetTimeline';
+import PetGeneralInfo from '@/components/pets/profile/PetGeneralInfo';
+import PetLocation from '@/components/pets/profile/PetLocation';
+import PetIdentification from '@/components/pets/profile/PetIdentification';
+import PetHealth from '@/components/pets/profile/PetHealth';
+import PetGallery from '@/components/pets/profile/PetGallery';
+import { useBreadcrumb } from '@/components/BreadcrumbContext';
 
-interface Pet {
+// Тип PetDetail (упрощенный, без специфики приюта)
+interface PetDetail {
   id: number;
   name: string;
-  species_id?: number;
   species_name: string;
-  breed_id?: number;
   breed_name: string;
-  owner_id?: number;
-  owner_name: string;
-  owner_email?: string;
-  owner_phone?: string;
-  owner_avatar?: string;
-  owner_bio?: string;
-  owner_role?: string;
   birth_date: string;
-  age_type?: string;
-  approximate_years?: number;
-  approximate_months?: number;
+  age_type: string;
+  approximate_years: number;
+  approximate_months: number;
   gender: string;
-  description?: string;
+  description: string;
+  photo_url: string;
+  media_urls?: string[];
+  color: string;
   relationship?: string;
-  created_at: string;
-  // Внешний вид
-  color?: string;
-  fur?: string;
-  ears?: string;
-  tail?: string;
-  size?: string;
-  special_marks?: string;
-  // Идентификация
-  marking_date?: string;
-  tag_number?: string;
-  brand_number?: string;
-  chip_number?: string;
-  // Место содержания
-  location_type?: string;
-  location_address?: string;
-  location_cage?: string;
-  location_contact?: string;
-  location_phone?: string;
-  location_notes?: string;
-  // Здоровье
-  weight?: number;
+  fur: string;
+  ears: string;
+  tail: string;
+  size: string;
+  special_marks: string;
+  marking_date: string;
+  tag_number: string;
+  brand_number: string;
+  chip_number: string;
+  marking_specialist: string;
+  marking_org: string;
+  location_type: string;
+  location_address: string;
+  location_cage: string;
+  location_contact: string;
+  location_phone: string;
+  location_notes: string;
+  org_id?: number | null;
+  org_name?: string | null;
+  weight?: number | null;
   sterilization_date?: string;
-  health_notes?: string;
+  sterilization_specialist?: string;
+  sterilization_org?: string;
+  sterilization_type?: string;
+  health_notes: string;
+  created_at: string;
+  user_id?: number;
+  owner_name?: string;
 }
 
-interface Breed {
-  id: number;
-  name: string;
-  species_id: number;
-}
+const SIZE_LABELS: Record<string, string> = { small: 'Маленький', medium: 'Средний', large: 'Крупный' };
+const DOG_GRADIENT = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+const CAT_GRADIENT = 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)';
 
-export default function PetViewPage() {
-  const params = useParams();
+export default function PetIDPetCardPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: petId } = use(params);
+  const orgId = 'petid'; // Фиксируем orgId для PetID, общие компоненты поймут, что это PetID
+  
   const router = useRouter();
-  const petId = params.id as string;
-
-  const [pet, setPet] = useState<Pet | null>(null);
+  const [pet, setPet] = useState<PetDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  // Данные для редактирования
-  const [editData, setEditData] = useState({
-    name: '',
-    species_id: 1,
-    breed_id: null as number | null,
-    birth_date: '',
-    age_type: 'exact' as 'exact' | 'approximate',
-    approximate_years: 0,
-    approximate_months: 0,
-    gender: 'male',
-    description: '',
-    relationship: 'owner' as 'owner' | 'curator',
-    // Внешний вид
-    color: '',
-    fur: '',
-    ears: '',
-    tail: '',
-    size: '',
-    special_marks: '',
-    // Идентификация
-    marking_date: '',
-    tag_number: '',
-    brand_number: '',
-    chip_number: '',
-    // Место содержания
-    location_type: 'home',
-    location_address: '',
-    location_cage: '',
-    location_contact: '',
-    location_phone: '',
-    location_notes: '',
-    // Здоровье
-    weight: '' as string | number,
-    sterilization_date: '',
-    health_notes: '',
-    is_sterilized: false,
-  });
-
-  const [breeds, setBreeds] = useState<Breed[]>([]);
-  const [breedSearch, setBreedSearch] = useState('');
-  const [showBreedDropdown, setShowBreedDropdown] = useState(false);
-  const [birthDateType, setBirthDateType] = useState<'exact' | 'approximate'>('exact');
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<Tab>('timeline');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const { uploadFile } = useMediaUpload();
+  const { setItems } = useBreadcrumb();
 
   useEffect(() => {
-    fetchPet();
-    fetchBreeds();
-  }, [petId]);
+    fetch(`/api/petid/pets/${petId}`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success || data.data || data.pet) {
+          const petData = data.data || data.pet || data; 
+          setPet(petData);
+          setPhotoUrl(petData.photo_url || petData.photo || petData.media_urls?.[0] || '');
+          setItems([
+            { label: 'Мои питомцы', href: `/petid/pets` },
+            { label: petData.name ? `${petData.name} (№${petData.id})` : `Питомец №${petData.id}` },
+          ]);
+        } else {
+          setError(data.error || 'Ошибка');
+        }
+      })
+      .catch(() => setError('Ошибка'))
+      .finally(() => setLoading(false));
+  }, [petId, setItems]);
 
-  const fetchPet = async () => {
+  const handleQuickUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !pet) return;
+    setUploading(true);
     try {
-      setLoading(true);
-      const response = await fetch(`/api/petid/pets/${petId}`, {
-        credentials: 'include',
+      const uploaded = await uploadFile(file, 'photo');
+      if (!uploaded?.url) return;
+      const newUrls = [...(pet.media_urls || []), uploaded.url];
+      const body: Record<string, unknown> = { media_urls: newUrls };
+      if (!photoUrl) body.photo_url = uploaded.url;
+      await fetch(`/api/petid/pets/${pet.id}`, {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPet(data.pet);
-        // Инициализируем данные для редактирования
-        setEditData({
-          name: data.pet.name,
-          species_id: data.pet.species_id || 1,
-          breed_id: data.pet.breed_id || null,
-          birth_date: data.pet.birth_date ? data.pet.birth_date.split('T')[0] : '',
-          age_type: (data.pet.age_type as 'exact' | 'approximate') || 'exact',
-          approximate_years: data.pet.approximate_years || 0,
-          approximate_months: data.pet.approximate_months || 0,
-          gender: data.pet.gender || 'male',
-          description: data.pet.description || '',
-          relationship: (data.pet.relationship as 'owner' | 'curator') || 'owner',
-          // Внешний вид
-          color: data.pet.color || '',
-          fur: data.pet.fur || '',
-          ears: data.pet.ears || '',
-          tail: data.pet.tail || '',
-          size: data.pet.size || '',
-          special_marks: data.pet.special_marks || '',
-          // Идентификация
-          marking_date: data.pet.marking_date ? data.pet.marking_date.split('T')[0] : '',
-          tag_number: data.pet.tag_number || '',
-          brand_number: data.pet.brand_number || '',
-          chip_number: data.pet.chip_number || '',
-          // Место содержания
-          location_type: data.pet.location_type || 'home',
-          location_address: data.pet.location_address || '',
-          location_cage: data.pet.location_cage || '',
-          location_contact: data.pet.location_contact || '',
-          location_phone: data.pet.location_phone || '',
-          location_notes: data.pet.location_notes || '',
-          // Здоровье
-          weight: data.pet.weight ?? '',
-          sterilization_date: data.pet.sterilization_date
-            ? data.pet.sterilization_date.split('T')[0]
-            : '',
-          health_notes: data.pet.health_notes || '',
-          is_sterilized: !!data.pet.sterilization_date,
-        });
-        setBreedSearch(data.pet.breed_name || '');
-        setBirthDateType(data.pet.age_type || 'exact');
-      } else {
-        setError('Питомец не найден');
-      }
-    } catch (err) {
-      setError('Ошибка загрузки данных');
-      console.error(err);
+      pet.media_urls = newUrls;
+      if (!photoUrl) setPhotoUrl(uploaded.url);
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 2000);
     } finally {
-      setLoading(false);
+      setUploading(false);
+      if (uploadInputRef.current) uploadInputRef.current.value = '';
     }
   };
 
-  const fetchBreeds = async () => {
-    try {
-      const response = await fetch('/main/api/owner/breeds', {
-        credentials: 'include',
-      });
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#9ca3af', fontSize: 13 }}>
+      Загрузка...
+    </div>
+  );
+  if (error || !pet) return (
+    <div style={{ padding: 32, textAlign: 'center' }}>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>😿</div>
+      <div style={{ color: '#6b7280', fontSize: 14 }}>{error || 'Питомец не найден'}</div>
+      <button onClick={() => router.back()} style={{ marginTop: 16, padding: '8px 20px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', fontSize: 13, cursor: 'pointer', color: '#374151' }}>
+        ← Назад к списку
+      </button>
+    </div>
+  );
 
-      if (response.ok) {
-        const data = await response.json();
-        setBreeds(data.breeds || []);
-      }
-    } catch (err) {
-      console.error('Ошибка загрузки пород:', err);
+  const isdog = pet.species_name === 'Собака' || pet.species_name?.toLowerCase() === 'собака';
+  const gradient = isdog ? DOG_GRADIENT : CAT_GRADIENT;
+
+  const formatAge = () => {
+    if (pet.age_type === 'approximate') {
+      const parts = [];
+      if (pet.approximate_years > 0) parts.push(`${pet.approximate_years} лет`);
+      if (pet.approximate_months > 0) parts.push(`${pet.approximate_months} мес.`);
+      return parts.length ? `~${parts.join(' ')}` : null;
+    }
+    if (pet.birth_date) {
+      const diff = Date.now() - new Date(pet.birth_date).getTime();
+      const years = Math.floor(diff / (365.25 * 24 * 3600 * 1000));
+      const months = Math.floor((diff % (365.25 * 24 * 3600 * 1000)) / (30.44 * 24 * 3600 * 1000));
+      if (years > 0) return `${years} л. ${months} мес.`;
+      if (months > 0) return `${months} мес.`;
+    }
+    return null;
+  };
+
+  const ageStr = formatAge();
+
+  const InfoRow = ({ icon, label, value }: { icon: string; label: string; value?: string | null }) => (
+    <div style={{ display: 'flex', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f3f4f6' }}>
+      <div style={{ width: 32, fontSize: 16, flexShrink: 0 }}>{icon}</div>
+      <div style={{ flex: 1, fontSize: 13, color: '#6b7280' }}>{label}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: value ? '#111827' : '#d1d5db' }}>{value || '—'}</div>
+    </div>
+  );
+
+  const renderCenter = () => {
+    switch (activeTab) {
+      case 'timeline':       return <PetTimeline pet={pet} orgId={orgId} />;
+      case 'general':        return <PetGeneralInfo pet={pet} orgId={orgId} onUpdate={(u) => setPet({ ...pet, ...u })} />;
+      case 'identification': return <PetIdentification pet={pet} orgId={orgId} onUpdate={(u: any) => setPet({ ...pet, ...u })} />;
+      case 'health':         return <PetHealth pet={pet} orgId={orgId} onUpdate={(u) => setPet({ ...pet, ...u })} />;
+      case 'gallery':        return <PetGallery pet={pet} orgId={orgId} onPhotoUrlChange={setPhotoUrl} />;
+      case 'fundraising':    return (
+        <div style={{ background: '#fff', borderRadius: 16, padding: 40, textAlign: 'center', boxShadow: '0 1px 12px rgba(0,0,0,0.08)' }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>💰</div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111827', marginBottom: 8 }}>Сбор средств</h2>
+          <p style={{ color: '#6b7280', fontSize: 14 }}>Данный функционал пока недоступен для частных лиц.</p>
+        </div>
+      );
     }
   };
-
-  const handleSave = async () => {
-    if (!editData.name.trim()) {
-      alert('Введите имя питомца');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const response = await fetch(`/api/petid/pets/${petId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(editData),
-      });
-
-      if (response.ok) {
-        await fetchPet();
-        setIsEditing(false);
-        alert('Изменения сохранены!');
-      } else {
-        const data = await response.json();
-        alert('Ошибка: ' + (data.error || 'Не удалось сохранить изменения'));
-      }
-    } catch (err) {
-      alert('Ошибка подключения к серверу');
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (!pet) return;
-
-    setIsEditing(false);
-    setEditData({
-      name: pet.name,
-      species_id: pet.species_id || 1,
-      breed_id: pet.breed_id || null,
-      birth_date: pet.birth_date ? pet.birth_date.split('T')[0] : '',
-      age_type: (pet.age_type as 'exact' | 'approximate') || 'exact',
-      approximate_years: pet.approximate_years || 0,
-      approximate_months: pet.approximate_months || 0,
-      gender: pet.gender || 'male',
-      description: pet.description || '',
-      relationship: (pet.relationship as 'owner' | 'curator') || 'owner',
-      // Внешний вид
-      color: pet.color || '',
-      fur: pet.fur || '',
-      ears: pet.ears || '',
-      tail: pet.tail || '',
-      size: pet.size || '',
-      special_marks: pet.special_marks || '',
-      // Идентификация
-      marking_date: pet.marking_date ? pet.marking_date.split('T')[0] : '',
-      tag_number: pet.tag_number || '',
-      brand_number: pet.brand_number || '',
-      chip_number: pet.chip_number || '',
-      // Место содержания
-      location_type: pet.location_type || 'home',
-      location_address: pet.location_address || '',
-      location_cage: pet.location_cage || '',
-      location_contact: pet.location_contact || '',
-      location_phone: pet.location_phone || '',
-      location_notes: pet.location_notes || '',
-      // Здоровье
-      weight: pet.weight ?? '',
-      sterilization_date: pet.sterilization_date ? pet.sterilization_date.split('T')[0] : '',
-      health_notes: pet.health_notes || '',
-      is_sterilized: !!pet.sterilization_date,
-    });
-    setBreedSearch(pet.breed_name || '');
-    setBirthDateType((pet.age_type as 'exact' | 'approximate') || 'exact');
-  };
-
-  const calculateBirthDate = (years: number, months: number) => {
-    const today = new Date();
-    const birthDate = new Date(today);
-    birthDate.setFullYear(today.getFullYear() - years);
-    birthDate.setMonth(today.getMonth() - months);
-
-    const formattedDate = birthDate.toISOString().split('T')[0];
-    setEditData({
-      ...editData,
-      birth_date: formattedDate,
-      age_type: 'approximate',
-      approximate_years: years,
-      approximate_months: months,
-    });
-  };
-
-  const calculateAge = () => {
-    if (!pet?.birth_date) return null;
-
-    const birthDate = new Date(pet.birth_date);
-    const today = new Date();
-
-    let years = today.getFullYear() - birthDate.getFullYear();
-    let months = today.getMonth() - birthDate.getMonth();
-
-    if (months < 0) {
-      years--;
-      months += 12;
-    }
-
-    return { years, months };
-  };
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="text-gray-500">Загрузка...</div>
-      </div>
-    );
-  }
-
-  if (error || !pet) {
-    return (
-      <div className="p-6">
-        <div className="text-red-500">{error || 'Питомец не найден'}</div>
-        <button
-          onClick={() => router.push('/pets')}
-          className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-        >
-          Вернуться к списку
-        </button>
-      </div>
-    );
-  }
-
-  const age = calculateAge();
 
   return (
-    <div className="p-6">
-      {/* Шапка с кнопками */}
-      <div className="mb-6 flex justify-between items-center">
-        <button
-          onClick={() => router.push('/pets')}
-          className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
-        >
-          ← Назад к списку
-        </button>
+    <div style={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 32 }}>
+      {/* Основной грид */}
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 280px', gap: 16, alignItems: 'start' }}>
 
-        <div className="flex gap-3">
-          {!isEditing ? (
-            <button
-              onClick={() => {
-                // Заполняем editData текущими значениями питомца
-                setEditData({
-                  name: pet.name,
-                  species_id: pet.species_id || 1,
-                  breed_id: pet.breed_id || null,
-                  birth_date: pet.birth_date ? pet.birth_date.split('T')[0] : '',
-                  age_type: (pet.age_type as 'exact' | 'approximate') || 'exact',
-                  approximate_years: pet.approximate_years || 0,
-                  approximate_months: pet.approximate_months || 0,
-                  gender: pet.gender || 'male',
-                  description: pet.description || '',
-                  relationship: (pet.relationship as 'owner' | 'curator') || 'owner',
-                  color: pet.color || '',
-                  fur: pet.fur || '',
-                  ears: pet.ears || '',
-                  tail: pet.tail || '',
-                  size: pet.size || '',
-                  special_marks: pet.special_marks || '',
-                  marking_date: pet.marking_date ? pet.marking_date.split('T')[0] : '',
-                  tag_number: pet.tag_number || '',
-                  brand_number: pet.brand_number || '',
-                  chip_number: pet.chip_number || '',
-                  location_type: pet.location_type || 'home',
-                  location_address: pet.location_address || '',
-                  location_cage: pet.location_cage || '',
-                  location_contact: pet.location_contact || '',
-                  location_phone: pet.location_phone || '',
-                  location_notes: pet.location_notes || '',
-                  weight: pet.weight ?? '',
-                  sterilization_date: pet.sterilization_date
-                    ? pet.sterilization_date.split('T')[0]
-                    : '',
-                  health_notes: pet.health_notes || '',
-                  is_sterilized: !!pet.sterilization_date,
-                });
-                setBreedSearch(pet.breed_name || '');
-                setIsEditing(true);
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              ✏️ Редактировать
-            </button>
-          ) : (
-            <>
+        {/* Левая колонка */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Фото */}
+          <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 1px 12px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+            <div style={{
+              height: 260, background: (photoUrl) ? '#000' : gradient,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100,
+              position: 'relative',
+            }}>
+              {photoUrl
+                ? <img src={photoUrl} alt={pet.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : (isdog ? '🐕' : '🐈')}
+              <span style={{
+                position: 'absolute', top: 12, left: 12,
+                background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)',
+                borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: '#374151',
+              }}>
+                №{pet.id}
+              </span>
+            </div>
+            <div style={{ padding: '16px 16px 12px' }}>
+              <div style={{ fontWeight: 700, fontSize: 18, color: '#111827', marginBottom: 4 }}>{pet.name}</div>
+              <div style={{ fontSize: 13, color: '#6b7280' }}>
+                {pet.species_name || (isdog ? 'Собака' : 'Кошка')}{pet.breed_name ? ` · ${pet.breed_name}` : ''}
+              </div>
+            </div>
+            <div style={{ padding: '0 12px 12px' }}>
               <button
-                onClick={() => setIsEditing(false)}
-                disabled={saving}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                onClick={() => uploadInputRef.current?.click()}
+                disabled={uploading}
+                onMouseEnter={e => {
+                  if (!uploading) {
+                    (e.currentTarget as HTMLButtonElement).style.background = '#f0f9ff';
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = '#93c5fd';
+                    (e.currentTarget as HTMLButtonElement).style.color = '#3b82f6';
+                  }
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = '#d1d5db';
+                  (e.currentTarget as HTMLButtonElement).style.color = '#6b7280';
+                }}
+                style={{
+                  width: '100%', padding: '8px', borderRadius: 8,
+                  border: uploadSuccess ? '1px solid #86efac' : '1px dashed #d1d5db',
+                  background: uploadSuccess ? '#f0fdf4' : uploading ? '#f9fafb' : 'transparent',
+                  fontSize: 12,
+                  color: uploadSuccess ? '#16a34a' : uploading ? '#9ca3af' : '#6b7280',
+                  cursor: uploading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s',
+                }}
               >
-                Отмена
+                {uploadSuccess ? '✓ Фото загружено' : uploading ? 'Загрузка...' : '+ Загрузить фото'}
               </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-              >
-                {saving ? 'Сохранение...' : 'Сохранить'}
-              </button>
-            </>
-          )}
+              <input
+                ref={uploadInputRef}
+                type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={handleQuickUpload}
+              />
+            </div>
+          </div>
+
+          {/* Навигационное меню: прячем "Сбор средств", так как он для НКО */}
+          <PetNavMenu activeTab={activeTab} onChange={setActiveTab} showFundraising={false} />
         </div>
-      </div>
 
-      {/* Hero секция */}
-      <div className="mb-6">
-        <PetHeroSection pet={pet} age={age} />
-      </div>
+        {/* Центральная колонка */}
+        <div>{renderCenter()}</div>
 
-      {/* Табы с контентом */}
-      <PetTabs
-        isEditing={isEditing}
-        pet={pet}
-        editData={editData}
-        setEditData={setEditData}
-        breeds={breeds}
-        breedSearch={breedSearch}
-        setBreedSearch={setBreedSearch}
-        showBreedDropdown={showBreedDropdown}
-        setShowBreedDropdown={setShowBreedDropdown}
-        birthDateType={birthDateType}
-        setBirthDateType={setBirthDateType}
-        calculateBirthDate={calculateBirthDate}
-        age={age}
-      />
+        {/* Правая колонка */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+            {/* Действия */}
+            <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 1px 12px rgba(0,0,0,0.08)', padding: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Действия</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                
+                <button 
+                  onClick={async () => {
+                    if (confirm('Вы уверены, что хотите удалить карточку питомца? Это действие необратимо.')) {
+                      try {
+                        const res = await fetch(`/api/petid/pets/${petId}`, { method: 'DELETE' });
+                        if (res.ok) {
+                          router.push(`/petid/pets`);
+                        } else {
+                          const data = await res.json();
+                          alert(data.error || 'Ошибка при удалении');
+                        }
+                      } catch (e) {
+                        alert('Ошибка сети при удалении');
+                      }
+                    }
+                  }}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, border: '1px solid #fca5a5', background: '#fef2f2', color: '#ef4444', cursor: 'pointer', fontWeight: 600, textAlign: 'left', transition: 'all 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#f87171'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.borderColor = '#fca5a5'; }}
+                >
+                  🗑 Удалить карточку
+                </button>
+              </div>
+            </div>
+
+            {/* Инфо */}
+            <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 1px 12px rgba(0,0,0,0.08)', padding: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Инфо</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>ID записи</div>
+                  <div style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>#{pet.id}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Добавлен</div>
+                  <div style={{ fontSize: 13, color: '#374151' }}>
+                    {new Date(pet.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Ответственный</div>
+                  <div style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>
+                    {pet.org_id ? (
+                      <span>Организация (<a href={`/orgs/${pet.org_id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }} onMouseEnter={e => e.currentTarget.style.textDecoration='underline'} onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>{pet.org_name || 'Профиль'}</a>)</span>
+                    ) : pet.user_id ? (
+                      <span>{pet.relationship === 'curator' ? 'Куратор' : pet.relationship === 'guardian' ? 'Опекун' : 'Владелец'} (<a href={`/main/${pet.user_id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }} onMouseEnter={e => e.currentTarget.style.textDecoration='underline'} onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>{pet.owner_name || 'Профиль'}</a>)</span>
+                    ) : (
+                      pet.relationship === 'curator' ? 'Куратор' : pet.relationship === 'guardian' ? 'Опекун' : 'Владелец'
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Основное */}
+            <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 1px 12px rgba(0,0,0,0.08)', padding: '16px 16px 8px' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Основное</div>
+              <InfoRow icon="⚧" label="Пол" value={pet.gender === 'male' ? 'Самец ♂' : 'Самка ♀'} />
+              {ageStr && <InfoRow icon="🎂" label="Возраст" value={ageStr} />}
+              <InfoRow icon="📏" label="Размер" value={pet.size ? SIZE_LABELS[pet.size] : null} />
+              <InfoRow icon="🎨" label="Окрас" value={pet.color} />
+            </div>
+
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

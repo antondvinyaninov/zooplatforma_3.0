@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zooplatforma/backend/internal/mainfrontend/pets"
 	"github.com/zooplatforma/backend/internal/shared/auth"
 	"github.com/zooplatforma/backend/internal/shared/config"
 	"github.com/zooplatforma/backend/internal/shared/s3"
@@ -18,6 +19,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 	}
 
 	authHandler := auth.NewHandler(db, cfg)
+	petsHandler := pets.NewHandler(db)
 
 	// Auth routes
 	authGroup := r.Group("/auth")
@@ -38,31 +40,31 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 	pets := r.Group("/pets")
 	{
 		pets.GET("", func(c *gin.Context) {
-			// Return empty if filtered by organization, as this relationship is deprecated
-			if c.Query("organization_id") != "" {
-				c.JSON(200, gin.H{"success": true, "pets": []interface{}{}, "data": []interface{}{}})
+			userID, exists := c.Get("user_id")
+			if !exists {
+				c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
 				return
 			}
-
-			// Получаем всех питомцев
+			
+			// Получаем всех питомцев пользователя
 			rows, err := db.Query(`
 				SELECT 
 					p.id, p.name, p.species_id, COALESCE(s.name, '') as species_name,
-					p.breed_id, COALESCE(b.name, '') as breed_name,
-					p.user_id, COALESCE(u.name, '') as owner_name,
-					COALESCE(p.birth_date::text, ''), COALESCE(p.gender, ''), 
-					p.description, COALESCE(p.relationship, 'owner'),
-					p.photo_url, p.created_at
+					p.breed_id, COALESCE(b.name, '') as breed_name, p.user_id, COALESCE(u.name, '') as owner_name,
+					COALESCE(p.birth_date::text, ''), COALESCE(p.gender, ''),
+					COALESCE(p.description, ''), COALESCE(p.relationship, ''),
+					COALESCE(p.photo_url, ''),
+					p.created_at
 				FROM pets p
+				LEFT JOIN users u ON p.user_id = u.id
 				LEFT JOIN species s ON p.species_id = s.id
 				LEFT JOIN breeds b ON p.breed_id = b.id
-				LEFT JOIN users u ON p.user_id = u.id
+				WHERE p.user_id = $1
 				ORDER BY p.id DESC
-			`)
+			`, userID)
 
 			if err != nil {
-				fmt.Printf("Error fetching all pets: %v\n", err)
-				c.JSON(500, gin.H{"success": false, "error": "Database error: " + err.Error()})
+				c.JSON(500, gin.H{"success": false, "error": "Database error"})
 				return
 			}
 			defer rows.Close()
@@ -103,9 +105,118 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 
 			c.JSON(200, gin.H{"success": true, "pets": petList, "data": petList})
 		})
-		pets.GET("/:id", func(c *gin.Context) {
-			c.JSON(200, gin.H{"success": true, "data": gin.H{"id": c.Param("id")}})
+		pets.GET("/:id", petsHandler.GetByID)
+
+		pets.PUT("/:id", func(c *gin.Context) {
+			userID, exists := c.Get("user_id")
+			if !exists {
+				c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+				return
+			}
+			var intUserID int
+			switch v := userID.(type) {
+			case float64:
+				intUserID = int(v)
+			case int:
+				intUserID = v
+			}
+			petID := c.Param("id")
+			var ownerID int
+			err := db.QueryRow("SELECT user_id FROM pets WHERE id = $1", petID).Scan(&ownerID)
+			if err != nil {
+				c.JSON(404, gin.H{"success": false, "error": "Pet not found"})
+				return
+			}
+			if ownerID != intUserID {
+				c.JSON(403, gin.H{"success": false, "error": "Forbidden"})
+				return
+			}
+			var input map[string]interface{}
+			if err := c.ShouldBindJSON(&input); err != nil {
+				c.JSON(400, gin.H{"success": false, "error": "Invalid input"})
+				return
+			}
+			allowedFields := map[string]string{
+				"name":               "name",
+				"species_id":         "species_id",
+				"breed_id":           "breed_id",
+				"birth_date":         "birth_date",
+				"gender":             "gender",
+				"description":        "description",
+				"relationship":       "relationship",
+				"color":              "color",
+				"size":               "size",
+				"location_type":      "location_type",
+				"sterilization_date": "sterilization_date",
+				"photo_url":          "photo_url",
+				"chip_number":        "microchip",
+				"fur":                "fur",
+				"ears":               "ears",
+				"tail":               "tail",
+				"special_marks":      "special_marks",
+				"marking_date":       "marking_date",
+				"tag_number":         "tag_number",
+				"brand_number":       "brand_number",
+				"location_address":   "location_address",
+				"location_cage":      "location_cage",
+				"location_contact":   "location_contact",
+				"location_phone":     "location_phone",
+				"location_notes":     "location_notes",
+				"weight":             "weight",
+				"health_notes":       "health_notes",
+			}
+			query := "UPDATE pets SET "
+			args := []interface{}{}
+			argCount := 1
+			for jsonKey, value := range input {
+				dbCol, ok := allowedFields[jsonKey]
+				if !ok {
+					continue
+				}
+				if argCount > 1 {
+					query += ", "
+				}
+				query += dbCol + " = $" + fmt.Sprint(argCount)
+				args = append(args, value)
+				argCount++
+			}
+			if argCount == 1 {
+				c.JSON(200, gin.H{"success": true})
+				return
+			}
+			query += " WHERE id = $" + fmt.Sprint(argCount)
+			args = append(args, petID)
+			_, err = db.Exec(query, args...)
+			if err != nil {
+				c.JSON(500, gin.H{"success": false, "error": "Database error"})
+				return
+			}
+			c.JSON(200, gin.H{"success": true})
 		})
+
+		pets.DELETE("/:id", func(c *gin.Context) {
+			userID, exists := c.Get("user_id")
+			if !exists {
+				c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+				return
+			}
+			petID := c.Param("id")
+			_, err := db.Exec("DELETE FROM pets WHERE id = $1 AND user_id = $2", petID, userID)
+			if err != nil {
+				c.JSON(500, gin.H{"success": false, "error": "Database error"})
+				return
+			}
+			c.JSON(200, gin.H{"success": true})
+		})
+
+		// Vaccinations, Treatments, Medical Records (via petsHandler)
+		pets.GET("/:id/vaccinations", petsHandler.GetVaccinations)
+		pets.POST("/:id/vaccinations", petsHandler.CreateVaccination)
+		pets.GET("/:id/treatments", petsHandler.GetTreatments)
+		pets.POST("/:id/treatments", petsHandler.CreateTreatment)
+		pets.GET("/:id/medical-records", petsHandler.GetMedicalRecords)
+		pets.POST("/:id/medical-records", petsHandler.CreateMedicalRecord)
+		pets.GET("/:id/timeline", petsHandler.GetTimeline)
 
 		pets.POST("/:id/photo", func(c *gin.Context) {
 			userID, exists := c.Get("user_id")
@@ -124,7 +235,15 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				return
 			}
 
-			if ownerID != userID.(int) {
+			var intUserID int
+			switch v := userID.(type) {
+			case float64:
+				intUserID = int(v)
+			case int:
+				intUserID = v
+			}
+
+			if ownerID != intUserID {
 				c.JSON(403, gin.H{"success": false, "error": "Forbidden"})
 				return
 			}
@@ -175,6 +294,27 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		})
 	}
 
+	// Vaccinations routes
+	vaccinations := r.Group("/vaccinations")
+	{
+		vaccinations.PUT("/:id", petsHandler.UpdateVaccination)
+		vaccinations.DELETE("/:id", petsHandler.DeleteVaccination)
+	}
+
+	// Treatments routes
+	treatmentsGroup := r.Group("/treatments")
+	{
+		treatmentsGroup.PUT("/:id", petsHandler.UpdateTreatment)
+		treatmentsGroup.DELETE("/:id", petsHandler.DeleteTreatment)
+	}
+
+	// Medical Records routes
+	medicalRecords := r.Group("/medical-records")
+	{
+		medicalRecords.PUT("/:id", petsHandler.UpdateMedicalRecord)
+		medicalRecords.DELETE("/:id", petsHandler.DeleteMedicalRecord)
+	}
+
 	// Organizations routes
 	organizations := r.Group("/organizations")
 	{
@@ -191,3 +331,5 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		})
 	}
 }
+
+// This will just break the file syntax. Better to use sed or manual file rewrite to insert.  

@@ -4,6 +4,58 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AdminLayout, { AdminTab } from '../../../components/admin/AdminLayout';
 import { ChartBarIcon, BookOpenIcon, HeartIcon } from '@heroicons/react/24/outline';
+import { BreadcrumbProvider, useBreadcrumb } from '../../../components/BreadcrumbContext';
+
+// Внутренний компонент для чтения хлебных крошек из контекста
+function PetidDashboardInner({
+  tabs,
+  activeTab,
+  handleTabChange,
+  adminUser,
+  handleLogout,
+  children,
+}: {
+  tabs: AdminTab[];
+  activeTab: string;
+  handleTabChange: (id: string) => void;
+  adminUser: { email: string; name?: string; avatar?: string; role: string };
+  handleLogout: () => void;
+  children: React.ReactNode;
+}) {
+  const { items } = useBreadcrumb();
+  const router = useRouter();
+
+  const breadcrumb = items.length > 0 ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      {items.map((item, i) => (
+        <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {i > 0 && <span style={{ color: '#d1d5db', fontSize: 13 }}>/</span>}
+          {item.href
+            ? <button onClick={() => router.push(item.href!)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#6b7280', padding: 0 }}>{item.label}</button>
+            : <span style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>{item.label}</span>
+          }
+        </span>
+      ))}
+    </div>
+  ) : null;
+
+  return (
+    <AdminLayout
+      logoSrc="/logo.svg"
+      logoText="PetID"
+      logoAlt="PetID - База данных питомцев"
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={handleTabChange}
+      adminUser={adminUser}
+      onLogout={handleLogout}
+      mainSiteUrl="/"
+      breadcrumb={breadcrumb}
+    >
+      {children}
+    </AdminLayout>
+  );
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -127,18 +179,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <AdminLayout
-      logoSrc="/logo.svg"
-      logoText="PetID"
-      logoAlt="PetID - База данных питомцев"
-      tabs={tabs}
-      activeTab={activeTab}
-      onTabChange={handleTabChange}
-      adminUser={adminUser}
-      onLogout={handleLogout}
-      mainSiteUrl="/"
-    >
-      {children}
-    </AdminLayout>
+    <BreadcrumbProvider>
+      <PetidDashboardInner
+        tabs={tabs}
+        activeTab={activeTab}
+        handleTabChange={handleTabChange}
+        adminUser={adminUser}
+        handleLogout={handleLogout}
+      >
+        {children}
+      </PetidDashboardInner>
+    </BreadcrumbProvider>
   );
 }

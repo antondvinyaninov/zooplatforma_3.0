@@ -3,6 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AdminLayout, { AdminTab } from '../../../components/admin/AdminLayout';
+import { BreadcrumbProvider } from '../../../components/BreadcrumbContext';
 import { ChartBarIcon, BookOpenIcon, HeartIcon, HomeIcon } from '@heroicons/react/24/outline';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -112,18 +113,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <AdminLayout
-      logoSrc="/favicon.svg"
-      logoText="ЗооПлатформа"
-      logoAlt="ЗооПлатформа - Кабинет зоопомощника"
-      tabs={tabs}
-      activeTab={activeTab}
-      onTabChange={handleTabChange}
-      adminUser={adminUser}
-      onLogout={handleLogout}
-      mainSiteUrl="https://zooplatforma.ru"
-    >
-      {children}
-    </AdminLayout>
+    <BreadcrumbProvider>
+      <AdminLayout
+        logoSrc="/favicon.svg"
+        logoText="ЗооПлатформа"
+        logoAlt="ЗооПлатформа - Кабинет зоопомощника"
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        adminUser={adminUser}
+        onLogout={handleLogout}
+        mainSiteUrl="https://zooplatforma.ru"
+        breadcrumb={true}
+      >
+        {children}
+      </AdminLayout>
+    </BreadcrumbProvider>
   );
 }

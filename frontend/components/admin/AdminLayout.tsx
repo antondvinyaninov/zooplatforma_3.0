@@ -1,9 +1,15 @@
 'use client';
 
 import { ReactNode, useState, useEffect } from 'react';
-import { BellIcon, Cog6ToothIcon, ChevronLeftIcon } from '@heroicons/react/24/outline';
+import {
+  BellIcon,
+  Cog6ToothIcon,
+  ChevronLeftIcon,
+  ChevronDownIcon,
+} from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { getMediaUrl } from '@/lib/utils';
+import { useBreadcrumb } from '../BreadcrumbContext';
 
 export interface AdminTab {
   id: string;
@@ -22,6 +28,7 @@ interface AdminLayoutProps {
   adminUser?: { email: string; name?: string; avatar?: string; role: string } | null;
   onLogout?: () => void;
   mainSiteUrl?: string;
+  breadcrumb?: ReactNode;
 }
 
 export default function AdminLayout({
@@ -35,15 +42,35 @@ export default function AdminLayout({
   adminUser,
   onLogout,
   mainSiteUrl = '/main',
+  breadcrumb,
 }: AdminLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const { items: breadcrumbItems } = useBreadcrumb();
+  
+  const defaultBreadcrumb = breadcrumbItems.length > 0 ? (
+    <div className="flex items-center gap-1.5 text-[13px]">
+      {breadcrumbItems.map((item, i) => (
+        <span key={i} className="flex items-center gap-1.5">
+          {i > 0 && <span className="text-gray-300">/</span>}
+          {item.href ? (
+            <Link href={item.href} className="text-gray-500 hover:text-gray-800 transition-colors no-underline">
+              {item.label}
+            </Link>
+          ) : (
+            <span className="text-gray-800 font-semibold">{item.label}</span>
+          )}
+        </span>
+      ))}
+    </div>
+  ) : null;
+
+  const finalBreadcrumb = breadcrumb === true || (!breadcrumb && breadcrumbItems.length > 0) ? defaultBreadcrumb : breadcrumb;
+
+  useEffect(() => { setIsClient(true); }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -56,136 +83,56 @@ export default function AdminLayout({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [userMenuOpen]);
 
+  const sidebarW = sidebarCollapsed ? 56 : 200;
+
   return (
-    <div className="min-h-screen bg-white w-full overflow-x-hidden">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-[100] shadow-sm">
-        <div className="max-w-full px-4 h-[54px] flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <button
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-            <h1 className="flex items-center gap-2 text-base font-medium text-gray-900 m-0">
-              <img src={logoSrc} alt={logoAlt} className="w-7 h-7" />
-              <span className="text-sm font-bold uppercase hidden sm:block">{logoText}</span>
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            {adminUser && (
-              <>
-                <button className="w-8 h-8 border-none bg-none cursor-pointer flex items-center justify-center rounded-full transition-colors hover:bg-gray-100 text-gray-600">
-                  <BellIcon className="w-4 h-4" />
-                </button>
-                <button className="w-8 h-8 border-none bg-none cursor-pointer flex items-center justify-center rounded-full transition-colors hover:bg-gray-100 text-gray-600">
-                  <Cog6ToothIcon className="w-4 h-4" />
-                </button>
-                <div className="relative user-menu-wrapper">
-                  <button
-                    className="flex items-center gap-2 px-2 py-1 bg-none border-none cursor-pointer rounded-lg transition-colors hover:bg-gray-100"
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  >
-                    {adminUser.avatar ? (
-                      <img
-                        src={getMediaUrl(adminUser.avatar)}
-                        alt={adminUser.name || adminUser.email}
-                        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 flex-shrink-0">
-                        <span className="text-sm font-medium">
-                          {adminUser?.email?.charAt(0).toUpperCase() || 'A'}
-                        </span>
-                      </div>
-                    )}
-                    <span className="text-xs text-gray-400">▼</span>
-                  </button>
+    <div className="flex h-screen bg-[#eff2f7] overflow-hidden w-full" style={{ zoom: 1.1 }}>
 
-                  {userMenuOpen && (
-                    <div className="absolute right-0 top-[calc(100%+8px)] w-[280px] bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-[1000]">
-                      <div className="p-4 border-b border-gray-200 flex items-center gap-3">
-                        {adminUser.avatar ? (
-                          <img
-                            src={getMediaUrl(adminUser.avatar)}
-                            alt={adminUser.name || adminUser.email}
-                            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 flex-shrink-0">
-                            <span className="text-sm font-medium">
-                              {adminUser?.email?.charAt(0).toUpperCase() || 'A'}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900 mb-0.5">
-                            {adminUser?.name || adminUser?.email || 'Admin'}
-                          </div>
-                          <div className="text-xs text-gray-600">{adminUser?.role || 'admin'}</div>
-                        </div>
-                      </div>
+      {/* Mobile overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
 
-                      <div className="py-2">
-                        <Link
-                          href="/main"
-                          className="w-full px-4 py-3 bg-none border-none cursor-pointer text-left text-sm text-gray-900 transition-colors hover:bg-gray-100 block no-underline"
-                        >
-                          Главная страница
-                        </Link>
-                        {onLogout && (
-                          <button
-                            className="w-full px-4 py-3 bg-none border-none cursor-pointer text-left text-sm text-gray-900 transition-colors hover:bg-gray-100"
-                            onClick={onLogout}
-                          >
-                            Выйти
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+      {/* Sidebar — полная высота */}
+      <aside
+        style={{ width: sidebarW }}
+        className={`
+          bg-transparent flex flex-col flex-shrink-0 transition-all duration-300 h-screen border-r border-gray-200
+          max-lg:fixed max-lg:left-0 max-lg:top-0 max-lg:h-screen max-lg:z-50 max-lg:bg-[#eff2f7]
+          ${mobileMenuOpen ? 'max-lg:translate-x-0' : 'max-lg:-translate-x-full'}
+        `}
+      >
+        {/* Лого + название */}
+        <div className={`flex items-center gap-2 px-3 flex-shrink-0 ${sidebarCollapsed ? 'justify-center py-4' : 'py-4'}`}>
+          {logoSrc && logoSrc !== '/favicon.svg' ? (
+            <img src={logoSrc} alt={logoAlt} className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">
+                {logoText?.charAt(0)?.toUpperCase() || '?'}
+              </span>
+            </div>
+          )}
+          {!sidebarCollapsed && (
+            <span className="text-xs font-semibold text-gray-800 truncate">{logoText}</span>
+          )}
         </div>
-      </header>
 
-      <div className="flex h-[calc(100vh-54px)] w-full">
-        {/* Mobile overlay */}
-        {mobileMenuOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-        )}
 
-        {/* Sidebar */}
-        <aside
-          className={`
-            w-[240px] bg-white border-r border-gray-200 flex-shrink-0 p-3 transition-all duration-300 relative flex flex-col
-            ${sidebarCollapsed ? 'lg:w-16' : 'lg:w-[240px]'}
-            max-lg:fixed max-lg:left-0 max-lg:top-[54px] max-lg:h-[calc(100vh-54px)] max-lg:z-50
-            ${mobileMenuOpen ? 'max-lg:translate-x-0' : 'max-lg:-translate-x-full'}
-          `}
-        >
+        {/* Навигация */}
+        <nav className="flex-1 overflow-y-auto py-2 px-2">
           {isClient ? (
-            <nav className="flex flex-col gap-0.5">
+            <>
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   className={`
-                    w-full px-3 py-2.5 border-none bg-none cursor-pointer flex items-center gap-3 transition-colors rounded-lg text-left whitespace-nowrap
-                    ${activeTab === tab.id ? 'bg-gray-100 shadow-sm' : 'hover:bg-gray-50'}
-                    ${sidebarCollapsed ? 'lg:justify-center lg:px-2.5' : ''}
+                    w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg text-left transition-colors duration-200 border-none cursor-pointer whitespace-nowrap
+                    ${sidebarCollapsed ? 'justify-center' : ''}
+                    hover:bg-gray-200
                   `}
                   onClick={() => {
                     onTabChange(tab.id);
@@ -193,44 +140,121 @@ export default function AdminLayout({
                   }}
                   title={tab.label}
                 >
-                  <div
-                    className={`w-5 h-5 flex-shrink-0 ${activeTab === tab.id ? 'text-blue-600' : 'text-gray-600'}`}
-                  >
+                  <div className="w-5 h-5 flex-shrink-0 text-gray-600">
                     {tab.icon}
                   </div>
                   {!sidebarCollapsed && (
-                    <span
-                      className={`text-base ${activeTab === tab.id ? 'text-blue-600 font-medium' : 'text-gray-900'}`}
-                    >
+                    <span className={`text-sm text-gray-700 ${activeTab === tab.id ? 'font-semibold' : 'font-medium'}`}>
                       {tab.label}
                     </span>
                   )}
                 </button>
               ))}
-            </nav>
+            </>
           ) : (
-            <nav className="flex flex-col gap-0.5">
-              <div className="h-[200px]"></div>
-            </nav>
+            <div className="h-[200px]" />
           )}
+        </nav>
 
-          <button
-            className="mt-auto p-2.5 px-3 border-none bg-none cursor-pointer flex items-center gap-3 transition-colors rounded-lg text-gray-600 border-t border-gray-300 -mx-3 -mb-3 pt-4 hover:bg-gray-50"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            title={sidebarCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
-          >
-            <ChevronLeftIcon
-              className={`w-5 h-5 transition-transform duration-300 flex-shrink-0 ${
-                sidebarCollapsed ? 'rotate-180' : ''
-              }`}
-            />
-            {!sidebarCollapsed && <span className="text-base">Свернуть</span>}
-          </button>
-        </aside>
+        {/* Свернуть — внизу как в Метрике */}
+        <button
+          className="flex items-center gap-2 px-2 py-1.5 border-none bg-transparent cursor-pointer text-gray-600 hover:bg-gray-200 hover:text-gray-800 transition-colors duration-200 w-full text-left flex-shrink-0 rounded-lg"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          title={sidebarCollapsed ? 'Развернуть' : 'Свернуть'}
+        >
+          <ChevronLeftIcon
+            className={`w-4 h-4 transition-transform duration-300 flex-shrink-0 ${sidebarCollapsed ? 'rotate-180' : ''}`}
+          />
+          {!sidebarCollapsed && <span className="text-sm">Свернуть</span>}
+        </button>
+      </aside>
 
-        {/* Main content */}
-        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 p-8 max-md:p-4 max-sm:p-3">
-          <div className="w-full max-w-[1600px] mx-auto">{children}</div>
+      {/* Правая часть */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        {/* Тонкая топ-полоска */}
+        <div className="flex items-center justify-between px-4 h-[44px] flex-shrink-0">
+          {/* Хлебные крошки / мобильный бургер */}
+          <div className="flex items-center gap-2">
+            <button
+              className="lg:hidden p-1 hover:bg-gray-100 rounded-lg transition-colors border-none cursor-pointer bg-transparent"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            {finalBreadcrumb && <div className="hidden lg:flex items-center">{finalBreadcrumb}</div>}
+          </div>
+          {/* Правые элементы */}
+          <div className="flex items-center gap-1 ml-auto">
+            <Link
+              href={mainSiteUrl}
+              className="text-xs text-gray-500 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100 transition-colors no-underline hidden sm:block"
+            >
+              На сайт
+            </Link>
+
+            <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors border-none bg-transparent cursor-pointer text-gray-500">
+              <BellIcon className="w-4 h-4" />
+            </button>
+            <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors border-none bg-transparent cursor-pointer text-gray-500">
+              <Cog6ToothIcon className="w-4 h-4" />
+            </button>
+
+            {adminUser && (
+              <div className="relative user-menu-wrapper">
+                <button
+                  className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-gray-100 rounded-lg transition-colors border-none bg-transparent cursor-pointer"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                >
+                  {adminUser.avatar ? (
+                    <img src={getMediaUrl(adminUser.avatar)} alt="" className="w-6 h-6 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                      <span className="text-xs text-gray-600 font-medium">
+                        {adminUser.email?.charAt(0).toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
+                  <span className="text-xs text-gray-700 font-medium hidden sm:block">
+                    {adminUser.name || adminUser.email?.split('@')[0]}
+                  </span>
+                  <ChevronDownIcon className="w-3 h-3 text-gray-400" />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-[calc(100%+4px)] w-[220px] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-[1000] py-1">
+                    <div className="px-3 py-2 border-b border-gray-100">
+                      <div className="text-sm font-medium text-gray-900">{adminUser.name || adminUser.email}</div>
+                      <div className="text-xs text-gray-500 capitalize">{adminUser.role}</div>
+                    </div>
+                    <Link
+                      href={mainSiteUrl}
+                      className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"
+                    >
+                      На сайт
+                    </Link>
+                    {onLogout && (
+                      <button
+                        className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 border-none bg-transparent cursor-pointer border-t border-gray-100 mt-1"
+                        onClick={onLogout}
+                      >
+                        Выйти
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Контент */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#eff2f7]">
+          <div className="w-full max-w-[1600px] mx-auto py-4 max-md:py-2">
+            {children}
+          </div>
         </main>
       </div>
     </div>

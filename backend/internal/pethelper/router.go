@@ -3,7 +3,6 @@ package pethelper
 import (
 	"bytes"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"io"
 
@@ -325,86 +324,10 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				return
 			}
 
-			// Разрешенные поля таблицы pets для обновления (и маппинг)
-			allowedFields := map[string]string{
-				"name":               "name",
-				"species_id":         "species_id",
-				"breed_id":           "breed_id",
-				"birth_date":         "birth_date",
-				"gender":             "gender",
-				"description":        "description",
-				"relationship":       "relationship",
-				"color":              "color",
-				"size":               "size",
-				"location_type":      "location_type",
-				"sterilization_date": "sterilization_date",
-				"is_sterilized":      "is_sterilized",
-				"photo_url":          "photo_url",
-				"chip_number":        "microchip", // map from frontend key to db column
-				"media_urls":         "media_urls",
-				"age_type":           "age_type",
-				"approximate_years":  "approximate_years",
-				"approximate_months": "approximate_months",
-				"catalog_status":     "catalog_status",
-				"catalog_data":       "catalog_data",
-
-				// Новые поля из миграции 013
-				"fur":              "fur",
-				"ears":             "ears",
-				"tail":             "tail",
-				"special_marks":    "special_marks",
-				"marking_date":     "marking_date",
-				"tag_number":       "tag_number",
-				"brand_number":     "brand_number",
-				"location_address": "location_address",
-				"location_cage":    "location_cage",
-				"location_contact": "location_contact",
-				"location_phone":   "location_phone",
-				"location_notes":   "location_notes",
-				"weight":           "weight",
-				"health_notes":     "health_notes",
-
-				// Остальные поля пока игнорируются, чтобы не вызывать SQL ошибку (42703)
-			}
-
-			// Обновляем только переданные поля, которые есть в разрешенном списке
-			query := "UPDATE pets SET "
-			args := []interface{}{}
-			argCount := 1
-
-			for jsonKey, value := range input {
-				dbCol, ok := allowedFields[jsonKey]
-				if !ok {
-					continue // Игнорируем неразрешенные или вычисляемые поля
-				}
-				if argCount > 1 {
-					query += ", "
-				}
-				query += dbCol + " = $" + fmt.Sprint(argCount)
-				if dbCol == "media_urls" || dbCol == "catalog_data" {
-					jsonBytes, err := json.Marshal(value)
-					if err != nil {
-						c.JSON(500, gin.H{"success": false, "error": fmt.Sprintf("Failed to serialize %s", dbCol)})
-						return
-					}
-					args = append(args, jsonBytes)
-				} else {
-					args = append(args, value)
-				}
-				argCount++
-			}
-
-			if argCount == 1 {
-				// Нет полей для обновления
-				c.JSON(200, gin.H{"success": true})
-				return
-			}
-
-			query += " WHERE id = $" + fmt.Sprint(argCount)
-			args = append(args, petID)
-
-			_, err = db.Exec(query, args...)
+			// Вызов общего метода обновления питомца и логирования в хронологию
+			err = petsHandler.UpdatePetCore(petID, input)
 			if err != nil {
+				fmt.Printf("❌ UpdatePetCore error in pethelper: %v\n", err)
 				c.JSON(500, gin.H{"success": false, "error": "Database error"})
 				return
 			}

@@ -687,6 +687,19 @@ func (h *Handler) GetTimeline(c *gin.Context) {
 		FROM pet_medical_records
 		WHERE pet_id = $1
 
+		UNION ALL
+
+		SELECT 
+			'org_' || id AS id,
+			event_type AS type,
+			title,
+			description,
+			created_at AS date,
+			icon,
+			color
+		FROM org_pet_events
+		WHERE pet_id = $1 AND event_type != 'medical' AND event_type != 'registration'
+
 		ORDER BY date DESC
 	`
 
@@ -723,6 +736,20 @@ func (h *Handler) GetTimeline(c *gin.Context) {
 
 	if events == nil {
 		events = []map[string]interface{}{}
+	}
+
+	var petName, createdAt string
+	err = h.db.QueryRow(`SELECT COALESCE(name, 'Без имени'), created_at::text FROM pets WHERE id = $1`, petID).Scan(&petName, &createdAt)
+	if err == nil {
+		events = append(events, map[string]interface{}{
+			"id":          "reg_0",
+			"type":        "registration",
+			"title":       "Регистрация профиля",
+			"description": "Профиль питомца «" + petName + "» создан",
+			"date":        createdAt[:10],
+			"icon":        "🐾",
+			"color":       "blue",
+		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "events": events})

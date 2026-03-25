@@ -246,11 +246,13 @@ func (h *Handler) GetByID(c *gin.Context) {
 			p.created_at::text as created_at,
 			
 			p.species_id, s.name as species_name,
-			p.breed_id, b.name as breed_name
+			p.breed_id, b.name as breed_name,
+			p.org_id, o.name as org_name
 		FROM pets p
 		LEFT JOIN users u ON p.user_id = u.id
 		LEFT JOIN species s ON p.species_id = s.id
 		LEFT JOIN breeds b ON p.breed_id = b.id
+		LEFT JOIN organizations o ON p.org_id = o.id
 		WHERE p.id = $1
 	`
 
@@ -277,8 +279,8 @@ func (h *Handler) GetByID(c *gin.Context) {
 		ownerName, ownerLastName, ownerAvatar             sql.NullString
 		location, phone, createdAt, ownerEmail            sql.NullString
 
-		speciesID, breedID                                sql.NullInt64
-		speciesNameStr, breedNameStr                      sql.NullString
+		speciesID, breedID, orgID                         sql.NullInt64
+		speciesNameStr, breedNameStr, orgNameStr          sql.NullString
 	)
 
 	err := h.db.QueryRow(query, petID).Scan(
@@ -294,7 +296,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 		&catalogStatus, &catalogDataRaw,
 
 		&ownerName, &ownerLastName, &ownerAvatar, &location, &phone, &ownerEmail, &createdAt,
-		&speciesID, &speciesNameStr, &breedID, &breedNameStr,
+		&speciesID, &speciesNameStr, &breedID, &breedNameStr, &orgID, &orgNameStr,
 	)
 
 	if err == sql.ErrNoRows {
@@ -325,6 +327,11 @@ func (h *Handler) GetByID(c *gin.Context) {
 	var parsedCatalogData map[string]interface{}
 	if len(catalogDataRaw) > 0 {
 		_ = json.Unmarshal(catalogDataRaw, &parsedCatalogData)
+	}
+
+	ownerFullName := ownerName.String
+	if ownerLastName.Valid && ownerLastName.String != "" {
+		ownerFullName = ownerFullName + " " + ownerLastName.String
 	}
 
 	pet := map[string]interface{}{
@@ -366,7 +373,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 		"health_notes":       healthNotes.String,
 		"views_count":        viewsCount.Int64,
 
-		"owner_name":         ownerName.String,
+		"owner_name":         ownerFullName,
 		"owner_email":        ownerEmail.String,
 		"city":               location.String,
 		"phone":              phone.String,
@@ -377,6 +384,8 @@ func (h *Handler) GetByID(c *gin.Context) {
 		"media_urls":         parsedMediaUrls,
 		"catalog_status":     catalogStatus.String,
 		"catalog_data":       parsedCatalogData,
+		"org_id":             orgID.Int64,
+		"org_name":           orgNameStr.String,
 	}
 
 	if speciesID.Valid {

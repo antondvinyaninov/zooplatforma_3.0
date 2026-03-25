@@ -1,67 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import ConfirmModal from '@/components/main/shared/ConfirmModal';
-
-interface Pet {
-  id: number;
-  name: string;
-  species_id?: number;
-  species_name: string;
-  breed_id?: number;
-  breed_name: string;
-  owner_id?: number;
-  owner_name: string;
-  birth_date: string;
-  gender: string;
-  description?: string;
-  relationship?: string;
-  created_at: string;
-}
+import { useRouter } from 'next/navigation';
+import PetsTable, { Pet } from '@/components/pets/list/PetsTable';
+import PetsEmptyState from '@/components/pets/list/PetsEmptyState';
+import AddPetModal from '@/components/pets/list/AddPetModal';
 
 export default function PetsPage() {
+  const router = useRouter();
   const [pets, setPets] = useState<Pet[]>([]);
-  const [filteredPets, setFilteredPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Фильтры
-  const [speciesFilter, setSpeciesFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  // Модальное окно
   const [showModal, setShowModal] = useState(false);
-  const [editingPet, setEditingPet] = useState<Pet | null>(null);
-  const [newPet, setNewPet] = useState({
-    name: '',
-    species_id: 1,
-    breed_id: null as number | null,
-    birth_date: '',
-    age_type: 'exact' as 'exact' | 'approximate',
-    approximate_years: 0,
-    approximate_months: 0,
-    gender: 'male',
-    description: '',
-    relationship: 'owner' as 'owner' | 'curator',
-  });
-  const [saving, setSaving] = useState(false);
-  const [breeds, setBreeds] = useState<any[]>([]);
-  const [breedSearch, setBreedSearch] = useState('');
-  const [showBreedDropdown, setShowBreedDropdown] = useState(false);
-  const [birthDateType, setBirthDateType] = useState<'exact' | 'approximate'>('exact');
-  const [approximateAge, setApproximateAge] = useState({ years: 0, months: 0 });
-  const [petToDelete, setPetToDelete] = useState<Pet | null>(null);
-  const [isDeletingPet, setIsDeletingPet] = useState(false);
 
   useEffect(() => {
     fetchPets();
-    fetchBreeds();
   }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [pets, speciesFilter, searchQuery, sortOrder]);
 
   const fetchPets = async () => {
     try {
@@ -72,7 +26,6 @@ export default function PetsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Загружены питомцы:', data.pets?.length, 'шт.');
         setPets(data.pets || []);
       } else {
         setError('Ошибка загрузки питомцев');
@@ -85,669 +38,67 @@ export default function PetsPage() {
     }
   };
 
-  const fetchBreeds = async () => {
-    try {
-      const response = await fetch('/main/api/owner/breeds', {
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setBreeds(data.breeds || []);
-      }
-    } catch (err) {
-      console.error('Ошибка загрузки пород:', err);
-    }
-  };
-
-  const handleAddPet = async () => {
-    if (!newPet.name.trim()) {
-      alert('Введите имя питомца');
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      if (editingPet) {
-        // Редактирование существующего питомца
-        const response = await fetch(`/api/petid/pets/${editingPet.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(newPet),
-        });
-
-        if (response.ok) {
-          setShowModal(false);
-          setEditingPet(null);
-          setBreedSearch('');
-          setShowBreedDropdown(false);
-          setBirthDateType('exact');
-          setApproximateAge({ years: 0, months: 0 });
-          setNewPet({
-            name: '',
-            species_id: 1,
-            breed_id: null,
-            birth_date: '',
-            age_type: 'exact',
-            approximate_years: 0,
-            approximate_months: 0,
-            gender: 'male',
-            description: '',
-            relationship: 'owner',
-          });
-          await fetchPets();
-          alert('Питомец успешно обновлен!');
-        } else {
-          const data = await response.json();
-          alert('Ошибка: ' + (data.error || 'Не удалось обновить питомца'));
-        }
-      } else {
-        // Создание нового питомца
-        console.log('Отправляем данные питомца:', newPet);
-
-        const response = await fetch('/api/petid/pets', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(newPet),
-        });
-
-        console.log('Статус ответа:', response.status);
-
-        if (response.ok) {
-          setShowModal(false);
-          setBreedSearch('');
-          setShowBreedDropdown(false);
-          setBirthDateType('exact');
-          setApproximateAge({ years: 0, months: 0 });
-          setNewPet({
-            name: '',
-            species_id: 1,
-            breed_id: null,
-            birth_date: '',
-            age_type: 'exact',
-            approximate_years: 0,
-            approximate_months: 0,
-            gender: 'male',
-            description: '',
-            relationship: 'owner',
-          });
-          setSpeciesFilter('all');
-          setSearchQuery('');
-          setSortOrder('desc');
-          await fetchPets();
-          alert('Питомец успешно добавлен!');
-        } else {
-          const data = await response.json();
-          alert('Ошибка: ' + (data.error || 'Не удалось добавить питомца'));
-        }
-      }
-    } catch (err) {
-      alert('Ошибка подключения к серверу');
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleEditPet = (pet: Pet) => {
-    setEditingPet(pet);
-    const selectedBreed = breeds.find((b) => b.id === pet.breed_id);
-    setBreedSearch(selectedBreed ? selectedBreed.name : '');
-    setNewPet({
-      name: pet.name,
-      species_id: pet.species_id || 1,
-      breed_id: pet.breed_id || null,
-      birth_date: pet.birth_date ? pet.birth_date.split('T')[0] : '',
-      age_type: (pet as any).age_type || 'exact',
-      approximate_years: (pet as any).approximate_years || 0,
-      approximate_months: (pet as any).approximate_months || 0,
-      gender: pet.gender || 'male',
-      description: pet.description || '',
-      relationship: (pet as any).relationship || 'owner',
-    });
-    setShowModal(true);
-  };
-
-  const handleDeletePet = async (pet: Pet) => {
-    setIsDeletingPet(true);
-    try {
-      const response = await fetch(`/api/petid/pets/${pet.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        await fetchPets();
-        alert('Питомец успешно удален!');
-      } else {
-        const data = await response.json();
-        alert('Ошибка: ' + (data.error || 'Не удалось удалить питомца'));
-      }
-    } catch (err) {
-      alert('Ошибка подключения к серверу');
-      console.error(err);
-    } finally {
-      setIsDeletingPet(false);
-      setPetToDelete(null);
-    }
-  };
-
-  const applyFilters = () => {
-    let result = [...pets];
-
-    // Фильтр по виду животного
-    if (speciesFilter !== 'all') {
-      const speciesName = speciesFilter === 'dog' ? 'Собака' : 'Кошка';
-      result = result.filter((pet) => pet.species_name === speciesName);
-    }
-
-    // Поиск по имени питомца или владельца
-    if (searchQuery.trim()) {
-      result = result.filter(
-        (pet) =>
-          pet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          pet.owner_name?.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-    }
-
-    // Сортировка по ID
-    result.sort((a, b) => {
-      return sortOrder === 'asc' ? a.id - b.id : b.id - a.id;
-    });
-
-    setFilteredPets(result);
-  };
-
-  const calculateBirthDate = (years: number, months: number) => {
-    const today = new Date();
-    const birthDate = new Date(today);
-    birthDate.setFullYear(today.getFullYear() - years);
-    birthDate.setMonth(today.getMonth() - months);
-
-    // Форматируем в YYYY-MM-DD
-    const formattedDate = birthDate.toISOString().split('T')[0];
-    setNewPet({
-      ...newPet,
-      birth_date: formattedDate,
-      age_type: 'approximate',
-      approximate_years: years,
-      approximate_months: months,
-    });
-  };
-
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="text-gray-500">Загрузка...</div>
+      <div style={{ padding: 24, color: '#9ca3af', fontSize: 13 }}>
+        Загрузка...
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="text-red-500">{error}</div>
+      <div style={{ padding: 24, color: '#ef4444', fontSize: 13 }}>
+        {error}
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Питомцы</h1>
-          <p className="text-gray-600 mt-2">Все зарегистрированные питомцы</p>
+    <div style={{ paddingLeft: 16, paddingRight: 16 }}>
+      {/* Заголовок */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <div style={{ flex: 1 }}>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#111827' }}>Мои питомцы</h1>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>
+            Единый профиль ваших животных
+          </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          + Добавить питомца
-        </button>
-      </div>
-
-      {/* Фильтры и поиск */}
-      <div className="mb-6 bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Фильтр по виду */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Вид животного</label>
-            <select
-              value={speciesFilter}
-              onChange={(e) => setSpeciesFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Все виды</option>
-              <option value="dog">Собаки</option>
-              <option value="cat">Кошки</option>
-            </select>
-          </div>
-
-          {/* Поиск */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Поиск по имени питомца или владельца
-            </label>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Введите имя..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        {/* Счетчик результатов */}
-        <div className="mt-4 text-sm text-gray-600">
-          Найдено питомцев: <span className="font-semibold">{filteredPets.length}</span> из{' '}
-          {pets.length}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setShowModal(true)}
+            style={{
+              padding: '8px 16px', borderRadius: 8, border: 'none',
+              background: '#16a34a', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer',
+            }}
+          >
+            + Добавить питомца
+          </button>
         </div>
       </div>
 
-      {/* Таблица */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              >
-                <div className="flex items-center gap-2">
-                  ID
-                  <span className="text-gray-400">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                </div>
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Имя питомца
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Вид
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Порода
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Владелец
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Дата рождения
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Пол
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Роль
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Действия
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredPets.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
-                  {searchQuery || speciesFilter !== 'all' ? 'Ничего не найдено' : 'Нет данных'}
-                </td>
-              </tr>
-            ) : (
-              filteredPets.map((pet) => (
-                <tr key={pet.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{pet.id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {pet.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {pet.species_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {pet.breed_name || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {pet.owner_name || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('ru-RU') : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {pet.gender === 'male' ? 'Самец' : pet.gender === 'female' ? 'Самка' : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {pet.relationship === 'owner'
-                      ? 'Владелец'
-                      : pet.relationship === 'curator'
-                        ? 'Куратор'
-                        : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <a href={`/pets/${pet.id}`} className="text-blue-600 hover:text-blue-900 mr-4">
-                      Просмотр
-                    </a>
-                    <button
-                      onClick={() => handleEditPet(pet)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
-                    >
-                      Редактировать
-                    </button>
-                    <button
-                      onClick={() => setPetToDelete(pet)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Удалить
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Модальное окно добавления питомца */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {editingPet ? 'Редактировать питомца' : 'Добавить питомца'}
-            </h2>
-
-            <div className="space-y-4">
-              {/* Имя */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Имя питомца *
-                </label>
-                <input
-                  type="text"
-                  value={newPet.name}
-                  onChange={(e) => setNewPet({ ...newPet, name: e.target.value })}
-                  placeholder="Например: Барсик"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Вид животного */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Вид животного *
-                </label>
-                <select
-                  value={newPet.species_id}
-                  onChange={(e) => {
-                    setNewPet({ ...newPet, species_id: Number(e.target.value), breed_id: null });
-                    setBreedSearch(''); // Сбрасываем поиск породы при смене вида
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value={1}>Собака</option>
-                  <option value={2}>Кошка</option>
-                </select>
-              </div>
-
-              {/* Порода */}
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Порода (необязательно)
-                </label>
-                <input
-                  type="text"
-                  value={breedSearch}
-                  onChange={(e) => {
-                    setBreedSearch(e.target.value);
-                    setShowBreedDropdown(true);
-                    if (!e.target.value) {
-                      setNewPet({ ...newPet, breed_id: null });
-                    }
-                  }}
-                  onFocus={() => setShowBreedDropdown(true)}
-                  placeholder="Начните вводить название породы..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-
-                {/* Выпадающий список с результатами */}
-                {showBreedDropdown && breedSearch && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    {breeds
-                      .filter(
-                        (breed) =>
-                          breed.species_id === newPet.species_id &&
-                          breed.name.toLowerCase().includes(breedSearch.toLowerCase()),
-                      )
-                      .map((breed) => (
-                        <div
-                          key={breed.id}
-                          onClick={() => {
-                            setNewPet({ ...newPet, breed_id: breed.id });
-                            setBreedSearch(breed.name);
-                            setShowBreedDropdown(false);
-                          }}
-                          className="px-3 py-2 hover:bg-blue-50 cursor-pointer"
-                        >
-                          {breed.name}
-                        </div>
-                      ))}
-                    {breeds.filter(
-                      (breed) =>
-                        breed.species_id === newPet.species_id &&
-                        breed.name.toLowerCase().includes(breedSearch.toLowerCase()),
-                    ).length === 0 && (
-                      <div className="px-3 py-2 text-gray-500">Породы не найдены</div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Дата рождения */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Дата рождения (необязательно)
-                </label>
-
-                {/* Переключатель типа даты */}
-                <div className="flex gap-4 mb-3">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={birthDateType === 'exact'}
-                      onChange={() => {
-                        setBirthDateType('exact');
-                        setApproximateAge({ years: 0, months: 0 });
-                      }}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Точная дата</span>
-                  </label>
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={birthDateType === 'approximate'}
-                      onChange={() => {
-                        setBirthDateType('approximate');
-                        setNewPet({ ...newPet, birth_date: '' });
-                      }}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Примерный возраст</span>
-                  </label>
-                </div>
-
-                {/* Точная дата */}
-                {birthDateType === 'exact' && (
-                  <input
-                    type="date"
-                    value={newPet.birth_date}
-                    onChange={(e) =>
-                      setNewPet({
-                        ...newPet,
-                        birth_date: e.target.value,
-                        age_type: 'exact',
-                        approximate_years: 0,
-                        approximate_months: 0,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                )}
-
-                {/* Примерный возраст */}
-                {birthDateType === 'approximate' && (
-                  <div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">Лет</label>
-                        <select
-                          value={approximateAge.years}
-                          onChange={(e) => {
-                            const years = Number(e.target.value);
-                            setApproximateAge({ ...approximateAge, years });
-                            calculateBirthDate(years, approximateAge.months);
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          {[...Array(21)].map((_, i) => (
-                            <option key={i} value={i}>
-                              {i}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">Месяцев</label>
-                        <select
-                          value={approximateAge.months}
-                          onChange={(e) => {
-                            const months = Number(e.target.value);
-                            setApproximateAge({ ...approximateAge, months });
-                            calculateBirthDate(approximateAge.years, months);
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          {[...Array(12)].map((_, i) => (
-                            <option key={i} value={i}>
-                              {i}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    {(approximateAge.years > 0 || approximateAge.months > 0) && (
-                      <div className="mt-2 text-sm text-gray-600">
-                        Примерная дата рождения:{' '}
-                        {newPet.birth_date
-                          ? new Date(newPet.birth_date).toLocaleDateString('ru-RU')
-                          : '-'}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Пол */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Пол *</label>
-                <select
-                  value={newPet.gender}
-                  onChange={(e) => setNewPet({ ...newPet, gender: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="male">Самец</option>
-                  <option value="female">Самка</option>
-                </select>
-              </div>
-
-              {/* Роль (владелец или куратор) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Кто я питомцу *
-                </label>
-                <select
-                  value={newPet.relationship}
-                  onChange={(e) =>
-                    setNewPet({ ...newPet, relationship: e.target.value as 'owner' | 'curator' })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="owner">Владелец</option>
-                  <option value="curator">Куратор</option>
-                </select>
-              </div>
-
-              {/* Описание */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Описание (необязательно)
-                </label>
-                <textarea
-                  value={newPet.description}
-                  onChange={(e) => setNewPet({ ...newPet, description: e.target.value })}
-                  placeholder="Дополнительная информация о питомце..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* Кнопки */}
-            <div className="mt-6 flex gap-3 justify-end">
-              <button
-                onClick={() => {
-                  setShowModal(false);
-                  setEditingPet(null);
-                  setBreedSearch('');
-                  setShowBreedDropdown(false);
-                  setBirthDateType('exact');
-                  setApproximateAge({ years: 0, months: 0 });
-                  setNewPet({
-                    name: '',
-                    species_id: 1,
-                    breed_id: null,
-                    birth_date: '',
-                    age_type: 'exact',
-                    approximate_years: 0,
-                    approximate_months: 0,
-                    gender: 'male',
-                    description: '',
-                    relationship: 'owner',
-                  });
-                }}
-                disabled={saving}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={handleAddPet}
-                disabled={saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                {saving ? 'Сохранение...' : editingPet ? 'Сохранить' : 'Добавить'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Состояния */}
+      {pets.length === 0 ? (
+        <PetsEmptyState onAdd={() => setShowModal(true)} />
+      ) : (
+        <PetsTable
+          pets={pets}
+          variant="petid"  // <-- Вариант без org_pet_number
+          onRowClick={(pet) => router.push(`/petid/pets/${pet.id}`)}
+        />
       )}
-      <ConfirmModal
-        isOpen={!!petToDelete}
-        title="Удалить питомца?"
-        message={`Питомец "${petToDelete?.name || ''}" будет удален без возможности восстановления.`}
-        confirmText="Удалить"
-        loading={isDeletingPet}
-        onClose={() => setPetToDelete(null)}
-        onConfirm={() => {
-          if (petToDelete) {
-            void handleDeletePet(petToDelete);
-          }
-        }}
-      />
+
+      {/* Модальное окно (переиспользуем общее) */}
+      {showModal && (
+        <AddPetModal
+          orgId="petid" // Используем специальный идентификатор для PetID, бекенд должен его понимать или мы адаптируем
+          onClose={() => setShowModal(false)}
+          onSuccess={async () => {
+            setShowModal(false);
+            await fetchPets();
+          }}
+        />
+      )}
     </div>
   );
 }

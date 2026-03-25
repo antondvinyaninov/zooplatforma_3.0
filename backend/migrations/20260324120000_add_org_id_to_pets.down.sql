@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_pets_org_id;
+ALTER TABLE pets DROP COLUMN IF EXISTS org_id;
