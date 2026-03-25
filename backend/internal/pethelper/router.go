@@ -349,6 +349,29 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 
 		// Timeline
 		petsGroup.GET("/:id/timeline", petsHandler.GetTimeline)
+
+		// Удаление
+		petsGroup.DELETE("/:id", func(c *gin.Context) {
+			petId := c.Param("id")
+			userID, exists := c.Get("user_id")
+			if !exists {
+				c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+				return
+			}
+
+			res, err := db.Exec(`DELETE FROM pets WHERE id = $1 AND user_id = $2 AND relationship = 'curator'`, petId, userID)
+			if err != nil {
+				c.JSON(500, gin.H{"success": false, "error": "Database error"})
+				return
+			}
+			rows, _ := res.RowsAffected()
+			if rows == 0 {
+				c.JSON(404, gin.H{"success": false, "error": "Pet not found or access denied"})
+				return
+			}
+
+			c.JSON(200, gin.H{"success": true})
+		})
 	}
 
 	// Vaccinations routes

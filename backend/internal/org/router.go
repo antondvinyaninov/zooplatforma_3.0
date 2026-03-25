@@ -601,16 +601,17 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			return
 		}
 
-		res, err := db.Exec(`DELETE FROM pets WHERE id = $1 AND org_id = $2`, petId, orgId)
+		orgIDInt, err := strconv.Atoi(orgId)
 		if err != nil {
-			fmt.Printf("❌ Delete pet error: %v\n", err)
-			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			c.JSON(400, gin.H{"success": false, "error": "Invalid org ID"})
 			return
 		}
-		
-		rowsAffected, _ := res.RowsAffected()
-		if rowsAffected == 0 {
-			c.JSON(404, gin.H{"success": false, "error": "Pet not found"})
+
+		petsHandler := pets.NewHandler(db)
+		err = petsHandler.DeletePetCore(petId, orgIDInt, "org")
+		if err != nil {
+			fmt.Printf("❌ Delete pet error: %v\n", err)
+			c.JSON(400, gin.H{"success": false, "error": err.Error()})
 			return
 		}
 
