@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import s from '../shared/pet-card.module.css';
 import PetGuardianCard from './PetGuardianCard';
+import CityAutocomplete from '@/components/main/shared/CityAutocomplete';
 
 interface PetIdentificationProps {
   pet: any;
   orgId: string;
   onUpdate: (updates: Record<string, any>) => void;
+  extraActions?: React.ReactNode;
 }
 
-export default function PetIdentification({ pet, orgId, onUpdate }: PetIdentificationProps) {
+export default function PetIdentification({ pet, orgId, onUpdate, extraActions }: PetIdentificationProps) {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -48,7 +50,7 @@ export default function PetIdentification({ pet, orgId, onUpdate }: PetIdentific
     }
   };
 
-  const EditableRow = ({ label, field, value, displayValue, as = 'input', options = [] }: any) => {
+  const renderEditableRow = ({ label, field, value, displayValue, as = 'input', options = [] }: any) => {
     const isEditing = editingField === field;
 
     return (
@@ -81,6 +83,15 @@ export default function PetIdentification({ pet, orgId, onUpdate }: PetIdentific
                   if (e.key === 'Escape') cancelEdit();
                 }}
               />
+            ) : as === 'city' ? (
+              <div style={{ flex: 1 }}>
+                <CityAutocomplete
+                  value={editValue || ''}
+                  onChange={setEditValue}
+                  placeholder="Начните вводить город..."
+                  className="!py-1 !pl-8"
+                />
+              </div>
             ) : (
               <input
                 type="text"
@@ -147,41 +158,21 @@ export default function PetIdentification({ pet, orgId, onUpdate }: PetIdentific
       {/* Маркирование */}
       <div className={s.card}>
         <div style={{ fontSize: 16, fontWeight: 600, color: '#111827', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f3f4f6', paddingBottom: 8 }}>
-          Идентификация и Маркирование
+          <span style={{ flex: 1 }}>Идентификация и Маркирование</span>
+          {extraActions}
         </div>
         {/* Первая строка: только номера (бирка, клеймо, чип) */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.8fr', gap: '16px 20px', marginBottom: 20 }}>
-          <EditableRow 
-            field="tag_number" label="№ бирки" 
-            value={pet.tag_number} displayValue={pet.tag_number} 
-          />
-          <EditableRow 
-            field="brand_number" label="Клеймо" 
-            value={pet.brand_number} displayValue={pet.brand_number} 
-          />
-          <EditableRow 
-            field="chip_number" label="№ чипа" 
-            value={pet.chip_number} displayValue={pet.chip_number} 
-          />
+          {renderEditableRow({ field: "tag_number",  label: "№ бирки",   value: pet.tag_number,  displayValue: pet.tag_number,    })}
+          {renderEditableRow({ field: "brand_number",  label: "Клеймо",   value: pet.brand_number,  displayValue: pet.brand_number,    })}
+          {renderEditableRow({ field: "chip_number",  label: "№ чипа",   value: pet.chip_number,  displayValue: pet.chip_number,    })}
         </div>
         
         {/* Вторая строка: дата, специалист и организация */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.5fr 1.5fr', gap: '16px 20px' }}>
-          <EditableRow 
-            field="marking_date" label="Дата маркирования" 
-            value={pet.marking_date} displayValue={formatDate(pet.marking_date)} 
-            as="date"
-          />
-          <EditableRow 
-            field="marking_specialist" label="Специалист" 
-            value={pet.marking_specialist} displayValue={pet.marking_specialist} 
-            placeholder="ФИО специалиста"
-          />
-          <EditableRow 
-            field="marking_org" label="Организация" 
-            value={pet.marking_org} displayValue={pet.marking_org} 
-            placeholder="Название клиники/организации"
-          />
+          {renderEditableRow({ field: "marking_date",  label: "Дата маркирования",   value: pet.marking_date,  displayValue: formatDate(pet.marking_date),   as: "date",   })}
+          {renderEditableRow({ field: "marking_specialist",  label: "Специалист",   value: pet.marking_specialist,  displayValue: pet.marking_specialist,   placeholder: "ФИО специалиста",   })}
+          {renderEditableRow({ field: "marking_org",  label: "Организация",   value: pet.marking_org,  displayValue: pet.marking_org,   placeholder: "Название клиники/организации",   })}
         </div>
       </div>
 
@@ -200,24 +191,11 @@ export default function PetIdentification({ pet, orgId, onUpdate }: PetIdentific
           Место содержания
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px 32px' }}>
-          <EditableRow 
-            field="location_type" label="Тип места" 
-            value={pet.location_type} 
-            displayValue={locOptions.find(o => o.value === pet.location_type)?.label || pet.location_type} 
-            as="select" options={locOptions}
-          />
-          <EditableRow 
-            field="location_cage" label="Вольер / Комната" 
-            value={pet.location_cage} displayValue={pet.location_cage} 
-          />
-          <EditableRow 
-            field="location_address" label="Адрес" 
-            value={pet.location_address} displayValue={pet.location_address} 
-          />
-          <EditableRow 
-            field="location_notes" label="Примечания" 
-            value={pet.location_notes} displayValue={pet.location_notes} 
-          />
+          {renderEditableRow({ field: "location_type",  label: "Тип места",   value: pet.location_type,   displayValue: locOptions.find(o => o.value === pet.location_type)?.label || pet.location_type,   as: "select",  options: locOptions,   })}
+          {renderEditableRow({ field: "city",  label: "Город",   value: pet.actual_city || '',  displayValue: pet.city,   as: "city",   })}
+          {renderEditableRow({ field: "location_cage",  label: "Вольер / Комната",   value: pet.location_cage,  displayValue: pet.location_cage,    })}
+          {renderEditableRow({ field: "location_address",  label: "Адрес (без города)",   value: pet.location_address,  displayValue: pet.location_address,    })}
+          {renderEditableRow({ field: "location_notes",  label: "Примечания",   value: pet.location_notes,  displayValue: pet.location_notes,    })}
         </div>
       </div>
     </div>

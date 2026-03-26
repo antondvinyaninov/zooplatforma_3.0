@@ -4,6 +4,7 @@ export type Tab =
   | 'timeline'
   | 'general'
   | 'identification'
+  | 'location'
   | 'health'
   | 'gallery'
   | 'fundraising';
@@ -11,7 +12,8 @@ export type Tab =
 export const TABS: { id: Tab; icon: string; label: string }[] = [
   { id: 'timeline',       icon: '📅', label: 'Хронология' },
   { id: 'general',        icon: '📋', label: 'Общая информация' },
-  { id: 'identification', icon: '🏷️', label: 'Идентификация' },
+  { id: 'identification', icon: '🏷️', label: 'Регистрация' },
+  { id: 'location',       icon: '📍', label: 'Место содержания' },
   { id: 'health',         icon: '🏥', label: 'Здоровье' },
   { id: 'gallery',        icon: '📸', label: 'Галерея' },
 ];

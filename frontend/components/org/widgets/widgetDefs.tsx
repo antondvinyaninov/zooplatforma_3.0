@@ -11,7 +11,7 @@ export interface WidgetDef {
 }
 
 // Импорты виджетов
-import AnimalsWidget from '../../pets/widgets/AnimalsWidget';
+import AnimalsWidget from '../../modules/pets/widgets/AnimalsWidget';
 import TeamWidget from './TeamWidget';
 import StatsWidget from './StatsWidget';
 import NotificationsWidget from './NotificationsWidget';

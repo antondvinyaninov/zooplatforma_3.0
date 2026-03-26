@@ -14,6 +14,7 @@ export default function AuthorCard({ pet, isOwnerOrCurator }: AuthorCardProps) {
 
   // Определяем тип автора в зависимости от статуса и связи
   const getAuthorTitle = () => {
+    if (pet.org_id) return 'Опекун';
     if (pet.status === 'needs_help') return 'Организатор';
     if (pet.status === 'found') return 'Нашедший';
     if (pet.relationship === 'curator') return 'Куратор';
@@ -42,6 +43,7 @@ export default function AuthorCard({ pet, isOwnerOrCurator }: AuthorCardProps) {
       case 'Организатор': return 'Написать организатору';
       case 'Нашедший': return 'Написать нашедшему';
       case 'Владелец': return 'Написать владельцу';
+      case 'Опекун': return 'Написать опекуну';
       default: return 'Написать куратору';
     }
   };
@@ -52,7 +54,13 @@ export default function AuthorCard({ pet, isOwnerOrCurator }: AuthorCardProps) {
       
       <div className="flex items-start gap-4 mb-5">
         <div 
-          onClick={() => router.push(`/id${pet.user_id}`)}
+          onClick={() => {
+            if (pet.org_id) {
+              router.push(`/orgs/${pet.org_id}`);
+            } else {
+              router.push(`/id${pet.user_id}`);
+            }
+          }}
           className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer border border-gray-200"
         >
           {pet.user?.avatar ? (
@@ -64,7 +72,13 @@ export default function AuthorCard({ pet, isOwnerOrCurator }: AuthorCardProps) {
         
         <div className="flex-1 min-w-0 pt-1">
           <div 
-            onClick={() => router.push(`/id${pet.user_id}`)}
+            onClick={() => {
+              if (pet.org_id) {
+                router.push(`/orgs/${pet.org_id}`);
+              } else {
+                router.push(`/id${pet.user_id}`);
+              }
+            }}
             className="font-bold text-gray-900 truncate hover:text-blue-600 transition-colors cursor-pointer flex items-center gap-1.5"
           >
             {pet.user?.name} {pet.user?.last_name || ''}

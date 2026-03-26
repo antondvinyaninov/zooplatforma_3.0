@@ -11,6 +11,7 @@ import {
   UsersIcon,
   Cog6ToothIcon,
   PuzzlePieceIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 
 // Иконка лапки
@@ -183,6 +184,9 @@ export default function OrgDashboardLayout({
   if (activeModules.includes('pets')) {
     moduleTabs.push({ id: 'pets', label: 'Питомцы', icon: <PawIcon className="w-5 h-5" /> });
   }
+  if (activeModules.includes('pet-registration')) {
+    moduleTabs.push({ id: 'registration', label: 'Регистрация', icon: <ClipboardDocumentListIcon className="w-5 h-5" /> });
+  }
 
   const systemTabs: AdminTab[] = [
     { id: 'modules', label: 'Модули', icon: <PuzzlePieceIcon className="w-5 h-5" /> },
@@ -198,6 +202,7 @@ export default function OrgDashboardLayout({
       dashboard: `/org/${orgId}/dashboard`,
       organization: `/org/${orgId}/organization`,
       pets: `/org/${orgId}/pets`,
+      registration: `/org/${orgId}/registration`,
       modules: `/org/${orgId}/modules`,
       staff: `/org/${orgId}/staff`,
       settings: `/org/${orgId}/settings`,

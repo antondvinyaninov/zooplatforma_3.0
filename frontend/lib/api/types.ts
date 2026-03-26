@@ -152,11 +152,14 @@ export interface Pet {
   catalog_data?: any;
   region?: string;
   city?: string;
+  actual_city?: string;
   location_address?: string;
   urgent?: boolean;
   contact_name?: string;
   contact_phone?: string;
   organization_id?: number;
+  org_id?: number;
+  org_name?: string;
   created_at: string;
   views_count?: number;
   user?: User;

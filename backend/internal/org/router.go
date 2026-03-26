@@ -620,4 +620,378 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 
 	// Подключаем эндпоинты здоровья (Вакцинации, Обработки, Медкарты)
 	SetupHealthRoutes(r, db)
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Модуль: Сотрудники организации
+	// ─────────────────────────────────────────────────────────────────────────
+	
+	r.GET("/:orgId/staff", func(c *gin.Context) {
+		intUserID, ok := getUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+			return
+		}
+		orgId := c.Param("orgId")
+
+		var role string
+		if err := db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&role); err != nil {
+			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
+			return
+		}
+
+		rows, err := db.Query(`
+			SELECT u.id, 
+			       COALESCE(u.name, '') || CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN ' ' || u.last_name ELSE '' END, 
+			       COALESCE(u.avatar, ''), 
+			       COALESCE(om.role, ''), 
+			       COALESCE(om.position, '')
+			FROM organization_members om
+			JOIN users u ON om.user_id = u.id
+			WHERE om.organization_id = $1
+			ORDER BY u.name ASC
+		`, orgId)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			return
+		}
+		defer rows.Close()
+
+		var staff []map[string]interface{}
+		for rows.Next() {
+			var id int
+			var name, avatar, role, position string
+			if err := rows.Scan(&id, &name, &avatar, &role, &position); err == nil {
+				staff = append(staff, map[string]interface{}{
+					"id": id,
+					"name": name,
+					"avatar": avatar,
+					"role": role,
+					"position": position,
+				})
+			} else {
+				fmt.Printf("❌ Staff scan error: %v\n", err)
+			}
+		}
+		if staff == nil {
+			staff = []map[string]interface{}{}
+		}
+		c.JSON(200, gin.H{"success": true, "data": staff})
+	})
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Модуль: Регистрация питомцев
+	// ─────────────────────────────────────────────────────────────────────────
+
+	// GET /:orgId/pets/:petId/registrations — история регистраций
+	r.GET("/:orgId/pets/:petId/registrations", func(c *gin.Context) {
+		intUserID, ok := getUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+			return
+		}
+		orgId := c.Param("orgId")
+		petId := c.Param("petId")
+
+		var role string
+		if err := db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&role); err != nil {
+			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
+			return
+		}
+
+		type Registration struct {
+			ID                 int    `json:"id"`
+			RegisteredAt       string `json:"registered_at"`
+			SpecialistName     string `json:"specialist_name"`
+			SpecialistPosition string `json:"specialist_position"`
+			Notes              string `json:"notes"`
+			CreatedByName      string `json:"created_by_name"`
+			CreatedAt          string `json:"created_at"`
+		}
+
+		rows, err := db.Query(`
+			SELECT r.id, r.registered_at, COALESCE(r.specialist_name,''), COALESCE(r.specialist_position,''),
+			       COALESCE(r.notes,''), COALESCE(u.name,''), r.created_at
+			FROM pet_registrations r
+			LEFT JOIN users u ON r.created_by = u.id
+			WHERE r.pet_id = $1 AND r.org_id = $2
+			ORDER BY r.registered_at DESC
+		`, petId, orgId)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			return
+		}
+		defer rows.Close()
+
+		var registrations []Registration
+		for rows.Next() {
+			var reg Registration
+			if err := rows.Scan(&reg.ID, &reg.RegisteredAt, &reg.SpecialistName, &reg.SpecialistPosition, &reg.Notes, &reg.CreatedByName, &reg.CreatedAt); err != nil {
+				continue
+			}
+			registrations = append(registrations, reg)
+		}
+		if registrations == nil {
+			registrations = []Registration{}
+		}
+		c.JSON(200, gin.H{"success": true, "registrations": registrations})
+	})
+
+	// POST /:orgId/pets/:petId/registrations — создать запись регистрации
+	r.POST("/:orgId/pets/:petId/registrations", func(c *gin.Context) {
+		intUserID, ok := getUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+			return
+		}
+		orgId := c.Param("orgId")
+		petId := c.Param("petId")
+
+		var role string
+		if err := db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&role); err != nil {
+			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
+			return
+		}
+
+		var input struct {
+			RegisteredAt       string `json:"registered_at"`
+			SpecialistName     string `json:"specialist_name"`
+			SpecialistPosition string `json:"specialist_position"`
+			Notes              string `json:"notes"`
+			// Идентификаторы питомца
+			ChipNumber     string `json:"chip_number,omitempty"`
+			TagNumber      string `json:"tag_number,omitempty"`
+			BrandNumber    string `json:"brand_number,omitempty"`
+		}
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(400, gin.H{"success": false, "error": "Invalid input"})
+			return
+		}
+		if input.RegisteredAt == "" {
+			c.JSON(400, gin.H{"success": false, "error": "registered_at is required"})
+			return
+		}
+
+		tx, err := db.Begin()
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Transaction error"})
+			return
+		}
+		defer tx.Rollback()
+
+		var orgName string
+		db.QueryRow(`SELECT name FROM organizations WHERE id = $1`, orgId).Scan(&orgName)
+
+		// Идентификаторы и маркировку записываем (если переданы) в основную таблицу питомца
+		// Учитываем, что эта регистрация теперь является "актом маркирования"
+		_, err = tx.Exec(`
+			UPDATE pets 
+			SET 
+				chip_number = CASE WHEN $1 != '' THEN $1 ELSE chip_number END,
+				tag_number = CASE WHEN $2 != '' THEN $2 ELSE tag_number END,
+				brand_number = CASE WHEN $3 != '' THEN $3 ELSE brand_number END,
+				marking_date = CASE WHEN $4 != '' AND (marking_date IS NULL OR marking_date::text = '') THEN $4::date ELSE marking_date END,
+				marking_specialist = CASE WHEN $5 != '' AND (marking_specialist IS NULL OR marking_specialist = '') THEN $5 ELSE marking_specialist END,
+				marking_org = CASE WHEN $6 != '' AND (marking_org IS NULL OR marking_org = '') THEN $6 ELSE marking_org END
+			WHERE id = $7
+		`, input.ChipNumber, input.TagNumber, input.BrandNumber, input.RegisteredAt, input.SpecialistName, orgName, petId)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Database error while updating pet"})
+			return
+		}
+
+		var newID int
+		err = tx.QueryRow(`
+			INSERT INTO pet_registrations (pet_id, org_id, registered_at, specialist_name, specialist_position, notes, created_by, chip_number, tag_number, brand_number)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			RETURNING id
+		`, petId, orgId, input.RegisteredAt, input.SpecialistName, input.SpecialistPosition, input.Notes, intUserID, input.ChipNumber, input.TagNumber, input.BrandNumber).Scan(&newID)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			return
+		}
+
+		if err := tx.Commit(); err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Commit error"})
+			return
+		}
+
+		c.JSON(200, gin.H{"success": true, "id": newID})
+	})
+
+	// GET /:orgId/registrations/pet-info/:petId — глобальный поиск питомца
+	r.GET("/:orgId/registrations/pet-info/:petId", func(c *gin.Context) {
+		intUserID, ok := getUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+			return
+		}
+		orgId := c.Param("orgId")
+
+		var role string
+		if err := db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&role); err != nil {
+			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
+			return
+		}
+
+		petId := c.Param("petId")
+
+		var pet struct {
+			ID                int     `json:"id"`
+			Name              string  `json:"name"`
+			PhotoURL          *string `json:"photo_url,omitempty"`
+			SpeciesName       *string `json:"species_name,omitempty"`
+			BreedName         *string `json:"breed_name,omitempty"`
+			BirthDate         *string `json:"birth_date,omitempty"`
+			AgeType           *string `json:"age_type,omitempty"`
+			ApproximateYears  *int    `json:"approximate_years,omitempty"`
+			ApproximateMonths *int    `json:"approximate_months,omitempty"`
+			ChipNumber        *string `json:"chip_number,omitempty"`
+			TagNumber         *string `json:"tag_number,omitempty"`
+			BrandNumber       *string `json:"brand_number,omitempty"`
+			OwnerID           *int    `json:"owner_id,omitempty"`
+			OwnerName         *string `json:"owner_name,omitempty"`
+			OwnerAvatar       *string `json:"owner_avatar,omitempty"`
+			CuratorID         *int    `json:"curator_id,omitempty"`
+			CuratorName       *string `json:"curator_name,omitempty"`
+			CuratorAvatar     *string `json:"curator_avatar,omitempty"`
+			OrgID             *int    `json:"org_id,omitempty"`
+			OrgName           *string `json:"org_name,omitempty"`
+			OrgLogo           *string `json:"org_logo,omitempty"`
+		}
+		var petPhoto string
+		var mediaUrlsJSON string
+
+		err := db.QueryRow(`
+			SELECT p.id, COALESCE(p.name, ''), COALESCE(p.photo_url, ''), COALESCE(p.media_urls::text, '[]'),
+			       COALESCE(s.name, ''), COALESCE(b.name, p.breed, ''), COALESCE(p.brand_number, ''), 
+			       COALESCE(p.tag_number, ''), COALESCE(p.chip_number, ''),
+			       COALESCE(p.birth_date::text, ''), COALESCE(p.age_type, 'exact'),
+			       COALESCE(p.approximate_years, 0), COALESCE(p.approximate_months, 0),
+			       CASE WHEN p.relationship = 'owner' THEN COALESCE(p.user_id, 0) ELSE 0 END AS owner_id,
+			       CASE WHEN p.relationship = 'owner' THEN COALESCE(u.name, '') || CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN ' ' || u.last_name ELSE '' END ELSE '' END AS owner_name,
+			       CASE WHEN p.relationship = 'owner' THEN COALESCE(u.avatar, '') ELSE '' END AS owner_avatar,
+			       CASE WHEN p.relationship = 'curator' THEN COALESCE(p.user_id, 0) ELSE 0 END AS curator_id,
+			       CASE WHEN p.relationship = 'curator' THEN COALESCE(u.name, '') || CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN ' ' || u.last_name ELSE '' END ELSE '' END AS curator_name,
+			       CASE WHEN p.relationship = 'curator' THEN COALESCE(u.avatar, '') ELSE '' END AS curator_avatar,
+			       COALESCE(p.org_id, 0), COALESCE(org.name, ''), COALESCE(org.logo, '')
+			FROM pets p
+			LEFT JOIN species s ON p.species_id = s.id
+			LEFT JOIN breeds b ON p.breed_id = b.id
+			LEFT JOIN users u ON p.user_id = u.id
+			LEFT JOIN organizations org ON p.org_id = org.id
+			WHERE p.id = $1
+		`, petId).Scan(
+			&pet.ID, &pet.Name, &petPhoto, &mediaUrlsJSON, &pet.SpeciesName, &pet.BreedName,
+			&pet.BrandNumber, &pet.TagNumber, &pet.ChipNumber,
+			&pet.BirthDate, &pet.AgeType, &pet.ApproximateYears, &pet.ApproximateMonths,
+			&pet.OwnerID, &pet.OwnerName, &pet.OwnerAvatar,
+			&pet.CuratorID, &pet.CuratorName, &pet.CuratorAvatar,
+			&pet.OrgID, &pet.OrgName, &pet.OrgLogo,
+		)
+		if err == sql.ErrNoRows {
+			c.JSON(404, gin.H{"success": false, "error": "Питомец не найден"})
+			return
+		} else if err != nil {
+			fmt.Printf("❌ GET pet-info error: %v\n", err)
+			c.JSON(500, gin.H{"success": false, "error": "Ошибка базы данных: " + err.Error()})
+			return
+		}
+
+		// Выбор фото
+		if petPhoto != "" {
+			pet.PhotoURL = &petPhoto
+		} else if mediaUrlsJSON != "" && mediaUrlsJSON != "[]" {
+			var media []string
+			if err := json.Unmarshal([]byte(mediaUrlsJSON), &media); err == nil && len(media) > 0 {
+				pet.PhotoURL = &media[0]
+			}
+		}
+
+		c.JSON(200, gin.H{"success": true, "pet": pet})
+	})
+
+	// GET /:orgId/registrations — список всех регистраций
+	r.GET("/:orgId/registrations", func(c *gin.Context) {
+		intUserID, ok := getUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+			return
+		}
+		orgId := c.Param("orgId")
+
+		var role string
+		if err := db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&role); err != nil {
+			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
+			return
+		}
+
+		rows, err := db.Query(`
+			SELECT r.id, r.pet_id, p.name, COALESCE(p.photo_url, ''), COALESCE(s.name, ''),
+			       r.registered_at, COALESCE(r.specialist_name,''), COALESCE(r.specialist_position,''),
+			       COALESCE(r.notes,''), COALESCE(u.name,'') 
+			FROM pet_registrations r
+			JOIN pets p ON r.pet_id = p.id
+			LEFT JOIN species s ON p.species_id = s.id
+			LEFT JOIN users u ON r.created_by = u.id
+			WHERE r.org_id = $1
+			ORDER BY r.registered_at DESC
+		`, orgId)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			return
+		}
+		defer rows.Close()
+
+		var regs []map[string]interface{}
+		for rows.Next() {
+			var id, pet_id int
+			var p_name, photo, species, reg_at, spec_name, spec_pos, notes, created_by string
+			if err := rows.Scan(&id, &pet_id, &p_name, &photo, &species, &reg_at, &spec_name, &spec_pos, &notes, &created_by); err == nil {
+				regs = append(regs, map[string]interface{}{
+					"id": id, "pet_id": pet_id, "pet_name": p_name, "pet_photo_url": photo, "species_name": species,
+					"registered_at": reg_at, "specialist_name": spec_name, "specialist_position": spec_pos,
+					"notes": notes, "created_by_name": created_by,
+				})
+			}
+		}
+		if regs == nil {
+			regs = []map[string]interface{}{}
+		}
+		c.JSON(200, gin.H{"success": true, "registrations": regs})
+	})
+
+	// DELETE /:orgId/registrations/:regId — удаление регистрации
+	r.DELETE("/:orgId/registrations/:regId", func(c *gin.Context) {
+		intUserID, ok := getUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+			return
+		}
+		orgId := c.Param("orgId")
+		regId := c.Param("regId")
+
+		var role string
+		if err := db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&role); err != nil {
+			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
+			return
+		}
+
+		if role != "owner" && role != "admin" {
+			c.JSON(403, gin.H{"success": false, "error": "Только администратор или владелец может удалять записи"})
+			return
+		}
+
+		res, err := db.Exec(`DELETE FROM pet_registrations WHERE id = $1 AND org_id = $2`, regId, orgId)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			return
+		}
+		rowsAffected, _ := res.RowsAffected()
+		if rowsAffected == 0 {
+			c.JSON(404, gin.H{"success": false, "error": "Запись не найдена"})
+			return
+		}
+
+		c.JSON(200, gin.H{"success": true})
+	})
 }

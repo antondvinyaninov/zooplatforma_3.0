@@ -49,6 +49,7 @@ func (h *Handler) UpdatePetCore(petIDStr string, input map[string]interface{}) e
 		"marking_date":     "marking_date",
 		"tag_number":       "tag_number",
 		"brand_number":     "brand_number",
+		"city":             "city",
 		"location_address": "location_address",
 		"location_cage":    "location_cage",
 		"location_contact": "location_contact",

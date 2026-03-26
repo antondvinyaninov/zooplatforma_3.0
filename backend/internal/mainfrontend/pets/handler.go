@@ -90,19 +90,27 @@ func (h *Handler) GetUserPets(c *gin.Context) {
 			SELECT 
 				p.id, p.name, p.species, p.breed, p.gender, p.birth_date,
 				p.color, p.size, p.photo_url, p.user_id, p.description,
-				u.name as owner_name, u.last_name as owner_last_name, u.location, u.phone, p.location_type, u.avatar as owner_avatar,
-				b.name as breed_name, p.catalog_status, p.catalog_data, s.name as species_name
+				COALESCE(o.name, u.name) as owner_name, 
+				CASE WHEN p.org_id IS NOT NULL THEN NULL ELSE u.last_name END as owner_last_name, 
+				COALESCE(NULLIF(p.city, ''), CASE WHEN p.org_id IS NOT NULL THEN COALESCE(NULLIF(o.city, ''), NULLIF(o.address_city, ''), NULLIF(o.address, '')) ELSE NULLIF(u.location, '') END) as location, 
+				CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.phone, '') ELSE NULLIF(u.phone, '') END as phone, 
+				p.location_type, 
+				CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.logo, '') ELSE NULLIF(u.avatar, '') END as owner_avatar,
+				b.name as breed_name, p.catalog_status, p.catalog_data, s.name as species_name,
+				p.org_id
 			FROM pets p
 			LEFT JOIN users u ON p.user_id = u.id
+			LEFT JOIN organizations o ON p.org_id = o.id
 			LEFT JOIN breeds b ON p.breed_id = b.id
 			LEFT JOIN species s ON p.species_id = s.id
-			WHERE p.relationship = 'curator' 
+			WHERE (p.relationship = 'curator' OR p.org_id IS NOT NULL)
 			  AND (p.catalog_status != 'draft' OR p.catalog_status IS NULL)
 			  AND (
 			      (p.photo IS NOT NULL AND p.photo != '') 
 			      OR 
 			      (p.photo_url IS NOT NULL AND p.photo_url != '')
 			  )
+			  AND p.name IS NOT NULL AND p.name != ''
 			ORDER BY p.created_at DESC
 		`
 
@@ -125,13 +133,14 @@ func (h *Handler) GetUserPets(c *gin.Context) {
 			catalogStatus                                     sql.NullString
 			catalogDataRaw                                    []byte
 			speciesName                                       sql.NullString
+			orgID                                             sql.NullInt64
 		)
 
 		err := rows.Scan(
 			&id, &name, &species, &breed, &gender, &birthDate,
 			&color, &size, &photoURL, &userID, &description,
 			&ownerName, &ownerLastName, &location, &phone, &locationType, &ownerAvatar, &breedName,
-			&catalogStatus, &catalogDataRaw, &speciesName,
+			&catalogStatus, &catalogDataRaw, &speciesName, &orgID,
 		)
 		if err != nil {
 			continue
@@ -237,12 +246,17 @@ func (h *Handler) GetByID(c *gin.Context) {
 
 			p.fur, p.ears, p.tail, p.special_marks,
 			p.marking_date, p.tag_number, p.brand_number,
-			p.location_address, p.location_cage, p.location_contact, p.location_phone, p.location_notes,
+			p.location_address, p.city, p.location_cage, p.location_contact, p.location_phone, p.location_notes,
 			p.weight, p.health_notes, p.views_count,
 			p.age_type, p.approximate_years, p.approximate_months, p.is_sterilized, p.media_urls,
 			p.catalog_status, p.catalog_data,
 
-			u.name as owner_name, u.last_name, u.avatar, u.location, u.phone, u.email as owner_email,
+			COALESCE(o.name, u.name) as owner_name,
+			CASE WHEN p.org_id IS NOT NULL THEN NULL ELSE u.last_name END as last_name, 
+			CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.logo, '') ELSE NULLIF(u.avatar, '') END as avatar, 
+			COALESCE(NULLIF(p.city, ''), CASE WHEN p.org_id IS NOT NULL THEN COALESCE(NULLIF(o.city, ''), NULLIF(o.address_city, ''), NULLIF(o.address, '')) ELSE NULLIF(u.location, '') END) as location, 
+			CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.phone, '') ELSE NULLIF(u.phone, '') END as phone, 
+			CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.email, '') ELSE NULLIF(u.email, '') END as owner_email,
 			p.created_at::text as created_at,
 			
 			p.species_id, s.name as species_name,
@@ -265,8 +279,8 @@ func (h *Handler) GetByID(c *gin.Context) {
 
 		fur, ears, tail, specialMarks                     sql.NullString
 		markingDate, tagNumber, brandNumber               sql.NullString
-		locationAddress, locationCage, locationContact    sql.NullString
-		locationPhone, locationNotes                      sql.NullString
+		locationAddress, petCity, locationCage            sql.NullString
+		locationContact, locationPhone, locationNotes     sql.NullString
 		weight, healthNotes                               sql.NullString
 		viewsCount                                        sql.NullInt64
 		ageType                                           sql.NullString
@@ -290,7 +304,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 
 		&fur, &ears, &tail, &specialMarks,
 		&markingDate, &tagNumber, &brandNumber,
-		&locationAddress, &locationCage, &locationContact, &locationPhone, &locationNotes,
+		&locationAddress, &petCity, &locationCage, &locationContact, &locationPhone, &locationNotes,
 		&weight, &healthNotes, &viewsCount,
 		&ageType, &approxYears, &approxMonths, &isSterilizedActual, &mediaUrlsRaw,
 		&catalogStatus, &catalogDataRaw,
@@ -364,6 +378,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 		"marking_date":       markingDate.String,
 		"tag_number":         tagNumber.String,
 		"brand_number":       brandNumber.String,
+		"actual_city":        petCity.String,
 		"location_address":   locationAddress.String,
 		"location_cage":      locationCage.String,
 		"location_contact":   locationContact.String,

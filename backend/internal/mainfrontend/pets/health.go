@@ -690,6 +690,26 @@ func (h *Handler) GetTimeline(c *gin.Context) {
 		UNION ALL
 
 		SELECT 
+			'reg_' || pr.id AS id,
+			'registration' AS type,
+			CASE WHEN ROW_NUMBER() OVER (PARTITION BY pr.pet_id ORDER BY pr.registered_at ASC, pr.id ASC) = 1 THEN 'Официальная регистрация' ELSE 'Дополнение данных' END AS title,
+			'Дата: ' || TO_CHAR(pr.registered_at, 'DD.MM.YYYY') || 
+			'. Специалист: ' || COALESCE(pr.specialist_name, 'Не указан') || 
+			COALESCE(' (' || NULLIF(pr.specialist_position, '') || ')', '') || 
+			COALESCE('. Организация: ' || (SELECT name FROM organizations WHERE id = pr.org_id), '') || 
+			COALESCE('. Заметка: ' || NULLIF(pr.notes, ''), '') ||
+			COALESCE('. Чип: ' || NULLIF(pr.chip_number, ''), '') ||
+			COALESCE('. Бирка: ' || NULLIF(pr.tag_number, ''), '') ||
+			COALESCE('. Клеймо: ' || NULLIF(pr.brand_number, ''), '') AS description,
+			pr.registered_at AS date,
+			'📝' AS icon,
+			'blue' AS color
+		FROM pet_registrations pr
+		WHERE pr.pet_id = $1
+
+		UNION ALL
+
+		SELECT 
 			'org_' || id AS id,
 			event_type AS type,
 			title,

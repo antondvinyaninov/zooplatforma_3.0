@@ -7,7 +7,6 @@ import (
 	"io"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zooplatforma/backend/internal/mainfrontend/organizations"
 	"github.com/zooplatforma/backend/internal/mainfrontend/pets"
 	"github.com/zooplatforma/backend/internal/shared/auth"
 	"github.com/zooplatforma/backend/internal/shared/config"
@@ -23,7 +22,6 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 
 	authHandler := auth.NewHandler(db, cfg)
 	petsHandler := pets.NewHandler(db)
-	organizationsHandler := organizations.NewHandler(db)
 
 	// Auth routes
 	authGroup := r.Group("/auth")
@@ -33,44 +31,6 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		authGroup.GET("/me", authHandler.Me)
 	}
 
-	// Breeds routes
-	breeds := r.Group("/breeds")
-	{
-		breeds.GET("", func(c *gin.Context) {
-			// Получаем все породы из БД
-			rows, err := db.Query(`
-				SELECT b.id, b.name, b.species_id, s.name as species_name, b.description, b.created_at
-				FROM breeds b
-				LEFT JOIN species s ON b.species_id = s.id
-				ORDER BY b.id ASC
-			`)
-			if err != nil {
-				c.JSON(500, gin.H{"success": false, "error": "Database error"})
-				return
-			}
-			defer rows.Close()
-
-			type Breed struct {
-				ID          int     `json:"id"`
-				Name        string  `json:"name"`
-				SpeciesID   int     `json:"species_id"`
-				SpeciesName string  `json:"species_name"`
-				Description *string `json:"description"`
-				CreatedAt   string  `json:"created_at"`
-			}
-
-			var breeds []Breed
-			for rows.Next() {
-				var breed Breed
-				if err := rows.Scan(&breed.ID, &breed.Name, &breed.SpeciesID, &breed.SpeciesName, &breed.Description, &breed.CreatedAt); err != nil {
-					continue
-				}
-				breeds = append(breeds, breed)
-			}
-
-			c.JSON(200, gin.H{"success": true, "breeds": breeds})
-		})
-	}
 
 	// Pets routes
 	petsGroup := r.Group("/pets")
@@ -395,18 +355,5 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		medicalRecords.DELETE("/:id", petsHandler.DeleteMedicalRecord)
 	}
 
-	// Organizations routes
-	organizationsGroup := r.Group("/organizations")
-	{
-		organizationsGroup.GET("", organizationsHandler.GetAll)
-		organizationsGroup.GET("/:id", organizationsHandler.GetByID)
-	}
 
-	// Health routes
-	health := r.Group("/health")
-	{
-		health.GET("", func(c *gin.Context) {
-			c.JSON(200, gin.H{"success": true, "data": []interface{}{}})
-		})
-	}
 }

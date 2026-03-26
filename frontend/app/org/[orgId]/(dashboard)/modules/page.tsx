@@ -20,7 +20,15 @@ const AVAILABLE_MODULES: ModuleDef[] = [
     icon: '🐾',
     tag: 'Животные',
   },
+  {
+    id: 'pet-registration',
+    name: 'Регистрация питомцев',
+    description: 'Официальная регистрация животных с указанием даты, специалиста и организации. Добавляет кнопку «Зарегистрировать» в карточку питомца.',
+    icon: '✅',
+    tag: 'Идентификация',
+  },
 ];
+
 
 export default function ModulesPage({ params }: { params: Promise<{ orgId: string }> }) {
   const { orgId } = use(params);
