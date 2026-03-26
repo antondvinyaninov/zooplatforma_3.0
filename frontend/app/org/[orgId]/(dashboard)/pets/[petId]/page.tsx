@@ -4,13 +4,13 @@ import { useState, useEffect, useRef } from 'react';
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMediaUpload } from '@/app/main/hooks/useMediaUpload';
-import PetNavMenu, { Tab } from '@/components/pets/shared/PetNavMenu';
-import PetTimeline from '@/components/pets/profile/PetTimeline';
-import PetGeneralInfo from '@/components/pets/profile/PetGeneralInfo';
-import PetLocation from '@/components/pets/profile/PetLocation';
-import PetIdentification from '@/components/pets/profile/PetIdentification';
-import PetHealth from '@/components/pets/profile/PetHealth';
-import PetGallery from '@/components/pets/profile/PetGallery';
+import PetNavMenu, { Tab } from '@/components/modules/pets/shared/PetNavMenu';
+import PetTimeline from '@/components/modules/pets/profile/PetTimeline';
+import PetGeneralInfo from '@/components/modules/pets/profile/PetGeneralInfo';
+import PetLocation from '@/components/modules/pets/profile/PetLocation';
+import PetIdentification from '@/components/modules/pets/profile/PetIdentification';
+import PetHealth from '@/components/modules/pets/profile/PetHealth';
+import PetGallery from '@/components/modules/pets/profile/PetGallery';
 import { useBreadcrumb } from '@/components/BreadcrumbContext';
 
 interface PetDetail {

@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
-import PetsTable, { Pet } from '@/components/pets/list/PetsTable';
-import PetsEmptyState from '@/components/pets/list/PetsEmptyState';
-import AddPetModal from '@/components/pets/list/AddPetModal';
+import PetsTable, { Pet } from '@/components/modules/pets/list/PetsTable';
+import PetsEmptyState from '@/components/modules/pets/list/PetsEmptyState';
+import AddPetModal from '@/components/modules/pets/list/AddPetModal';
 
 export default function PetsPage({ params }: { params: Promise<{ orgId: string }> }) {
   const { orgId } = use(params);
