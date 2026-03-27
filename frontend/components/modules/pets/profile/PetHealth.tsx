@@ -9,6 +9,7 @@ interface PetHealthProps {
     health_notes: string;
   };
   orgId: string;
+  apiUrl: string;
   onUpdate: (updates: Record<string, any>) => void;
 }
 
@@ -48,7 +49,7 @@ interface Treatment {
   notes?: string;
 }
 
-export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
+export default function PetHealth({ pet, orgId, apiUrl, onUpdate }: PetHealthProps) {
   // State for Weight editing
   const [isEditingWeight, setIsEditingWeight] = useState(false);
   const [weightValue, setWeightValue] = useState(pet.weight ? String(pet.weight) : '');
@@ -90,8 +91,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
   
   const fetchVaccinations = async () => {
     try {
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-      const response = await fetch(`${apiBase}/pets/${pet.id}/vaccinations`, { credentials: 'include' });
+      const response = await fetch(`${apiUrl}/vaccinations`, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setVaccinations(data.vaccinations || []);
@@ -101,8 +101,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
 
   const fetchTreatments = async () => {
     try {
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-      const response = await fetch(`${apiBase}/pets/${pet.id}/treatments`, { credentials: 'include' });
+      const response = await fetch(`${apiUrl}/treatments`, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setTreatments(data.treatments || []);
@@ -112,8 +111,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
 
   const fetchMedicalRecords = async () => {
     try {
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-      const response = await fetch(`${apiBase}/pets/${pet.id}/medical-records`, { credentials: 'include' });
+      const response = await fetch(`${apiUrl}/medical-records`, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setMedicalRecords(data.medical_records || []);
@@ -136,8 +134,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
     const finalVal = isNaN(val) ? null : val;
     
     try {
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-      const res = await fetch(`${apiBase}/pets/${pet.id}`, {
+      const res = await fetch(apiUrl, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ weight: finalVal })
       });
@@ -150,8 +147,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
   
   const saveNotes = async () => {
     try {
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-      const res = await fetch(`${apiBase}/pets/${pet.id}`, {
+      const res = await fetch(apiUrl, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ health_notes: notesValue })
       });
@@ -191,10 +187,10 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
   const handleSaveVaccination = async () => {
     if (!newVaccination.date || !newVaccination.vaccine_name) return alert('Заполните дату и название');
     
-    const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
+    const apiBase = apiUrl.split('/pets/')[0];
     const url = editingVaccination 
       ? `${apiBase}/vaccinations/${editingVaccination.id}`
-      : `${apiBase}/pets/${pet.id}/vaccinations`;
+      : `${apiUrl}/vaccinations`;
     const method = editingVaccination ? 'PUT' : 'POST';
 
     try {
@@ -216,7 +212,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
   const handleDeleteVaccination = async (id: number) => {
     if (!confirm('Удалить эту прививку?')) return;
     try {
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
+      const apiBase = apiUrl.split('/pets/')[0];
       const res = await fetch(`${apiBase}/vaccinations/${id}`, { method: 'DELETE', credentials: 'include' });
       if (res.ok) fetchVaccinations();
     } catch (e) { alert('Ошибка соединения'); }
@@ -226,10 +222,10 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
   const handleSaveTreatment = async () => {
     if (!newTreatment.date || !newTreatment.product_name) return alert('Заполните дату и название препарата');
     
-    const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
+    const apiBase = apiUrl.split('/pets/')[0];
     const url = editingTreatment 
       ? `${apiBase}/treatments/${editingTreatment.id}`
-      : `${apiBase}/pets/${pet.id}/treatments`;
+      : `${apiUrl}/treatments`;
     const method = editingTreatment ? 'PUT' : 'POST';
 
     try {
@@ -251,7 +247,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
   const handleDeleteTreatment = async (id: number) => {
     if (!confirm('Удалить эту обработку?')) return;
     try {
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
+      const apiBase = apiUrl.split('/pets/')[0];
       const res = await fetch(`${apiBase}/treatments/${id}`, { method: 'DELETE', credentials: 'include' });
       if (res.ok) fetchTreatments();
     } catch (e) { alert('Ошибка соединения'); }
@@ -261,10 +257,10 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
   const handleSaveMedicalRecord = async () => {
     if (!newMedicalRecord.date || !newMedicalRecord.title) return alert('Заполните дату и название');
     
-    const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
+    const apiBase = apiUrl.split('/pets/')[0];
     const url = editingMedicalRecord 
       ? `${apiBase}/medical-records/${editingMedicalRecord.id}`
-      : `${apiBase}/pets/${pet.id}/medical-records`;
+      : `${apiUrl}/medical-records`;
     const method = editingMedicalRecord ? 'PUT' : 'POST';
 
     try {
@@ -286,7 +282,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
   const handleDeleteMedicalRecord = async (id: number) => {
     if (!confirm('Удалить эту запись?')) return;
     try {
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
+      const apiBase = apiUrl.split('/pets/')[0];
       const res = await fetch(`${apiBase}/medical-records/${id}`, { method: 'DELETE', credentials: 'include' });
       if (res.ok) fetchMedicalRecords();
     } catch (e) { alert('Ошибка соединения'); }

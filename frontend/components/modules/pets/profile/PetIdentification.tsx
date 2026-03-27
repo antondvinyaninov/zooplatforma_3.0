@@ -6,11 +6,12 @@ import CityAutocomplete from '@/components/main/shared/CityAutocomplete';
 interface PetIdentificationProps {
   pet: any;
   orgId: string;
+  apiUrl: string;
   onUpdate: (updates: Record<string, any>) => void;
   extraActions?: React.ReactNode;
 }
 
-export default function PetIdentification({ pet, orgId, onUpdate, extraActions }: PetIdentificationProps) {
+export default function PetIdentification({ pet, orgId, apiUrl, onUpdate, extraActions }: PetIdentificationProps) {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -30,8 +31,7 @@ export default function PetIdentification({ pet, orgId, onUpdate, extraActions }
     setSaving(true);
     try {
       const body = { [field]: editValue };
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-      const res = await fetch(`${apiBase}/pets/${pet.id}`, {
+      const res = await fetch(apiUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

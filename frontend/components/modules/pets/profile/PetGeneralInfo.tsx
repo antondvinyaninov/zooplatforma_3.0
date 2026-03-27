@@ -27,6 +27,7 @@ interface PetGeneralInfoProps {
     sterilization_type?: string;
   };
   orgId: string;
+  apiUrl: string;
   onUpdate: (updates: Record<string, any>) => void;
 }
 
@@ -56,7 +57,7 @@ const calculateAge = (pet: PetGeneralInfoProps['pet']) => {
   return 'Неизвестно';
 };
 
-export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoProps) {
+export default function PetGeneralInfo({ pet, orgId, apiUrl, onUpdate }: PetGeneralInfoProps) {
   const ageString = calculateAge(pet);
 
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -87,8 +88,7 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
     setSaving(true);
     try {
       const body = { [payloadKey]: editValue };
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-      const res = await fetch(`${apiBase}/pets/${pet.id}`, {
+      const res = await fetch(apiUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -142,6 +142,18 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
                 onChange={e => setEditValue(e.target.value)}
                 style={{ flex: 1, minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
                 autoFocus
+              />
+            ) : as === 'textarea' ? (
+              <textarea
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                style={{ flex: 1, minWidth: 0, padding: '8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14, minHeight: '80px', resize: 'vertical' }}
+                autoFocus
+                placeholder={placeholder}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveEdit(field, keyToSave);
+                  if (e.key === 'Escape') cancelEdit();
+                }}
               />
             ) : (
               <input
@@ -206,8 +218,7 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
       setSaving(true);
       try {
         const body = { breed_id };
-        const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-        const res = await fetch(`${apiBase}/pets/${pet.id}`, {
+        const res = await fetch(apiUrl, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify(body),
         });
@@ -310,8 +321,7 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
           approximate_months: ageType === 'approximate' ? months : 0,
         };
 
-        const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-        const res = await fetch(`${apiBase}/pets/${pet.id}`, {
+        const res = await fetch(apiUrl, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify(body),
         });

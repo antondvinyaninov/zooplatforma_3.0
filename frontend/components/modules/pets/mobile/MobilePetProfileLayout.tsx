@@ -5,7 +5,7 @@ import PetNavMenu, { Tab } from '@/components/modules/pets/shared/PetNavMenu';
 import { PetDetail } from '../profile/PetProfileLayout';
 
 export default function MobilePetProfileLayout({
-  pet, orgId, activeTab, setActiveTab, photoUrl, gradient, isdog, ageStr,
+  pet, orgId, apiUrl, activeTab, setActiveTab, photoUrl, gradient, isdog, ageStr,
   uploading, uploadSuccess, handleQuickUpload, uploadInputRef,
   catalogToggle, handleCatalogStatusChange, handleDelete,
   extraRightActions, showFundraising, renderCenter, InfoRow,

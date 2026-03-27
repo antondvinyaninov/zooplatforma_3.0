@@ -237,12 +237,12 @@ export default function PetProfileLayout({
 
   const renderCenter = () => {
     switch (activeTab) {
-      case 'timeline':       return <PetTimeline pet={pet as any} orgId={orgId} />;
-      case 'general':        return <PetGeneralInfo pet={pet as any} orgId={orgId} onUpdate={(u: any) => setPet({ ...pet, ...u })} />;
-      case 'identification': return <PetIdentification pet={pet as any} orgId={orgId} onUpdate={(u: any) => setPet({ ...pet, ...u })} extraActions={showRegistrationButton ? <RegisterPetButton petId={pet.id} orgId={orgId} isRegistered={isRegistered} /> : identificationExtraActions?.(pet)} />;
+      case 'timeline':       return <PetTimeline pet={pet as any} orgId={orgId} apiUrl={apiUrl} />;
+      case 'general':        return <PetGeneralInfo pet={pet as any} orgId={orgId} apiUrl={apiUrl} onUpdate={(u: any) => setPet({ ...pet, ...u })} />;
+      case 'identification': return <PetIdentification pet={pet as any} orgId={orgId} apiUrl={apiUrl} onUpdate={(u: any) => setPet({ ...pet, ...u })} extraActions={showRegistrationButton ? <RegisterPetButton petId={pet.id} orgId={orgId} isRegistered={isRegistered} /> : identificationExtraActions?.(pet)} />;
 
-      case 'health':         return <PetHealth pet={pet as any} orgId={orgId} onUpdate={(u: any) => setPet({ ...pet, ...u })} />;
-      case 'gallery':        return <PetGallery pet={pet as any} orgId={orgId} onPhotoUrlChange={setPhotoUrl} />;
+      case 'health':         return <PetHealth pet={pet as any} orgId={orgId} apiUrl={apiUrl} onUpdate={(u: any) => setPet({ ...pet, ...u })} />;
+      case 'gallery':        return <PetGallery pet={pet as any} orgId={orgId} apiUrl={apiUrl} onPhotoUrlChange={setPhotoUrl} />;
       case 'fundraising':    return (
         <div style={{ background: '#fff', borderRadius: 16, padding: 40, textAlign: 'center', boxShadow: '0 1px 12px rgba(0,0,0,0.08)' }}>
           <div style={{ fontSize: 56, marginBottom: 16 }}>💰</div>
@@ -264,7 +264,7 @@ export default function PetProfileLayout({
     return (
       <div className="px-4 pb-8 w-full max-w-full overflow-hidden">
         <MobilePetProfileLayout 
-          pet={pet} orgId={orgId} activeTab={activeTab} setActiveTab={setActiveTab} 
+          pet={pet} orgId={orgId} apiUrl={apiUrl} activeTab={activeTab} setActiveTab={setActiveTab} 
           photoUrl={photoUrl} gradient={gradient} isdog={isdog} ageStr={ageStr} 
           uploading={uploading} uploadSuccess={uploadSuccess} handleQuickUpload={handleQuickUpload} 
           uploadInputRef={uploadInputRef} catalogToggle={catalogToggle} 

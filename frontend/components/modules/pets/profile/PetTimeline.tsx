@@ -16,6 +16,7 @@ interface TimelineEvent {
 interface PetTimelineProps {
   pet: { id: number; name: string; created_at?: string; org_pet_number?: number };
   orgId: string;
+  apiUrl: string;
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -42,7 +43,7 @@ const formatDate = (dateString: string) =>
     hour: '2-digit', minute: '2-digit',
   });
 
-export default function PetTimeline({ pet, orgId }: PetTimelineProps) {
+export default function PetTimeline({ pet, orgId, apiUrl }: PetTimelineProps) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,8 +51,7 @@ export default function PetTimeline({ pet, orgId }: PetTimelineProps) {
     const load = async () => {
       setLoading(true);
       try {
-        const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-        const res = await fetch(`${apiBase}/pets/${pet.id}/timeline`, { credentials: 'include' });
+        const res = await fetch(`${apiUrl}/timeline`, { credentials: 'include' });
         const data = await res.json();
         console.log('[PETID DEBUG] Timeline API response:', data);
         const apiEvents = data.events || [];

@@ -13,15 +13,16 @@ interface PetGalleryProps {
     body_photo_url?: string;
   };
   orgId: string;
+  apiUrl: string;
   onPhotoUrlChange?: (url: string) => void;
 }
 
 // Слот для специализированного фото
 function SpecialPhotoSlot({
-  label, icon, url, fieldKey, petId, orgId, onSave,
+  label, icon, url, fieldKey, petId, orgId, apiUrl, onSave,
 }: {
   label: string; icon: string; url: string; fieldKey: string;
-  petId: number; orgId: string; onSave: (url: string) => void;
+  petId: number; orgId: string; apiUrl: string; onSave: (url: string) => void;
 }) {
   const { uploadFile } = useMediaUpload();
   const ref = useRef<HTMLInputElement>(null);
@@ -39,8 +40,7 @@ function SpecialPhotoSlot({
     try {
       const uploaded = await uploadFile(file, 'photo');
       if (!uploaded?.url) return;
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-      await fetch(`${apiBase}/pets/${petId}`, {
+      await fetch(apiUrl, {
         method: 'PUT', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [fieldKey]: uploaded.url }),
@@ -109,7 +109,7 @@ function SpecialPhotoSlot({
   );
 }
 
-export default function PetGallery({ pet, orgId, onPhotoUrlChange }: PetGalleryProps) {
+export default function PetGallery({ pet, orgId, apiUrl, onPhotoUrlChange }: PetGalleryProps) {
   const { uploadFile, progress } = useMediaUpload();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -142,8 +142,7 @@ export default function PetGallery({ pet, orgId, onPhotoUrlChange }: PetGalleryP
     setIsSaving(true);
     setUploadError(null);
     try {
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-      const res = await fetch(`${apiBase}/pets/${pet.id}`, {
+      const res = await fetch(apiUrl, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify({ media_urls: newUrls }),
       });
@@ -159,8 +158,7 @@ export default function PetGallery({ pet, orgId, onPhotoUrlChange }: PetGalleryP
   const setAsMain = async (url: string) => {
     setSettingMain(true);
     try {
-      const apiBase = orgId === 'petid' ? '/api/petid' : `/api/org/${orgId}`;
-      const res = await fetch(`${apiBase}/pets/${pet.id}`, {
+      const res = await fetch(apiUrl, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify({ photo_url: url }),
       });
@@ -311,11 +309,11 @@ export default function PetGallery({ pet, orgId, onPhotoUrlChange }: PetGalleryP
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <SpecialPhotoSlot
             label="Фото морды" icon="🐾" url={facePhoto} fieldKey="face_photo_url"
-            petId={pet.id} orgId={orgId} onSave={setFacePhoto}
+            petId={pet.id} orgId={orgId} apiUrl={apiUrl} onSave={setFacePhoto}
           />
           <SpecialPhotoSlot
             label="Фото тела" icon="📏" url={bodyPhoto} fieldKey="body_photo_url"
-            petId={pet.id} orgId={orgId} onSave={setBodyPhoto}
+            petId={pet.id} orgId={orgId} apiUrl={apiUrl} onSave={setBodyPhoto}
           />
         </div>
       </div>
