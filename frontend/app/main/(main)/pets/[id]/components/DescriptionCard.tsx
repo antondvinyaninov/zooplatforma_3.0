@@ -7,16 +7,11 @@ interface DescriptionCardProps {
 }
 
 export default function DescriptionCard({ pet }: DescriptionCardProps) {
-  // Временно используем заглушку, если описания нет в модели Pet
-  const defaultDescription = pet.status === 'needs_help' 
-    ? `Нашему любимому ${pet.gender === 'female' ? 'кошке' : 'коту'} ${pet.name} срочно требуется операция, и без своевременного лечения ${pet.gender === 'female' ? 'она' : 'он'} может погибнуть. Мы обращаемся к вам за помощью - любая сумма будет очень важна для спасения.`
-    : pet.status === 'looking_for_home'
-    ? `Милый ${pet.gender === 'female' ? 'ребенок' : 'малыш'} ${pet.name}, привит, стерилизован. Очень ласковый и игривый. Ищет добрую семью, которая сможет уделить достаточно внимания и заботы.`
-    : pet.status === 'lost'
-    ? `Потерялся ${pet.species.toLowerCase()} ${pet.name}, ${pet.breed || ''}, окрас ${pet.color || 'неизвестно'}. Последний раз видели возле дома. Если найдете, пожалуйста, свяжитесь с нами!`
-    : `Найден ${pet.species.toLowerCase()}, похож на ${pet.breed || 'обычного'}, окрас ${pet.color || 'неизвестно'}. Очень ласковый и не агрессивный. Ошейник без номера.`;
+  const descriptionText = pet.description?.trim();
 
-  const descriptionText = pet.description?.trim() || defaultDescription;
+  if (!descriptionText) {
+    return null;
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-2.5">

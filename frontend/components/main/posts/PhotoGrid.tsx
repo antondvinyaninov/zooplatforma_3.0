@@ -90,7 +90,7 @@ export default function PhotoGrid({ photos, onClick }: PhotoGridProps) {
   return (
     <div
       ref={containerRef}
-      className="relative aspect-square overflow-hidden cursor-pointer group bg-white dark:bg-gray-900"
+      className="relative w-full rounded-xl overflow-hidden cursor-pointer group flex items-center justify-center bg-gray-50/50"
       onClick={onClick}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -100,20 +100,16 @@ export default function PhotoGrid({ photos, onClick }: PhotoGridProps) {
       {isVideo ? (
         <video
           src={getPhotoUrl(currentPhoto.url)}
-          className="w-full h-full object-contain"
+          className="w-full h-auto max-h-[600px] object-contain rounded-xl"
           controls
           onClick={(e) => e.stopPropagation()}
         />
       ) : (
-        <div
-          style={{
-            backgroundImage: `url(${getPhotoUrl(currentPhoto.url)})`,
-            backgroundSize: 'contain',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            width: '100%',
-            height: '100%',
-          }}
+        <img
+          src={getPhotoUrl(currentPhoto.url)}
+          alt="Вложение поста"
+          className="w-full h-auto max-h-[600px] object-contain rounded-xl"
+          draggable="false"
         />
       )}
       {/* Счетчик фото */}

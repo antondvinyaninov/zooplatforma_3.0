@@ -30,7 +30,7 @@ export default function ChatHeader({ user, onClose }: ChatHeaderProps) {
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 px-2 py-2 flex items-center justify-between shadow-sm z-10">
+    <div className="bg-white/85 backdrop-blur-md border-b border-gray-100 px-3 py-2.5 flex items-center justify-between shadow-sm z-20 sticky top-0">
       <div className="flex items-center gap-1.5">
         <div className="relative flex items-center">
           <button

@@ -356,7 +356,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
 
       {/* 2. Прививки */}
       <div style={{ marginTop: 24 }}>
-        <div className={s.headerCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className={`${s.headerCard} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3`}>
           <div>
             <div className={s.sectionTitle}>Вакцинации</div>
             <div className={s.sectionDesc}>История прививок питомца</div>
@@ -376,7 +376,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
         {showAddVaccination && (
           <div className={s.card} style={{ marginBottom: 16, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <h4 style={{ fontWeight: 600, marginBottom: 16, fontSize: '15px' }}>{editingVaccination ? 'Редактировать прививку' : 'Новая прививка'}</h4>
-            <div className={s.grid2}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div><label className={s.fieldLabel}>Дата*</label><input type="date" className={s.inputNode} value={newVaccination.date} onChange={e => setNewVaccination({...newVaccination, date: e.target.value})} /></div>
               <div>
                 <label className={s.fieldLabel}>Тип вакцины</label>
@@ -403,42 +403,64 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
           </div>
         )}
 
-        <div className={s.card} style={{ padding: 0, overflow: 'hidden' }}>
+        <div className={s.card} style={{ padding: 0, overflowX: 'auto' }}>
           {vaccinations.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>Нет записей о вакцинациях</div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-              <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
-                <tr>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Дата</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Тип</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Вакцина</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Следующая</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151', textAlign: 'right' }}>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vaccinations.map((vac) => (
-                  <tr key={vac.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    <td style={{ padding: '12px 16px', color: '#111827' }}>{new Date(vac.date).toLocaleDateString('ru-RU')}</td>
-                    <td style={{ padding: '12px 16px', color: '#4b5563' }}>{getVaccineTypeLabel(vac.vaccine_type)}</td>
-                    <td style={{ padding: '12px 16px', color: '#111827', fontWeight: 500 }}>{vac.vaccine_name}</td>
-                    <td style={{ padding: '12px 16px', color: '#6b7280' }}>{vac.next_date ? new Date(vac.next_date).toLocaleDateString('ru-RU') : '-'}</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      <button onClick={() => { setEditingVaccination(vac); setNewVaccination(vac); setShowAddVaccination(true); }} style={{ color: '#2563eb', marginRight: 12, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Ред.</button>
-                      <button onClick={() => handleDeleteVaccination(vac.id!)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Удалить</button>
-                    </td>
+            <>
+              <table className="hidden sm:table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
+                  <tr>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Дата</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Тип</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Вакцина</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Следующая</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151', textAlign: 'right' }}>Действия</th>
                   </tr>
+                </thead>
+                <tbody>
+                  {vaccinations.map((vac) => (
+                    <tr key={vac.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '12px 16px', color: '#111827' }}>{new Date(vac.date).toLocaleDateString('ru-RU')}</td>
+                      <td style={{ padding: '12px 16px', color: '#4b5563' }}>{getVaccineTypeLabel(vac.vaccine_type)}</td>
+                      <td style={{ padding: '12px 16px', color: '#111827', fontWeight: 500 }}>{vac.vaccine_name}</td>
+                      <td style={{ padding: '12px 16px', color: '#6b7280' }}>{vac.next_date ? new Date(vac.next_date).toLocaleDateString('ru-RU') : '-'}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        <button onClick={() => { setEditingVaccination(vac); setNewVaccination(vac); setShowAddVaccination(true); }} style={{ color: '#2563eb', marginRight: 12, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Ред.</button>
+                        <button onClick={() => handleDeleteVaccination(vac.id!)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Удалить</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="flex flex-col sm:hidden">
+                {vaccinations.map((vac) => (
+                  <div key={vac.id} style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ fontWeight: 600, color: '#111827', fontSize: 15 }}>{vac.vaccine_name}</span>
+                      <span style={{ color: '#6b7280', fontSize: 13 }}>{new Date(vac.date).toLocaleDateString('ru-RU')}</span>
+                    </div>
+                    <div style={{ color: '#4b5563', fontSize: 14, marginBottom: 4 }}>
+                      {getVaccineTypeLabel(vac.vaccine_type)}
+                    </div>
+                    <div style={{ color: '#6b7280', fontSize: 13, marginBottom: 12 }}>
+                      Следующая: {vac.next_date ? new Date(vac.next_date).toLocaleDateString('ru-RU') : '-'}
+                    </div>
+                    <div style={{ display: 'flex', gap: 16 }}>
+                      <button onClick={() => { setEditingVaccination(vac); setNewVaccination(vac); setShowAddVaccination(true); }} style={{ color: '#2563eb', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Ред.</button>
+                      <button onClick={() => handleDeleteVaccination(vac.id!)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Удалить</button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </div>
       </div>
 
       {/* 3. Обработки */}
       <div style={{ marginTop: 24 }}>
-        <div className={s.headerCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className={`${s.headerCard} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3`}>
           <div>
             <div className={s.sectionTitle}>Обработки от паразитов</div>
             <div className={s.sectionDesc}>Дегельминтизация, бравекто и т.д.</div>
@@ -458,7 +480,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
         {showAddTreatment && (
           <div className={s.card} style={{ marginBottom: 16, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <h4 style={{ fontWeight: 600, marginBottom: 16, fontSize: '15px' }}>{editingTreatment ? 'Редактировать обработку' : 'Новая обработка'}</h4>
-            <div className={s.grid2}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div><label className={s.fieldLabel}>Дата*</label><input type="date" className={s.inputNode} value={newTreatment.date} onChange={e => setNewTreatment({...newTreatment, date: e.target.value})} /></div>
               <div>
                 <label className={s.fieldLabel}>Тип обработки</label>
@@ -480,44 +502,66 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
           </div>
         )}
 
-        <div className={s.card} style={{ padding: 0, overflow: 'hidden' }}>
+        <div className={s.card} style={{ padding: 0, overflowX: 'auto' }}>
           {treatments.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>Нет записей об обработках</div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-              <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
-                <tr>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Дата</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Тип</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Препарат</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Доза</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Следующая</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151', textAlign: 'right' }}>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {treatments.map((tr) => (
-                  <tr key={tr.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    <td style={{ padding: '12px 16px', color: '#111827' }}>{new Date(tr.date).toLocaleDateString('ru-RU')}</td>
-                    <td style={{ padding: '12px 16px', color: '#4b5563' }}>{getTreatmentTypeLabel(tr.treatment_type)}</td>
-                    <td style={{ padding: '12px 16px', color: '#111827', fontWeight: 500 }}>{tr.product_name}</td>
-                    <td style={{ padding: '12px 16px', color: '#6b7280' }}>{tr.dosage || '-'}</td>
-                    <td style={{ padding: '12px 16px', color: '#6b7280' }}>{tr.next_date ? new Date(tr.next_date).toLocaleDateString('ru-RU') : '-'}</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      <button onClick={() => { setEditingTreatment(tr); setNewTreatment(tr); setShowAddTreatment(true); }} style={{ color: '#2563eb', marginRight: 12, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Ред.</button>
-                      <button onClick={() => handleDeleteTreatment(tr.id!)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Удалить</button>
-                    </td>
+            <>
+              <table className="hidden sm:table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
+                  <tr>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Дата</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Тип</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Препарат</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Доза</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151' }}>Следующая</th>
+                    <th style={{ padding: '12px 16px', fontWeight: 600, color: '#374151', textAlign: 'right' }}>Действия</th>
                   </tr>
+                </thead>
+                <tbody>
+                  {treatments.map((tr) => (
+                    <tr key={tr.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '12px 16px', color: '#111827' }}>{new Date(tr.date).toLocaleDateString('ru-RU')}</td>
+                      <td style={{ padding: '12px 16px', color: '#4b5563' }}>{getTreatmentTypeLabel(tr.treatment_type)}</td>
+                      <td style={{ padding: '12px 16px', color: '#111827', fontWeight: 500 }}>{tr.product_name}</td>
+                      <td style={{ padding: '12px 16px', color: '#6b7280' }}>{tr.dosage || '-'}</td>
+                      <td style={{ padding: '12px 16px', color: '#6b7280' }}>{tr.next_date ? new Date(tr.next_date).toLocaleDateString('ru-RU') : '-'}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        <button onClick={() => { setEditingTreatment(tr); setNewTreatment(tr); setShowAddTreatment(true); }} style={{ color: '#2563eb', marginRight: 12, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Ред.</button>
+                        <button onClick={() => handleDeleteTreatment(tr.id!)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Удалить</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="flex flex-col sm:hidden">
+                {treatments.map((tr) => (
+                  <div key={tr.id} style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ fontWeight: 600, color: '#111827', fontSize: 15 }}>{tr.product_name}</span>
+                      <span style={{ color: '#6b7280', fontSize: 13 }}>{new Date(tr.date).toLocaleDateString('ru-RU')}</span>
+                    </div>
+                    <div style={{ color: '#4b5563', fontSize: 14, marginBottom: 4 }}>
+                      {getTreatmentTypeLabel(tr.treatment_type)} {tr.dosage ? `(Доза: ${tr.dosage})` : ''}
+                    </div>
+                    <div style={{ color: '#6b7280', fontSize: 13, marginBottom: 12 }}>
+                      Следующая: {tr.next_date ? new Date(tr.next_date).toLocaleDateString('ru-RU') : '-'}
+                    </div>
+                    <div style={{ display: 'flex', gap: 16 }}>
+                      <button onClick={() => { setEditingTreatment(tr); setNewTreatment(tr); setShowAddTreatment(true); }} style={{ color: '#2563eb', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Ред.</button>
+                      <button onClick={() => handleDeleteTreatment(tr.id!)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>Удалить</button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </div>
       </div>
 
       {/* 4. Медицинские записи */}
       <div style={{ marginTop: 24 }}>
-        <div className={s.headerCard} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className={`${s.headerCard} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3`}>
           <div>
             <div className={s.sectionTitle}>Медицинская карта</div>
             <div className={s.sectionDesc}>Осмотры, диагнозы, операции</div>
@@ -537,7 +581,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
         {showAddMedicalRecord && (
           <div className={s.card} style={{ marginBottom: 16, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <h4 style={{ fontWeight: 600, marginBottom: 16, fontSize: '15px' }}>{editingMedicalRecord ? 'Редактировать запись' : 'Новая мед. запись'}</h4>
-            <div className={s.grid2}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div><label className={s.fieldLabel}>Дата*</label><input type="date" className={s.inputNode} value={newMedicalRecord.date} onChange={e => setNewMedicalRecord({...newMedicalRecord, date: e.target.value})} /></div>
               <div>
                 <label className={s.fieldLabel}>Категория</label>
@@ -560,7 +604,7 @@ export default function PetHealth({ pet, orgId, onUpdate }: PetHealthProps) {
           </div>
         )}
 
-        <div className={s.card} style={{ padding: 0, overflow: 'hidden' }}>
+        <div className={s.card} style={{ padding: 0, overflowX: 'auto' }}>
           {medicalRecords.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>Медицинская карта пуста</div>
           ) : (

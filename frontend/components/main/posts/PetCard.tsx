@@ -103,11 +103,11 @@ export default function PetCard({ pet }: PetCardProps) {
   return (
     <div
       onClick={handleClick}
-      className="flex items-start gap-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border-2 border-blue-200 hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer group"
+      className="flex items-start gap-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer group"
     >
       {/* Pet Photo */}
       <div className="relative flex-shrink-0">
-        <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-white font-bold text-2xl overflow-hidden shadow-md group-hover:scale-105 transition-transform">
+        <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-white font-bold text-2xl overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
           {pet.photo_url || pet.photo ? (
             <img
               src={pet.photo_url || pet.photo || getMediaUrl(pet.photo) || ''}

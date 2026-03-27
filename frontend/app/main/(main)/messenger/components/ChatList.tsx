@@ -121,7 +121,7 @@ export default function ChatList({
             <button
               key={chat.id}
               onClick={() => onSelectChat(chat.id)}
-              className={`w-full ${isCollapsed ? 'p-2' : 'p-3'} flex ${isCollapsed ? 'justify-center' : 'items-start gap-3'} hover:bg-gray-50 transition-colors border-b border-gray-100 ${selectedChatId === chat.id ? 'bg-blue-50' : ''}`}
+              className={`w-[calc(100%-16px)] mx-2 my-1 ${isCollapsed ? 'p-2' : 'p-3'} flex ${isCollapsed ? 'justify-center' : 'items-start gap-3'} rounded-[16px] transition-all duration-200 border border-transparent ${selectedChatId === chat.id ? 'bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]' : 'hover:bg-gray-50'}`}
               title={isCollapsed ? `${chat.other_user?.name} ${chat.other_user?.last_name}` : ''}
             >
               {/* Аватар */}

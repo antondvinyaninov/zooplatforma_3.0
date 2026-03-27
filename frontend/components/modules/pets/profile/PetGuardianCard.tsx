@@ -13,12 +13,12 @@ export default function PetGuardianCard({ pet, orgId }: PetGuardianCardProps) {
 
   if (isOrgPet) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 420px)', gap: 24 }}>
+      <div className="w-full sm:max-w-[420px]">
         <div style={{ 
           display: 'flex', flexDirection: 'column', 
           background: 'linear-gradient(145deg, #ffffff 0%, #f0f7ff 100%)', 
-          borderRadius: 16, padding: 24, border: '1px solid #bfdbfe', 
-          boxShadow: '0 4px 20px -4px rgba(59, 130, 246, 0.12)',
+          borderRadius: 8, padding: 24, border: '1px solid #bfdbfe', 
+          boxShadow: '0 4px 12px -4px rgba(59, 130, 246, 0.1)',
           position: 'relative', overflow: 'hidden' 
         }}>
           <div style={{ position: 'absolute', top: -40, right: -40, width: 140, height: 140, borderRadius: '50%', background: 'radial-gradient(circle, rgba(219,234,254,1) 0%, rgba(239,246,255,0) 70%)', zIndex: 0 }}></div>
@@ -97,12 +97,12 @@ export default function PetGuardianCard({ pet, orgId }: PetGuardianCardProps) {
   else if (orgId === 'pethelper') displayRole = 'Официальный куратор'; // fallback для волонтеров
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 420px)', gap: 24 }}>
+    <div className="w-full sm:max-w-[420px]">
       <div style={{ 
         display: 'flex', flexDirection: 'column', 
         background: 'linear-gradient(145deg, #ffffff 0%, #f0f7ff 100%)', 
-        borderRadius: 16, padding: 24, border: '1px solid #bfdbfe', 
-        boxShadow: '0 4px 20px -4px rgba(59, 130, 246, 0.12)',
+        borderRadius: 8, padding: 24, border: '1px solid #bfdbfe', 
+        boxShadow: '0 4px 12px -4px rgba(59, 130, 246, 0.1)',
         position: 'relative', overflow: 'hidden' 
       }}>
         <div style={{ position: 'absolute', top: -40, right: -40, width: 140, height: 140, borderRadius: '50%', background: 'radial-gradient(circle, rgba(219,234,254,1) 0%, rgba(239,246,255,0) 70%)', zIndex: 0 }}></div>

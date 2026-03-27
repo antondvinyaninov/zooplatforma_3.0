@@ -164,6 +164,7 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
   const [showEditMode, setShowEditMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuDropdownRef = useRef<HTMLDivElement | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
@@ -755,10 +756,39 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
 
       {/* Content */}
       <div
-        className="text-gray-900 px-4 pb-3 whitespace-pre-wrap relative"
+        className="text-gray-900 px-4 pb-3 relative"
         onDoubleClick={handleDoubleClick}
       >
-        {post.content}
+        <div className="whitespace-pre-wrap text-[15px] leading-relaxed">
+          {(() => {
+            if (isTextExpanded || !post.content) return post.content;
+            
+            const lines = post.content.split('\n');
+            const isLong = post.content.length > 350 || lines.length > 5;
+            
+            if (!isLong) return post.content;
+            
+            let truncated = lines.slice(0, 5).join('\n');
+            if (truncated.length > 350) {
+              truncated = truncated.slice(0, 350);
+            }
+            
+            return truncated.trimEnd() + '...';
+          })()}
+        </div>
+        
+        {!isTextExpanded && post.content && (post.content.length > 350 || (post.content.match(/\n/g) || []).length > 5) && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsTextExpanded(true);
+            }}
+            className="text-blue-600 font-medium text-[15px] mt-1 hover:underline cursor-pointer"
+          >
+            Показать полностью...
+          </button>
+        )}
 
         {/* Like Animation */}
         {showLikeAnimation && (
@@ -959,11 +989,35 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
 
           <div className="relative">
             <button
-              onClick={() => {
-                if (isAuthenticated) {
-                  setShowShareMenu(!showShareMenu);
-                } else {
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (!isAuthenticated) {
                   setShowAuthModal(true);
+                  return;
+                }
+
+                if (navigator.share) {
+                  try {
+                    const postUrl = `${window.location.origin}/?metka=${post.id}`;
+                    const shareTitle = `ЗооПлатформа | ${post.author_type === 'organization' ? post.organization?.short_name || post.organization?.name : getFullName(post.user?.first_name || post.user?.name || '', post.user?.last_name)}`;
+                    const shareText = post.content.substring(0, 100) + (post.content.length > 100 ? '...' : '');
+                    
+                    await navigator.share({
+                      title: shareTitle,
+                      text: shareText,
+                      url: postUrl,
+                    });
+                    
+                    // TODO: отправить аналитическое событие "Пост расшарен"
+                  } catch (err) {
+                    console.log('Пользователь отменил шаринг или API не поддерживается', err);
+                    setShowShareMenu(!showShareMenu); // fallback
+                  }
+                } else {
+                  // Fallback для ПК или старых браузеров
+                  setShowShareMenu(!showShareMenu);
                 }
               }}
               className="flex items-center gap-2 hover:text-purple-500 transition-colors"

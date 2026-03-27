@@ -6,7 +6,7 @@ import { useMediaUpload } from '@/app/main/hooks/useMediaUpload';
 import PetNavMenu, { Tab } from '@/components/modules/pets/shared/PetNavMenu';
 import PetTimeline from '@/components/modules/pets/profile/PetTimeline';
 import PetGeneralInfo from '@/components/modules/pets/profile/PetGeneralInfo';
-import PetLocation from '@/components/modules/pets/profile/PetLocation';
+
 import PetIdentification from '@/components/modules/pets/profile/PetIdentification';
 import PetHealth from '@/components/modules/pets/profile/PetHealth';
 import PetGallery from '@/components/modules/pets/profile/PetGallery';
@@ -46,6 +46,9 @@ export interface PetDetail {
   location_notes: string;
   org_id?: number | null;
   org_name?: string | null;
+  org_pet_number?: string | null;
+  city?: string | null;
+  actual_city?: any;
   weight?: number | null;
   sterilization_date?: string;
   sterilization_specialist?: string;
@@ -175,6 +178,18 @@ export default function PetProfileLayout({
     }
   };
 
+  // --- Mobile detection ---
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mobile = window.innerWidth < 1024;
+    setIsMobile(mobile);
+    if (mobile) setActiveTab('info');
+
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: '#9ca3af', fontSize: 13 }}>
       Загрузка...
@@ -225,7 +240,7 @@ export default function PetProfileLayout({
       case 'timeline':       return <PetTimeline pet={pet as any} orgId={orgId} />;
       case 'general':        return <PetGeneralInfo pet={pet as any} orgId={orgId} onUpdate={(u: any) => setPet({ ...pet, ...u })} />;
       case 'identification': return <PetIdentification pet={pet as any} orgId={orgId} onUpdate={(u: any) => setPet({ ...pet, ...u })} extraActions={showRegistrationButton ? <RegisterPetButton petId={pet.id} orgId={orgId} isRegistered={isRegistered} /> : identificationExtraActions?.(pet)} />;
-      case 'location':       return <PetLocation pet={pet as any} orgId={orgId} onUpdate={(u: any) => setPet({ ...pet, ...u })} />;
+
       case 'health':         return <PetHealth pet={pet as any} orgId={orgId} onUpdate={(u: any) => setPet({ ...pet, ...u })} />;
       case 'gallery':        return <PetGallery pet={pet as any} orgId={orgId} onPhotoUrlChange={setPhotoUrl} />;
       case 'fundraising':    return (
@@ -243,6 +258,24 @@ export default function PetProfileLayout({
     }
   };
 
+  if (isMobile) {
+    // Dynamically require to avoid circular dependencies if necessary, but direct import is fine
+    const MobilePetProfileLayout = require('../mobile/MobilePetProfileLayout').default;
+    return (
+      <div className="px-4 pb-8 w-full max-w-full overflow-hidden">
+        <MobilePetProfileLayout 
+          pet={pet} orgId={orgId} activeTab={activeTab} setActiveTab={setActiveTab} 
+          photoUrl={photoUrl} gradient={gradient} isdog={isdog} ageStr={ageStr} 
+          uploading={uploading} uploadSuccess={uploadSuccess} handleQuickUpload={handleQuickUpload} 
+          uploadInputRef={uploadInputRef} catalogToggle={catalogToggle} 
+          handleCatalogStatusChange={handleCatalogStatusChange} handleDelete={handleDelete} 
+          extraRightActions={extraRightActions} showFundraising={showFundraising} 
+          renderCenter={renderCenter} InfoRow={InfoRow}
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 32 }}>
       {/* Основной грид */}
@@ -251,7 +284,7 @@ export default function PetProfileLayout({
         {/* Левая колонка */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* Фото */}
-          <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 1px 12px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+          <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)', overflow: 'hidden' }}>
             <div style={{
               height: 260, background: (photoUrl) ? '#000' : gradient,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100,
@@ -265,7 +298,7 @@ export default function PetProfileLayout({
                 background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)',
                 borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: '#374151',
               }}>
-                №{pet.id}
+                №{pet.org_pet_number || pet.id}
               </span>
             </div>
             <div style={{ padding: '16px 16px 12px' }}>
@@ -321,7 +354,7 @@ export default function PetProfileLayout({
           <div style={{ position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
             {/* Действия */}
-            <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 1px 12px rgba(0,0,0,0.08)', padding: 16 }}>
+            <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)', padding: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Действия</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 
@@ -372,6 +405,20 @@ export default function PetProfileLayout({
                           <option value="lost">Потерян</option>
                           <option value="found">Найден</option>
                         </select>
+                        
+                        <a 
+                          href={`/main/pets/${pet.id}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          style={{ 
+                            display: 'block', marginTop: 16, fontSize: 13, color: '#2563eb', 
+                            textDecoration: 'none', fontWeight: 600, textAlign: 'center' 
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                          onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+                        >
+                          ↗ Открыть карточку в каталоге
+                        </a>
                       </div>
                     )}
                   </div>
@@ -390,14 +437,27 @@ export default function PetProfileLayout({
               </div>
             </div>
 
-            {/* Инфо */}
-            <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 1px 12px rgba(0,0,0,0.08)', padding: 16 }}>
+            {/* Инфо и Основное */}
+            <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)', padding: '16px 16px 8px' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Инфо</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 12, borderBottom: '1px solid #f3f4f6', marginBottom: 4 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>ID записи</div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Системный ID</div>
                   <div style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>#{pet.id}</div>
                 </div>
+                {pet.org_pet_number && (
+                  <div>
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Учетный номер</div>
+                    <div style={{ fontSize: 13, color: '#374151', fontWeight: 700 }}>#{pet.org_pet_number}</div>
+                  </div>
+                )}
+                {(pet.city || pet.location_address) && (
+                  <div>
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Город</div>
+                    <div style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>{pet.city || pet.location_address}</div>
+                  </div>
+                )}
                 <div>
                   <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Добавлен</div>
                   <div style={{ fontSize: 13, color: '#374151' }}>
@@ -417,11 +477,7 @@ export default function PetProfileLayout({
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Основное */}
-            <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 1px 12px rgba(0,0,0,0.08)', padding: '16px 16px 8px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Основное</div>
               <InfoRow icon="⚧" label="Пол" value={pet.gender === 'male' ? 'Самец ♂' : 'Самка ♀'} />
               {ageStr && <InfoRow icon="🎂" label="Возраст" value={ageStr} />}
               <InfoRow icon="📏" label="Размер" value={pet.size ? SIZE_LABELS[pet.size] : null} />

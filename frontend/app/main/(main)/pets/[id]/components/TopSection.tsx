@@ -41,6 +41,31 @@ export default function TopSection({ pet, isOwnerOrCurator }: TopSectionProps) {
 
   const viewsCount = pet.views_count || 0;
 
+  const handleShare = async () => {
+    const postUrl = `${window.location.origin}/main/pets/${pet.id}`;
+    const shareTitle = `ЗооПлатформа | ${pet.name || 'Питомец'} (${pet.species_name || pet.species || 'животное'})`;
+    const shareText = pet.description 
+      ? pet.description.substring(0, 100) + (pet.description.length > 100 ? '...' : '') 
+      : `${badge.text}. Узнайте подробности на платформе.`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: postUrl,
+        });
+      } catch (err) {
+        console.log('Пользователь отменил шаринг или API не поддерживается', err);
+        navigator.clipboard.writeText(postUrl);
+        alert('Ссылка скопирована в буфер обмена!');
+      }
+    } else {
+      navigator.clipboard.writeText(postUrl);
+      alert('Ссылка скопирована в буфер обмена!');
+    }
+  };
+
   return (
     <>
       <div className="bg-[#eff5ff] rounded-xl border border-blue-100 p-4 sm:p-6 mb-2.5">
@@ -88,6 +113,7 @@ export default function TopSection({ pet, isOwnerOrCurator }: TopSectionProps) {
 
           <div className="flex items-center gap-2.5 flex-shrink-0">
             <button 
+              onClick={handleShare}
               className="p-2.5 text-[#00c853] border border-[#00c853]/30 bg-green-50/50 rounded-lg hover:bg-green-50 transition-colors"
               title="Поделиться"
             >

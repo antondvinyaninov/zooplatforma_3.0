@@ -9,6 +9,8 @@ import Link from 'next/link';
 import PostCard from './PostCard';
 import CreatePost from './CreatePost';
 import PostSkeleton from './PostSkeleton';
+import PetCatalogCarousel from './injections/PetCatalogCarousel';
+import PromoActionCard from './injections/PromoActionCard';
 
 interface PostsFeedProps {
   activeFilter?: 'for-you' | 'following' | 'city' | 'lost' | 'found' | 'looking-for-home';
@@ -34,24 +36,50 @@ export default function PostsFeed({ activeFilter = 'for-you' }: PostsFeedProps) 
     queryFn: async ({ pageParam = 0 }) => {
       const limit = 10; // Load 10 posts per scroll
       // pageParam выступает в роли offset
-      const response = await postsApi.getAll({ limit, offset: pageParam, filter: filterParam });
-      console.log('--- DEBUG POSTS API RESPONSE ---', response);
+      let response = await postsApi.getAll({ limit, offset: pageParam, filter: filterParam });
+      let isFallback = false;
+      
+      // Fallback logic for 'city' cold start
+      if (pageParam === 0 && activeFilter === 'city' && (!response.data || response.data.length === 0)) {
+         response = await postsApi.getAll({ limit, offset: pageParam, filter: undefined });
+         isFallback = true;
+      }
+      
       if (!response.data) throw new Error('No data');
-      return response.data; // Post[]
+      return {
+        posts: response.data,
+        isFallback
+      };
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
-      // Бэкенд возвращает просто массив постов.
-      // Если постов вернулось меньше, чем limit, значит это последняя страница
-      if (lastPage.length < 10) return undefined;
+      if (lastPage.posts.length < 10) return undefined;
       return allPages.length * 10; // next offset = pages count * limit
     },
     // Убираем жесткое ожидание isAuthenticated, чтобы гости тоже загружали ленту
     enabled: !isAuthLoading,
   });
 
-  // FlatMap arrays since Data is now just Post[]
-  const posts = data?.pages.flat() || [];
+  // Extract posts and fallback flag
+  const isFallbackActivated = data?.pages[0]?.isFallback === true;
+  const posts = data?.pages.flatMap(page => page.posts) || [];
+  
+  // Merge posts with contextual widgets for native feed injection
+  const feedItems: Array<{ type: 'post' | 'catalog' | 'promo'; data?: any; id: string; widgetIndex?: number }> = [];
+  posts.forEach((post, index) => {
+    feedItems.push({ type: 'post', data: post, id: `post-${post.id}` });
+    
+    // Inject catalog carousel every 7 posts (indices 1, 8, 15, 22...)
+    if (index % 7 === 1) {
+      const widgetIndex = Math.floor(index / 7);
+      feedItems.push({ type: 'catalog', id: `widget-catalog-${widgetIndex}`, widgetIndex });
+    }
+    
+    // Inject promo card once after the 6th post
+    if (index === 5) {
+      feedItems.push({ type: 'promo', id: 'widget-promo' });
+    }
+  });
 
   const parentRef = useRef<HTMLDivElement>(null);
   const parentOffsetRef = useRef(0);
@@ -63,9 +91,14 @@ export default function PostsFeed({ activeFilter = 'for-you' }: PostsFeedProps) 
   }, []);
 
   const virtualizer = useWindowVirtualizer({
-    count: posts.length,
-    estimateSize: () => 400, // Примерная высота поста
-    overscan: 3,
+    count: feedItems.length,
+    estimateSize: (index) => {
+      const item = feedItems[index];
+      if (item.type === 'catalog') return 400;
+      if (item.type === 'promo') return 200;
+      return 600; // default post height (increased for better prediction)
+    },
+    overscan: 5, // Rent more off-screen elements to prevent flashing
     scrollMargin,
   });
 
@@ -92,24 +125,15 @@ export default function PostsFeed({ activeFilter = 'for-you' }: PostsFeedProps) 
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const handleDeletePost = (postId: number) => {
-    queryClient.setQueryData(['posts', activeFilter], (oldData: unknown) => {
-      if (!oldData) return oldData;
+    queryClient.setQueryData(['posts', activeFilter], (oldData: any) => {
+      if (!oldData || !oldData.pages) return oldData;
 
-      if (
-        typeof oldData !== 'object' ||
-        oldData === null ||
-        !('pages' in oldData) ||
-        !Array.isArray((oldData as { pages: unknown[] }).pages)
-      ) {
-        return oldData;
-      }
-
-      const typedData = oldData as { pages: unknown[] };
       return {
-        ...typedData,
-        pages: typedData.pages.map((page) =>
-          Array.isArray(page) ? page.filter((post) => post.id !== postId) : page,
-        ),
+        ...oldData,
+        pages: oldData.pages.map((page: any) => ({
+          ...page,
+          posts: page.posts.filter((post: any) => post.id !== postId),
+        })),
       };
     });
   };
@@ -143,30 +167,24 @@ export default function PostsFeed({ activeFilter = 'for-you' }: PostsFeedProps) 
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow-sm border border-gray-200">
-          {activeFilter === 'city' ? (
-            <>
-              <p className="font-medium">Нет постов из вашего города</p>
-              <p className="text-sm mt-2">
-                Убедитесь, что вы указали свой город в профиле, и другие пользователи тоже указали
-                свой город
-              </p>
-              <Link
-                href="/owner/profile/edit"
-                className="text-sm font-medium mt-3 inline-block"
-                style={{ color: '#1B76FF' }}
-              >
-                Заполнить город в профиле →
-              </Link>
-            </>
-          ) : (
-            <>
-              <p>Пока нет постов</p>
-              {isAuthenticated && <p className="text-sm mt-2">Создайте первый пост!</p>}
-            </>
-          )}
+          <p>Пока нет постов</p>
+          {isAuthenticated && <p className="text-sm mt-2">Создайте первый пост!</p>}
         </div>
       ) : (
         <>
+          {/* Fallback Banner for Empty City */}
+          {isFallbackActivated && activeFilter === 'city' && (
+            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-4 flex items-start gap-3 shadow-sm">
+              <span className="text-2xl leading-none">🏙️</span>
+              <div>
+                <h4 className="font-bold text-gray-900 text-sm">В вашем городе пока тихо</h4>
+                <p className="text-[13px] text-gray-600 mt-0.5">
+                  Мы загрузили для вас глобальную ленту. Станьте первым, кто опубликует пост в своем регионе!
+                </p>
+              </div>
+            </div>
+          )}
+
           <div ref={parentRef}>
             <div
               style={{
@@ -176,10 +194,10 @@ export default function PostsFeed({ activeFilter = 'for-you' }: PostsFeedProps) 
               }}
             >
               {virtualizer.getVirtualItems().map((virtualRow) => {
-                const post = posts[virtualRow.index];
+                const item = feedItems[virtualRow.index];
                 return (
                   <div
-                    key={virtualRow.key}
+                    key={item.id}
                     data-index={virtualRow.index}
                     ref={virtualizer.measureElement}
                     style={{
@@ -187,17 +205,21 @@ export default function PostsFeed({ activeFilter = 'for-you' }: PostsFeedProps) 
                       top: 0,
                       left: 0,
                       width: '100%',
-                      paddingBottom: '10px',
+                      paddingBottom: '16px',
                       transform: `translateY(${
                         virtualRow.start - virtualizer.options.scrollMargin
                       }px)`,
                     }}
                   >
-                    <PostCard
-                      post={post}
-                      onDelete={handleDeletePost}
-                      onUpdate={handleUpdatePost}
-                    />
+                    {item.type === 'post' && (
+                      <PostCard
+                        post={item.data}
+                        onDelete={handleDeletePost}
+                        onUpdate={handleUpdatePost}
+                      />
+                    )}
+                    {item.type === 'catalog' && <PetCatalogCarousel index={item.widgetIndex} />}
+                    {item.type === 'promo' && <PromoActionCard />}
                   </div>
                 );
               })}
@@ -205,10 +227,16 @@ export default function PostsFeed({ activeFilter = 'for-you' }: PostsFeedProps) 
           </div>
 
           {/* Элемент для наблюдения (infinite scroll trigger) */}
-          <div ref={observerTarget} className="h-10 flex items-center justify-center">
-            {isFetchingNextPage && <PostSkeleton />}
+          <div ref={observerTarget} className="py-6 flex flex-col items-center justify-center w-full min-h-[100px]">
+            {isFetchingNextPage && (
+              <div className="flex space-x-2 items-center justify-center">
+                <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            )}
             {!hasNextPage && posts.length > 0 && (
-              <p className="text-sm text-gray-500 mt-4">Все посты загружены</p>
+              <p className="text-sm text-gray-400 font-medium">Все посты загружены 🎉</p>
             )}
           </div>
         </>

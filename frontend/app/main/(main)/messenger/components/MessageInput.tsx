@@ -28,7 +28,8 @@ export default function MessageInput({
   };
 
   return (
-    <div className="bg-white border-t border-gray-200 p-3 md:p-4 relative pb-[max(env(safe-area-inset-bottom,12px),12px)]">
+    <div className="bg-transparent px-3 py-3 md:px-6 md:py-4 relative pb-[max(env(safe-area-inset-bottom,16px),16px)] z-20">
+      <div className="bg-white/95 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.08)] border border-gray-100/50 rounded-[32px] p-2 px-3 flex items-center gap-1.5 relative transition-all">
       {/* Скрытый input для выбора файлов */}
       <input
         ref={fileInputRef}
@@ -128,7 +129,8 @@ export default function MessageInput({
         </div>
       )}
 
-      <div className="flex items-center gap-2">
+      {/* Файловый Input теперь помещен над Floating Container */}
+      <div className="flex items-center gap-2 w-full">
         <button
           onClick={() => setShowAttachMenu(!showAttachMenu)}
           className="w-[36px] h-[36px] hover:bg-gray-100 rounded-full transition-colors flex items-center justify-center flex-shrink-0"
@@ -141,12 +143,12 @@ export default function MessageInput({
         <div className="flex-1 relative">
           <input
             type="text"
-            placeholder="Сообщение"
+            placeholder="Написать сообщение..."
             value={messageText}
             onChange={(e) => onMessageChange(e.target.value)}
             onKeyPress={handleKeyPress}
             disabled={sending}
-            className="w-full px-4 py-[9px] bg-[#f0f2f5] border-0 rounded-3xl focus:outline-none focus:ring-1 focus:ring-[#2688eb] focus:bg-white text-[15px] pr-10 disabled:opacity-50"
+            className="w-full px-5 py-3 bg-[#F8F9FA] hover:bg-gray-100 border border-transparent rounded-[24px] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#1B76FF]/20 focus:border-[#1B76FF]/30 transition-all text-[15px] pr-12 disabled:opacity-50 font-medium placeholder-gray-400"
           />
           <button className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full transition-colors">
             <svg className="w-5 h-5 text-[#818c99]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,6 +170,7 @@ export default function MessageInput({
             </svg>
           )}
         </button>
+      </div>
       </div>
     </div>
   );

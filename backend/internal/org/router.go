@@ -265,6 +265,8 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			// Место содержания
 			LocationType     string   `json:"location_type"`
 			LocationAddress  string   `json:"location_address"`
+			City             string   `json:"city"`
+			ActualCity       string   `json:"actual_city"`
 			LocationCage     string   `json:"location_cage"`
 			LocationContact  string   `json:"location_contact"`
 			LocationPhone    string   `json:"location_phone"`
@@ -310,6 +312,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				COALESCE(p.brand_number, ''), COALESCE(p.chip_number, ''),
 				COALESCE(p.marking_specialist, ''), COALESCE(p.marking_org, ''),
 				COALESCE(p.location_type, ''), COALESCE(p.location_address, ''),
+				COALESCE(NULLIF(p.city, ''), NULLIF(o.city, ''), NULLIF(o.address_city, ''), NULLIF(o.address, ''), ''), COALESCE(p.city, ''),
 				COALESCE(p.location_cage, ''), COALESCE(p.location_contact, ''),
 				COALESCE(p.location_phone, ''), COALESCE(p.location_notes, ''),
 				COALESCE(p.weight, 0), COALESCE(p.sterilization_date::text, ''), 
@@ -342,6 +345,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			&pet.BrandNumber, &pet.ChipNumber,
 			&pet.MarkingSpecialist, &pet.MarkingOrg,
 			&pet.LocationType, &pet.LocationAddress,
+			&pet.City, &pet.ActualCity,
 			&pet.LocationCage, &pet.LocationContact,
 			&pet.LocationPhone, &pet.LocationNotes,
 			&pet.Weight, &pet.SterilizationDate, 

@@ -126,15 +126,15 @@ export default function PetTimeline({ pet, orgId }: PetTimelineProps) {
 
                       {/* Карточка события */}
                       <div style={{
-                        flex: 1, background: '#f9fafb', borderRadius: 12, padding: '14px 16px',
-                        border: '1px solid #f3f4f6', transition: 'box-shadow 0.2s',
+                        flex: 1, minWidth: 0, background: '#f9fafb', borderRadius: 12, padding: '14px 16px',
+                        border: '1px solid #f3f4f6', transition: 'box-shadow 0.2s', overflow: 'hidden'
                       }}
                         onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)')}
                         onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
                       >
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
-                          <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{event.title}</div>
-                          <div style={{ fontSize: 12, color: '#9ca3af', flexShrink: 0, marginLeft: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+                          <div style={{ fontWeight: 600, fontSize: 14, color: '#111827', flex: '1 1 auto', minWidth: 'min-content' }}>{event.title}</div>
+                          <div style={{ fontSize: 12, color: '#9ca3af', flexShrink: 0 }}>
                             {formatDate(event.date)}
                           </div>
                         </div>

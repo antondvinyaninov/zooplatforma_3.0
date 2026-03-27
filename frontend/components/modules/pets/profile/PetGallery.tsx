@@ -227,7 +227,7 @@ export default function PetGallery({ pet, orgId, onPhotoUrlChange }: PetGalleryP
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {filteredUrls.map((url: string) => {
             const fullUrl = url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_MEDIA_URL}/${url.replace(/^\//, '')}`;
             const isMain = url === mainPhoto;
@@ -308,7 +308,7 @@ export default function PetGallery({ pet, orgId, onPhotoUrlChange }: PetGalleryP
       {/* Специализированные фото */}
       <div className={s.card} style={{ marginTop: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 12 }}>Специализированные фото</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <SpecialPhotoSlot
             label="Фото морды" icon="🐾" url={facePhoto} fieldKey="face_photo_url"
             petId={pet.id} orgId={orgId} onSave={setFacePhoto}

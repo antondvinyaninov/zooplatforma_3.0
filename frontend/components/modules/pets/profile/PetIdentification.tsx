@@ -38,7 +38,11 @@ export default function PetIdentification({ pet, orgId, onUpdate, extraActions }
         body: JSON.stringify(body),
       });
       if (res.ok) {
-        onUpdate(body);
+        if (field === 'city') {
+          onUpdate({ city: editValue, actual_city: editValue });
+        } else {
+          onUpdate(body);
+        }
         setEditingField(null);
       } else {
         alert('Ошибка сохранения');
@@ -65,7 +69,7 @@ export default function PetIdentification({ pet, orgId, onUpdate, extraActions }
               <select
                 value={editValue}
                 onChange={e => setEditValue(e.target.value)}
-                style={{ flex: 1, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
+                style={{ flex: 1, minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
                 autoFocus
               >
                 <option value="">Не указано</option>
@@ -76,7 +80,7 @@ export default function PetIdentification({ pet, orgId, onUpdate, extraActions }
                 type="date"
                 value={editValue}
                 onChange={e => setEditValue(e.target.value)}
-                style={{ flex: 1, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
+                style={{ flex: 1, minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
                 autoFocus
                 onKeyDown={e => {
                   if (e.key === 'Enter') saveEdit(field);
@@ -84,7 +88,7 @@ export default function PetIdentification({ pet, orgId, onUpdate, extraActions }
                 }}
               />
             ) : as === 'city' ? (
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <CityAutocomplete
                   value={editValue || ''}
                   onChange={setEditValue}
@@ -97,7 +101,7 @@ export default function PetIdentification({ pet, orgId, onUpdate, extraActions }
                 type="text"
                 value={editValue}
                 onChange={e => setEditValue(e.target.value)}
-                style={{ flex: 1, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
+                style={{ flex: 1, minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
                 autoFocus
                 onKeyDown={e => {
                   if (e.key === 'Enter') saveEdit(field);
@@ -157,19 +161,21 @@ export default function PetIdentification({ pet, orgId, onUpdate, extraActions }
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Маркирование */}
       <div className={s.card}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: '#111827', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f3f4f6', paddingBottom: 8 }}>
-          <span style={{ flex: 1 }}>Идентификация и Маркирование</span>
-          {extraActions}
+        <div className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <span>Идентификация и Маркирование</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {extraActions}
+          </div>
         </div>
         {/* Первая строка: только номера (бирка, клеймо, чип) */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.8fr', gap: '16px 20px', marginBottom: 20 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 mb-5">
           {renderEditableRow({ field: "tag_number",  label: "№ бирки",   value: pet.tag_number,  displayValue: pet.tag_number,    })}
           {renderEditableRow({ field: "brand_number",  label: "Клеймо",   value: pet.brand_number,  displayValue: pet.brand_number,    })}
           {renderEditableRow({ field: "chip_number",  label: "№ чипа",   value: pet.chip_number,  displayValue: pet.chip_number,    })}
         </div>
         
         {/* Вторая строка: дата, специалист и организация */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.5fr 1.5fr', gap: '16px 20px' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
           {renderEditableRow({ field: "marking_date",  label: "Дата маркирования",   value: pet.marking_date,  displayValue: formatDate(pet.marking_date),   as: "date",   })}
           {renderEditableRow({ field: "marking_specialist",  label: "Специалист",   value: pet.marking_specialist,  displayValue: pet.marking_specialist,   placeholder: "ФИО специалиста",   })}
           {renderEditableRow({ field: "marking_org",  label: "Организация",   value: pet.marking_org,  displayValue: pet.marking_org,   placeholder: "Название клиники/организации",   })}

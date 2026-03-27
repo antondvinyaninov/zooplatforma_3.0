@@ -112,7 +112,7 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
     label, field, payloadKey, value, displayValue, as = 'input', options = [], placeholder
   }: {
     label: string; field: string; payloadKey?: string; value: string; displayValue: React.ReactNode;
-    as?: 'input' | 'select' | 'date'; options?: { label: string; value: string }[]; placeholder?: string
+    as?: 'input' | 'select' | 'date' | 'textarea'; options?: { label: string; value: string }[]; placeholder?: string
   }) => {
     const isEditing = editingField === field;
     const keyToSave = payloadKey || field;
@@ -129,7 +129,7 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
               <select
                 value={editValue}
                 onChange={e => setEditValue(e.target.value)}
-                style={{ flex: 1, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
+                style={{ flex: 1, minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
                 autoFocus
               >
                 <option value="">Не указано</option>
@@ -140,7 +140,7 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
                 type="date"
                 value={editValue}
                 onChange={e => setEditValue(e.target.value)}
-                style={{ flex: 1, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
+                style={{ flex: 1, minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
                 autoFocus
               />
             ) : (
@@ -148,7 +148,7 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
                 type="text"
                 value={editValue}
                 onChange={e => setEditValue(e.target.value)}
-                style={{ flex: 1, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
+                style={{ flex: 1, minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
                 autoFocus
                 placeholder={placeholder}
                 onKeyDown={e => {
@@ -229,14 +229,14 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
         <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>Порода</div>
         {isEditing ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
-            <div style={{ flex: 1, position: 'relative' }}>
+            <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
               <input
                 type="text"
                 value={search}
                 onChange={e => { setSearch(e.target.value); setShowDropdown(true); }}
                 onFocus={() => setShowDropdown(true)}
                 placeholder="Начните вводить..."
-                style={{ width: '100%', padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
+                style={{ width: '100%', minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
                 autoFocus
               />
               {showDropdown && (
@@ -385,7 +385,7 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
           <div className={s.sectionDesc}>Базовая информация о питомце. Наведите на поле, чтобы отредактировать.</div>
         </div>
         <div className={s.card}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px 24px' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
             <EditableRow field="name" label="Имя питомца" value={pet.name || ''} displayValue={pet.name || '—'} />
             
             {/* Вид не так просто редактировать инлайн (нужно менять species_id), пока оставим view-only или селект: */}
@@ -442,6 +442,17 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
               </div>
             )}
           </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <EditableRow 
+              field="description" 
+              label="Описание питомца (для каталога)" 
+              value={pet.description || ''} 
+              displayValue={pet.description || '—'} 
+              placeholder="Подробный рассказ о питомце, характере, привычках..."
+              as="textarea" 
+            />
+          </div>
         </div>
       </div>
 
@@ -452,7 +463,7 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
           <div className={s.sectionDesc}>Окрас, шерсть, размер и особые приметы питомца.</div>
         </div>
         <div className={s.card}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px 24px' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
             <EditableRow 
               field="size" label="Размер" 
               value={pet.size || ''} 
@@ -476,7 +487,7 @@ export default function PetGeneralInfo({ pet, orgId, onUpdate }: PetGeneralInfoP
           <div className={s.sectionDesc}>Данные о стерилизации или кастрации питомца.</div>
         </div>
         <div className={s.card}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px 24px' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
             <EditableRow 
               field="sterilization_date" label="Дата стерилизации (кастрации)" 
               value={pet.sterilization_date || ''} 

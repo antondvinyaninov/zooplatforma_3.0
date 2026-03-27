@@ -13,96 +13,76 @@ export default function PetInfoCard({ pet, age }: PetInfoCardProps) {
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5 mb-2.5">
       <h3 className="text-lg font-bold text-gray-900 mb-3">Информация о питомце</h3>
       
-      <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2.5">
         {/* Возраст */}
         {age && (
-          <div className="flex gap-3">
-            <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0">
-              <div className="w-5 h-5 flex items-center justify-center text-orange-500 font-medium">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          <div className="bg-orange-50/60 border border-orange-100/60 rounded-xl p-3 flex flex-col gap-1 hover:bg-orange-50 transition-colors">
+            <div className="flex items-center gap-1.5 text-orange-500/80 mb-0.5">
+              <div className="w-4 h-4 flex items-center justify-center font-medium">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider">Возраст</span>
             </div>
-            <div className="flex border-b border-gray-50 pb-2 w-full items-center">
-              <div>
-                <div className="text-xs text-gray-400 mb-0.5">Возраст</div>
-                <div className="font-semibold text-gray-900 text-sm">{age}</div>
-              </div>
-            </div>
+            <div className="font-semibold text-gray-900 text-[13px] leading-tight">{age}</div>
           </div>
         )}
 
         {/* Порода */}
-        <div className="flex gap-3">
-          <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0">
-            <HeartIcon className="w-5 h-5 text-purple-500" />
+        <div className="bg-purple-50/60 border border-purple-100/60 rounded-xl p-3 flex flex-col gap-1 hover:bg-purple-50 transition-colors">
+          <div className="flex items-center gap-1.5 text-purple-600/70 mb-0.5">
+            <HeartIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Порода</span>
           </div>
-          <div className="flex border-b border-gray-50 pb-2 w-full items-center">
-            <div>
-              <div className="text-xs text-gray-400 mb-0.5">Порода</div>
-              <div className="font-semibold text-gray-900 text-sm">{pet.breed_name || pet.breed || pet.species || 'Без породы'}</div>
-            </div>
+          <div className="font-semibold text-gray-900 text-[13px] leading-tight truncate">
+            {pet.breed_name || pet.breed || pet.species || 'Без породы'}
           </div>
         </div>
 
         {/* Пол */}
-        <div className="flex gap-3">
-          <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
-            <UserIcon className="w-5 h-5 text-green-500" />
+        <div className="bg-blue-50/60 border border-blue-100/60 rounded-xl p-3 flex flex-col gap-1 hover:bg-blue-50 transition-colors">
+          <div className="flex items-center gap-1.5 text-blue-600/70 mb-0.5">
+            <UserIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Пол</span>
           </div>
-          <div className="flex border-b border-gray-50 pb-2 w-full items-center">
-            <div>
-              <div className="text-xs text-gray-400 mb-0.5">Пол</div>
-              <div className="font-semibold text-gray-900 text-sm">
-                {pet.gender === 'male' ? 'Мальчик' : pet.gender === 'female' ? 'Девочка' : 'Не указан'}
-              </div>
-            </div>
+          <div className="font-semibold text-gray-900 text-[13px] leading-tight">
+            {pet.gender === 'male' ? 'Мальчик' : pet.gender === 'female' ? 'Девочка' : 'Не указано'}
           </div>
         </div>
 
         {/* Город */}
         {(pet.location_address || pet.city || pet.region) && (
-          <div className="flex gap-3">
-            <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
-              <MapPinIcon className="w-5 h-5 text-red-500" />
+          <div className="bg-red-50/60 border border-red-100/60 rounded-xl p-3 flex flex-col gap-1 hover:bg-red-50 transition-colors">
+            <div className="flex items-center gap-1.5 text-red-500/80 mb-0.5">
+              <MapPinIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+              <span className="text-[10px] font-bold uppercase tracking-wider">Город</span>
             </div>
-            <div className="flex border-b border-gray-50 pb-2 w-full items-center">
-              <div>
-                <div className="text-xs text-gray-400 mb-0.5">Город</div>
-                <div className="font-semibold text-gray-900 text-sm">{(pet.location_address || pet.city || pet.region || '').split(',')[0]}</div>
-              </div>
+            <div className="font-semibold text-gray-900 text-[13px] leading-tight truncate">
+              {(pet.location_address || pet.city || pet.region || '').split(',')[0]}
             </div>
           </div>
         )}
 
         {/* Стерилизация */}
-        <div className="flex gap-3">
-          <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center flex-shrink-0">
-            <CheckCircleIcon className="w-5 h-5 text-teal-500" />
+        <div className="bg-teal-50/60 border border-teal-100/60 rounded-xl p-3 flex flex-col gap-1 hover:bg-teal-50 transition-colors">
+          <div className="flex items-center gap-1.5 text-teal-600/70 mb-0.5">
+            <CheckCircleIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Стерилизация</span>
           </div>
-          <div className="flex border-b border-gray-50 pb-2 w-full items-center">
-            <div>
-              <div className="text-xs text-gray-400 mb-0.5">Стерилизация</div>
-              <div className="font-semibold text-gray-900 text-sm">
-                {pet.is_sterilized ? 'Стерилизован' : 'Не стерилизован'}
-              </div>
-            </div>
+          <div className="font-semibold text-gray-900 text-[13px] leading-tight line-clamp-2">
+            {pet.is_sterilized ? 'Стерилизован' : 'Нет'}
           </div>
         </div>
 
-        {/* Чипирован */}
-        <div className="flex gap-3">
-          <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
-            <ShieldCheckIcon className="w-5 h-5 text-indigo-500" />
+        {/* Чип */}
+        <div className="bg-indigo-50/60 border border-indigo-100/60 rounded-xl p-3 flex flex-col gap-1 hover:bg-indigo-50 transition-colors">
+          <div className="flex items-center gap-1.5 text-indigo-500/80 mb-0.5">
+            <ShieldCheckIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Чип</span>
           </div>
-          <div className="flex border-b border-gray-50 pb-2 w-full items-center">
-            <div>
-              <div className="text-xs text-gray-400 mb-0.5">Чип</div>
-              <div className="font-semibold text-gray-900 text-sm">
-                {pet.chip_number ? `Да (${pet.chip_number})` : 'Нет чипа'}
-              </div>
-            </div>
+          <div className="font-semibold text-gray-900 text-[13px] leading-tight line-clamp-2">
+            {pet.chip_number ? `Да` : 'Нет'}
           </div>
         </div>
 

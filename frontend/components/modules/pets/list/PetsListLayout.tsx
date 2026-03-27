@@ -57,12 +57,32 @@ export default function PetsListLayout({
     fetchPets();
   }, [apiUrl]);
 
+  // --- Mobile detection ---
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (loading) {
     return <div className="p-4 sm:p-6 text-gray-500">Загрузка...</div>;
   }
 
   if (error) {
     return <div className="p-4 sm:p-6 text-red-500">{error}</div>;
+  }
+
+  if (isMobile) {
+    const MobilePetsListLayout = require('../mobile/MobilePetsListLayout').default;
+    return (
+      <MobilePetsListLayout
+        title={title} subtitle={subtitle} pets={pets} variant={variant}
+        petRoutePrefix={petRoutePrefix} extraHeaderActions={extraHeaderActions}
+        setShowModal={setShowModal}
+      />
+    );
   }
 
   return (

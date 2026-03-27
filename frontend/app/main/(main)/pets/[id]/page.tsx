@@ -58,6 +58,26 @@ export async function generateMetadata(
     : `Помогите питомцу по имени ${petName} (${petSpecies}). ${statusText}. Узнайте больше подробностей на Зоо Платформе.`;
 
   const imageUrl = getPetPhotoUrl(pet.photo_url || pet.photo);
+  
+  // Custom Dynamic OG Image wrapper
+  const ogUrl = new URL(
+    process.env.NEXT_PUBLIC_SITE_URL 
+      ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/og` 
+      : 'https://zooplatforma.com/api/og'
+  );
+  
+  ogUrl.searchParams.set('title', titleStr);
+  
+  let ogType = 'post';
+  if (pet.status === 'looking_for_home' || pet.catalog_status === 'looking_for_home') ogType = 'sale';
+  if (pet.status === 'lost' || pet.catalog_status === 'lost') ogType = 'lost';
+  if (pet.status === 'found' || pet.catalog_status === 'found') ogType = 'found';
+  if (pet.status === 'needs_help' || pet.catalog_status === 'needs_help') ogType = 'help';
+  ogUrl.searchParams.set('type', ogType);
+
+  if (imageUrl) {
+    ogUrl.searchParams.set('image', imageUrl);
+  }
 
   return {
     title: titleStr,
@@ -67,8 +87,18 @@ export async function generateMetadata(
       description: descriptionStr,
       url: `/main/pets/${id}`,
       type: 'profile',
-      images: imageUrl ? [imageUrl] : [],
+      images: [
+        {
+          url: ogUrl.toString(),
+          width: 1200,
+          height: 630,
+          alt: titleStr,
+        }
+      ],
       siteName: 'Зоо Платформа',
+    },
+    twitter: {
+      card: 'summary_large_image',
     },
     alternates: {
       canonical: `/main/pets/${id}`,

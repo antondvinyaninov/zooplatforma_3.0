@@ -9,7 +9,7 @@ export default function RightPanel() {
   if (isLoading) {
     return (
       <div className="space-y-2.5">
-        <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 flex gap-4 overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-xl rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 border border-white/60 flex gap-4 overflow-hidden">
           <FriendSkeleton />
           <FriendSkeleton />
           <FriendSkeleton />
@@ -26,7 +26,7 @@ export default function RightPanel() {
   return (
     <div className="space-y-2.5">
       {/* Friends */}
-      <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+      <div className="bg-white/80 backdrop-blur-xl rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 p-5">
         <FriendsListWidget userId={user.id} limit={6} />
       </div>
     </div>

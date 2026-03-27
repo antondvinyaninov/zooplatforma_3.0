@@ -29,6 +29,14 @@ export default function PetPageClient({ initialPet, initialPosts }: PetPageClien
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [postsLoading, setPostsLoading] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useEffect(() => {
     const loadPosts = async () => {
       try {
@@ -78,47 +86,54 @@ export default function PetPageClient({ initialPet, initialPosts }: PetPageClien
   const age = getAge();
   const isOwnerOrCurator = user?.id === pet.user_id;
 
+  const renderGallery = () => {
+    const galleryPhotos = [getPetPhotoUrl(pet.photo_url || pet.photo)].filter(Boolean);
+    if (pet.media_urls && Array.isArray(pet.media_urls)) {
+      pet.media_urls.forEach((url: string) => galleryPhotos.push(getPetPhotoUrl(url)));
+    }
+    if (posts) {
+      posts.forEach(post => {
+        if (post.attachments) {
+          post.attachments.forEach(a => {
+            if (a.type === 'photo' || (a.mime_type && typeof a.mime_type === 'string' && a.mime_type.startsWith('image'))) {
+              galleryPhotos.push(getPetPhotoUrl(a.url));
+            }
+          });
+        }
+      });
+    }
+    const uniquePhotos = Array.from(new Set(galleryPhotos)).filter(Boolean);
+    return <ImageGallery photos={uniquePhotos} name={pet.name || 'Питомец'} />;
+  };
+
   return (
-    <div className="max-w-[1200px] mx-auto w-full pb-10">
+    <div className="max-w-[1200px] mx-auto w-full pb-10 flex flex-col lg:block">
+      {/* Галерея на мобильных (самая первая!) */}
+      {isMobile && (
+        <div className="w-full">
+          {renderGallery()}
+        </div>
+      )}
+
       {/* Верхняя секция (Заголовок, хлебные крошки, кнопки) */}
-      <TopSection pet={pet} isOwnerOrCurator={isOwnerOrCurator} />
+      <div className={isMobile ? "px-3 mt-4" : ""}>
+        <TopSection pet={pet} isOwnerOrCurator={isOwnerOrCurator} />
+      </div>
 
       {/* 2-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5">
+      <div className={`grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-2.5 px-3 sm:px-0 ${isMobile ? 'mt-0' : 'mt-0'}`}>
         
         {/* Левая колонка - Основной контент */}
-        <div className="lg:col-span-8 flex flex-col gap-2.5">
-          {(() => {
-            const galleryPhotos = [getPetPhotoUrl(pet.photo_url || pet.photo)].filter(Boolean);
-            
-            if (pet.media_urls && Array.isArray(pet.media_urls)) {
-              pet.media_urls.forEach((url: string) => {
-                galleryPhotos.push(getPetPhotoUrl(url));
-              });
-            }
-            
-            if (posts) {
-              posts.forEach(post => {
-                if (post.attachments) {
-                  post.attachments.forEach(a => {
-                    if (a.type === 'photo' || (a.mime_type && typeof a.mime_type === 'string' && a.mime_type.startsWith('image'))) {
-                      galleryPhotos.push(getPetPhotoUrl(a.url));
-                    }
-                  });
-                }
-              });
-            }
-            
-            const uniquePhotos = Array.from(new Set(galleryPhotos)).filter(Boolean);
-            return <ImageGallery photos={uniquePhotos} name={pet.name || 'Питомец'} />;
-          })()}
+        <div className="lg:col-span-8 flex flex-col gap-4 lg:gap-2.5">
+          {/* Галерея на десктопе */}
+          {!isMobile && renderGallery()}
           
-          {/* Публикации */}
-          <PublicationsList pet={pet} posts={posts} postsLoading={postsLoading} />
+          {/* Публикации (на десктопе под фото) */}
+          {!isMobile && <PublicationsList pet={pet} posts={posts} postsLoading={postsLoading} />}
         </div>
 
         {/* Правая колонка - Сайдбар */}
-        <div className="lg:col-span-4 flex flex-col gap-2.5">
+        <div className="lg:col-span-4 flex flex-col gap-4 lg:gap-2.5">
           {/* Карточка Организатора / Куратора / Нашедшего */}
           <AuthorCard pet={pet} isOwnerOrCurator={isOwnerOrCurator} />
 
@@ -130,6 +145,9 @@ export default function PetPageClient({ initialPet, initialPosts }: PetPageClien
 
           {/* Информация о питомце */}
           <PetInfoCard pet={pet} age={age} />
+
+          {/* Публикации (на мобилке в самом низу) */}
+          {isMobile && <PublicationsList pet={pet} posts={posts} postsLoading={postsLoading} />}
         </div>
       </div>
     </div>

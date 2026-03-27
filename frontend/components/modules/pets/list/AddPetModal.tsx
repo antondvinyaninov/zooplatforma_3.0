@@ -137,7 +137,7 @@ export default function AddPetModal({ orgId, onClose, onSuccess }: AddPetModalPr
     >
       <div
         style={{
-          background: '#fff', borderRadius: 16, padding: 24,
+          background: '#fff', borderRadius: 8, padding: 24,
           width: 420, maxWidth: '95vw',
         }}
         onClick={(e) => e.stopPropagation()}

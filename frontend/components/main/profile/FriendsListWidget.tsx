@@ -60,13 +60,13 @@ export default function FriendsListWidget({ userId, limit = 6, onViewAll }: Frie
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Друзья <span className="text-gray-500 text-sm font-normal">({friends.length})</span>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-[16px] font-bold text-gray-900 flex items-center gap-2">
+          Друзья <span className="text-gray-500 text-[13px] font-bold bg-gray-100 px-2.5 py-0.5 rounded-full">{friends.length}</span>
         </h2>
         <button
           onClick={onViewAll}
-          className="text-sm font-medium text-blue-500 hover:text-blue-600"
+          className="text-[13px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50/50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-all duration-300"
         >
           Все
         </button>
@@ -77,9 +77,9 @@ export default function FriendsListWidget({ userId, limit = 6, onViewAll }: Frie
           <div
             key={friendship.id}
             onClick={() => router.push(`/id${friendship.friend.id}`)}
-            className="cursor-pointer group"
+            className="cursor-pointer group flex flex-col items-center"
           >
-            <div className="aspect-square rounded-lg bg-gray-200 flex items-center justify-center overflow-hidden mb-1 group-hover:opacity-90 transition-opacity relative">
+            <div className="aspect-square w-full rounded-[16px] bg-gray-50 flex items-center justify-center overflow-hidden mb-2 shadow-sm border border-gray-100 group-hover:shadow-md group-hover:-translate-y-0.5 transition-all duration-300 relative">
               {friendship.friend.avatar ? (
                 <img
                   src={getMediaUrl(friendship.friend.avatar) || ''}
@@ -87,16 +87,16 @@ export default function FriendsListWidget({ userId, limit = 6, onViewAll }: Frie
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <UserIcon className="w-8 h-8 text-gray-400" />
+                <UserIcon className="w-8 h-8 text-gray-300" strokeWidth={1.5} />
               )}
               {/* Статус онлайн индикатор */}
               <div
-                className={`absolute bottom-0.5 right-0.5 w-2.5 h-2.5 rounded-full border border-white flex-shrink-0 ${
-                  friendship.friend.is_online ? 'bg-green-500' : 'bg-gray-400'
+                className={`absolute bottom-1 right-1 w-3 h-3 rounded-full border-2 border-white flex-shrink-0 ${
+                  friendship.friend.is_online ? 'bg-green-500' : 'bg-gray-300'
                 }`}
               ></div>
             </div>
-            <div className="text-xs text-gray-700 text-center truncate">
+            <div className="text-[12px] font-medium text-gray-700 text-center truncate w-full px-1">
               {getFullName(friendship.friend.name, friendship.friend.last_name)}
             </div>
           </div>
