@@ -65,9 +65,10 @@ function SpecialPhotoSlot({
           position: 'relative', aspectRatio: '1', borderRadius: 12,
           overflow: 'hidden', cursor: saving ? 'not-allowed' : 'pointer',
           background: fullUrl ? '#000' : '#f8fafc',
-          border: `2px ${fullUrl ? 'solid #e5e7eb' : 'dashed #cbd5e1'}`,
+          borderWidth: 2,
+          borderStyle: fullUrl ? 'solid' : 'dashed',
+          borderColor: hover && !fullUrl ? '#93c5fd' : (fullUrl ? '#e5e7eb' : '#cbd5e1'),
           transition: 'border-color 0.2s',
-          borderColor: hover && !fullUrl ? '#93c5fd' : undefined,
         }}
       >
         {fullUrl ? (
@@ -95,7 +96,7 @@ function SpecialPhotoSlot({
             color: hover ? '#3b82f6' : '#94a3b8',
           }}>
             {saving
-              ? <div style={{ width: 22, height: 22, border: '2px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              ? <div style={{ width: 22, height: 22, borderWidth: 2, borderStyle: 'solid', borderColor: 'transparent #3b82f6 #3b82f6 #3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
               : <>
                   <span style={{ fontSize: 28 }}>{icon}</span>
                   <span style={{ fontSize: 11, fontWeight: 600 }}>{saving ? 'Загрузка...' : '+ Загрузить'}</span>
@@ -281,7 +282,7 @@ export default function PetGallery({ pet, orgId, apiUrl, onPhotoUrlChange }: Pet
           }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: isUploading ? '#dbeafe' : '#fff', border: `1px solid ${isUploading ? '#93c5fd' : '#ddd6fe'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isUploading ? '#3b82f6' : '#7c3aed', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
               {isUploading
-                ? <div style={{ width: 18, height: 18, border: '2px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                ? <div style={{ width: 18, height: 18, borderWidth: 2, borderStyle: 'solid', borderColor: 'transparent #3b82f6 #3b82f6 #3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                 : <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
               }
             </div>
