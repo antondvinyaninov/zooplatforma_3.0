@@ -347,15 +347,26 @@ export default function CatalogPage() {
               </p>
               
               {filterCity !== 'all' ? (
-                <button
-                  onClick={() => window.location.href = '/owner'}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 px-8 rounded-[16px] shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95 transition-all w-full sm:w-auto flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span>Разместить объявление</span>
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => window.location.href = '/owner'}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3 px-6 rounded-[16px] shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95 transition-all w-full sm:w-auto flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <span>Моего питомца</span>
+                  </button>
+                  <button
+                    onClick={() => window.location.href = '/pethelper'}
+                    className="bg-gray-100 text-gray-800 font-bold py-3 px-6 rounded-[16px] border border-gray-200 hover:bg-gray-200 active:scale-95 transition-all w-full sm:w-auto flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5 flex-shrink-0 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <span>Курируемого</span>
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={() => {
