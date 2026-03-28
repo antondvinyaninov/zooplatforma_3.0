@@ -3,6 +3,8 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.0.0/).
 
+## [Unreleased]
+
 ## [3.1.1] - 2026-03-28
 ### Changed
 - **Frontend / Cabinet:** Рефакторинг дашбордов Владельца и Зоопомощника. Убраны избыточные плашки со статистикой и независимая страница дашборда; внедрен прямой редирект с `/(dashboard)/dashboard` на `/(dashboard)/pets` для сокращения пользовательского пути.
@@ -47,3 +49,7 @@
 - **Frontend:** Исправлен баг со сбросом локального стейта поля "Город" (очистка после обновления страницы).
 - **Frontend:** Устранены проблемы с переполнением Tailwind-сеток (grids) в карточках информации и таблицах на узких экранах.
 - **Frontend:** Восстановлено исчезнувшее поле редактирования "Описание питомца (для каталога)" во внутренней конфигурации профиля (`PetGeneralInfo.tsx`).
+
+[Unreleased]: https://github.com/antondvinyaninov/zooplatforma_3.0/compare/v3.1.1...HEAD
+[3.1.1]: https://github.com/antondvinyaninov/zooplatforma_3.0/compare/v3.1.0...v3.1.1
+[3.1.0]: https://github.com/antondvinyaninov/zooplatforma_3.0/releases/tag/v3.1.0
