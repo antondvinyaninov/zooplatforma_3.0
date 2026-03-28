@@ -86,7 +86,7 @@ export default function PetsListLayout({
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
+    <div className="p-4 sm:p-6 w-full h-full">
       {/* Заголовок */}
       <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <div>
