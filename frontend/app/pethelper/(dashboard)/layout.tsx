@@ -63,16 +63,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } else if (pathname.includes('/pets')) {
       setActiveTab('pets');
     } else {
-      setActiveTab('dashboard'); // По умолчанию дашборд
+      setActiveTab('pets'); // По умолчанию подопечные
     }
   }, [pathname]);
 
   const tabs: AdminTab[] = [
-    {
-      id: 'dashboard',
-      label: 'Главная',
-      icon: <HomeIcon className="w-5 h-5" />,
-    },
     {
       id: 'pets',
       label: 'Мои подопечные',
@@ -84,9 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setActiveTab(tabId);
 
     // Навигация по табам
-    if (tabId === 'dashboard') {
-      router.push('/pethelper/dashboard');
-    } else if (tabId === 'pets') {
+    if (tabId === 'pets') {
       router.push('/pethelper/pets');
     }
   };
