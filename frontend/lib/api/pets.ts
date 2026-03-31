@@ -5,6 +5,8 @@ import { Pet } from './types';
 export const petsApi = {
   getUserPets: (userId: number) => apiClient.get<Pet[]>(`/api/pets/user/${userId}`),
   getCuratedPets: (userId: number) => apiClient.get<Pet[]>(`/api/pets/curated/${userId}`),
+  getOrganizationPets: (orgId: number | string) =>
+    apiClient.get<Pet[]>(`/api/pets/organization/${orgId}`),
 
   create: (data: { name: string; species?: string; photo?: string }) =>
     apiClient.post<Pet>('/api/pets', data),

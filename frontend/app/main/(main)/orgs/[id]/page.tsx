@@ -14,6 +14,9 @@ import {
   CheckBadgeIcon,
   BuildingOfficeIcon,
   UserGroupIcon,
+  InformationCircleIcon,
+  ClockIcon,
+  ChatBubbleOvalLeftEllipsisIcon,
 } from '@heroicons/react/24/outline';
 import {
   organizationsApi,
@@ -21,8 +24,10 @@ import {
   OrganizationMember,
   getOrganizationTypeName,
 } from '@/lib/organizations-api';
-import { postsApi, Post } from '@/lib/api';
+import { postsApi, Post, petsApi, Pet } from '@/lib/api';
+import { getMediaUrl } from '@/lib/utils';
 import PostCard from '@/components/main/posts/PostCard';
+import PetCard from '@/components/main/posts/PetCard';
 import CreatePost from '@/components/main/posts/CreatePost';
 import YandexMap from '@/components/main/shared/YandexMap';
 import ConfirmModal from '@/components/main/shared/ConfirmModal';
@@ -38,11 +43,14 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
   const [org, setOrg] = useState<Organization | null>(null);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
   const [membersLoading, setMembersLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(true);
+  const [petsLoading, setPetsLoading] = useState(true);
   const [claimingOwnership, setClaimingOwnership] = useState(false);
   const [showClaimConfirm, setShowClaimConfirm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'info' | 'team' | 'pets'>('info');
 
   // Проверка является ли пользователь участником организации
   const isMember = () => {
@@ -66,6 +74,7 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
       loadOrganization();
       loadMembers();
       loadPosts();
+      loadPets();
     }
   }, [id]);
 
@@ -111,24 +120,24 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
     }
   };
 
-  // Переход в систему управления в зависимости от типа организации
+  const loadPets = async () => {
+    try {
+      setPetsLoading(true);
+      const response = await petsApi.getOrganizationPets(Number(id));
+      if (response?.data) {
+        setPets(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading pets:', error);
+    } finally {
+      setPetsLoading(false);
+    }
+  };
+
+  // Переход в единую систему управления (ZooPlatform 3.0)
   const handleGoToManagement = () => {
     if (!org) return;
-
-    const managementUrls: Record<string, string> = {
-      shelter: `http://localhost:5100/dashboard?orgId=${org.id}`,
-      clinic: `http://localhost:6300/select`,
-      store: `http://localhost:7100/dashboard?orgId=${org.id}`, // Пока не создан
-      foundation: `http://localhost:7200/dashboard?orgId=${org.id}`, // Пока не создан
-      kennel: `http://localhost:7300/dashboard?orgId=${org.id}`, // Пока не создан
-    };
-
-    const url = managementUrls[org.type];
-    if (url) {
-      window.open(url, '_blank');
-    } else {
-      alert('Система управления для этого типа организации пока не доступна');
-    }
+    router.push(`/org/${org.id}/dashboard`);
   };
 
   // Заявить о владении организацией
@@ -192,7 +201,7 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
         <div className="relative h-48 bg-gradient-to-br from-blue-100 to-purple-100">
           {org.cover_photo ? (
             <img
-              src={`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.cover_photo}`}
+              src={getMediaUrl(org.cover_photo)}
               alt={org.name}
               className="w-full h-full object-cover"
             />
@@ -211,7 +220,7 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
               <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center overflow-hidden">
                 {org.logo ? (
                   <img
-                    src={`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.logo}`}
+                    src={getMediaUrl(org.logo)}
                     alt={org.name}
                     className="w-full h-full object-cover"
                   />
@@ -268,113 +277,251 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
         {/* Left Column - Main Content */}
         <div className="lg:col-span-2 space-y-2.5">
+          
+          {/* TAB SWITCHER (Premium Apple Style Pill Menu) */}
+          <div className="flex items-center overflow-x-auto gap-2.5 pb-3 mb-1 -mx-4 px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            <button
+              onClick={() => setActiveTab('info')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[15px] font-semibold transition-all duration-200 whitespace-nowrap ${
+                activeTab === 'info'
+                  ? 'bg-white text-gray-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-200/60'
+                  : 'bg-gray-100/80 text-gray-500 hover:bg-gray-200 hover:text-gray-700 border border-transparent'
+              }`}
+            >
+              <InformationCircleIcon className={`w-5 h-5 ${activeTab === 'info' ? 'text-gray-900' : 'text-gray-400'}`} />
+              Инфо
+            </button>
+            {members.length > 0 && (
+              <button
+                onClick={() => setActiveTab('team')}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[15px] font-semibold transition-all duration-200 whitespace-nowrap ${
+                  activeTab === 'team'
+                    ? 'bg-white text-gray-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-200/60'
+                    : 'bg-gray-100/80 text-gray-500 hover:bg-gray-200 hover:text-gray-700 border border-transparent'
+                }`}
+              >
+                <UserGroupIcon className={`w-5 h-5 ${activeTab === 'team' ? 'text-gray-900' : 'text-gray-400'}`} />
+                Команда
+              </button>
+            )}
+            {pets.length > 0 && (
+              <button
+                onClick={() => setActiveTab('pets')}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[15px] font-semibold transition-all duration-200 whitespace-nowrap ${
+                  activeTab === 'pets'
+                    ? 'bg-white text-gray-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-200/60'
+                    : 'bg-gray-100/80 text-gray-500 hover:bg-gray-200 hover:text-gray-700 border border-transparent'
+                }`}
+              >
+                <HeartIcon className={`w-5 h-5 ${activeTab === 'pets' ? 'text-gray-900' : 'text-gray-400'}`} />
+                Подопечные
+              </button>
+            )}
+          </div>
+
           {/* О организации */}
-          {org.description && (
+          {activeTab === 'info' && org.description && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">О нас</h2>
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-5">
+                <InformationCircleIcon className="w-5 h-5 text-violet-600" />
+                О нас
+              </h2>
               <p className="text-gray-700 whitespace-pre-wrap">{org.description}</p>
             </div>
           )}
 
-          {/* Контакты */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Контакты</h2>
-
-            <div className="space-y-4">
-              {org.phone && (
-                <div className="flex items-center gap-3">
-                  <PhoneIcon className="w-5 h-5 text-gray-400" />
-                  <a href={`tel:${org.phone}`} className="text-blue-500 hover:text-blue-600">
-                    {org.phone}
-                  </a>
-                </div>
-              )}
-
-              {org.email && (
-                <div className="flex items-center gap-3">
-                  <EnvelopeIcon className="w-5 h-5 text-gray-400" />
-                  <a href={`mailto:${org.email}`} className="text-blue-500 hover:text-blue-600">
-                    {org.email}
-                  </a>
-                </div>
-              )}
-
-              {org.website && (
-                <div className="flex items-center gap-3">
-                  <GlobeAltIcon className="w-5 h-5 text-gray-400" />
-                  <a
-                    href={org.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:text-blue-600"
-                  >
-                    {org.website}
-                  </a>
-                </div>
-              )}
-
-              {org.address_full && (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-start gap-3">
-                    <MapPinIcon className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div className="text-gray-700">{org.address_full}</div>
-                  </div>
-
-                  {/* Компактная карта */}
-                  {org.geo_lat && org.geo_lon && (
-                    <div className="mt-3">
-                      <YandexMap
-                        address={org.address_full}
-                        organizationName={org.name}
-                        latitude={org.geo_lat}
-                        longitude={org.geo_lon}
-                        zoom={15}
-                        height="250px"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Команда */}
-          {members.length > 0 && (
+          {/* Локация и время работы */}
+          {activeTab === 'info' && org.address_full && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <UserGroupIcon className="w-5 h-5" />
-                Команда
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-5">
+                <MapPinIcon className="w-5 h-5 text-violet-600" />
+                Где мы находимся
               </h2>
 
-              <div className="space-y-3">
-                {members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {member.user_avatar ? (
-                        <img
-                          src={`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${member.user_avatar}`}
-                          alt={member.user_name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-gray-400 text-xl">👤</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 truncate">{member.user_name}</div>
-                      <div className="text-sm text-gray-600">{member.position || member.role}</div>
-                    </div>
-                    {member.role === 'owner' && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                        Владелец
-                      </span>
-                    )}
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <MapPinIcon className="w-5 h-5 text-gray-400 mt-0.5" />
+                  <div className="text-gray-900 leading-relaxed font-medium">{org.address_full}</div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <ClockIcon className="w-5 h-5 text-gray-400 mt-0.5" />
+                  <div className="text-gray-900 leading-relaxed font-medium">Ежедневно с 10:00 до 20:00</div>
+                </div>
+
+                {/* Компактная карта */}
+                {org.geo_lat && org.geo_lon && (
+                  <div className="mt-4 rounded-xl overflow-hidden border border-gray-100 shadow-sm relative">
+                    <YandexMap
+                      address={org.address_full}
+                      organizationName={org.name}
+                      latitude={org.geo_lat}
+                      longitude={org.geo_lon}
+                      zoom={15}
+                      height="250px"
+                    />
                   </div>
-                ))}
+                )}
               </div>
+            </div>
+          )}
+
+          {/* Команда (Премиальные карточки) */}
+          {activeTab === 'team' && members.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <UserGroupIcon className="w-5 h-5 text-violet-600" />
+                  Команда
+                </h2>
+                <div className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-full border border-gray-200">
+                  {members.length} {members.length === 1 ? 'сотрудник' : members.length < 5 ? 'сотрудника' : 'сотрудников'}
+                </div>
+              </div>
+
+              {/* Горизонтальный скролл со скрытым ползунком */}
+              <div className="flex overflow-x-auto gap-4 pb-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] -mx-2 px-2">
+                {members.map((member) => {
+                  const avatarSrc = getMediaUrl(member.org_avatar) || getMediaUrl(member.user_avatar);
+                      
+                  return (
+                    <div
+                      key={member.id}
+                      className="snap-start shrink-0 w-32 sm:w-40 flex flex-col group cursor-pointer"
+                    >
+                      {/* Карточка (Фотография) */}
+                      <div className="w-full aspect-[3/4] rounded-2xl overflow-hidden relative border border-gray-100 shadow-sm bg-gray-50 mb-2">
+                        {/* Фоновое изображение */}
+                        {avatarSrc ? (
+                          <img
+                            src={avatarSrc}
+                            alt={member.user_name}
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-50 to-emerald-50 text-4xl font-bold text-gray-300">
+                            {member.user_name?.[0]?.toUpperCase() || '👤'}
+                          </div>
+                        )}
+                        
+                        {/* Легкий градиент для читаемости белого имени */}
+                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+                        {/* Имя сотрудника (На карточке) */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <div className="font-bold text-white text-[13px] sm:text-[14px] leading-tight line-clamp-2 drop-shadow-md">
+                            {member.user_name}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Специальность (Под карточкой) */}
+                      <div className="px-1">
+                        <div className="text-[12px] sm:text-[13px] font-medium text-gray-500 line-clamp-2 leading-snug">
+                          {member.position || 'Специалист'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Питомцы организации */}
+          {activeTab === 'pets' && pets.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <HeartIcon className="w-5 h-5 text-orange-500" />
+                  {['shelter', 'foundation'].includes(org?.type || '') ? 'Ищут дом' : 'Наши животные'}
+                </h2>
+                <div className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-full border border-gray-200">
+                  {pets.length} {pets.length % 10 === 1 && pets.length % 100 !== 11 ? 'подопечный' : 'подопечных'}
+                </div>
+              </div>
+
+              {petsLoading ? (
+                <div className="flex justify-center py-8">
+                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                </div>
+              ) : (
+                <div className="flex overflow-x-auto gap-4 pb-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] -mx-2 px-2">
+                  {pets.map((pet) => {
+                    const photoSrc = getMediaUrl(pet.photo_url) || getMediaUrl(pet.photo);
+                    
+                    // Форматирование возраста
+                    const getAgeText = () => {
+                      if (!pet.birth_date) return null;
+                      const birth = new Date(pet.birth_date);
+                      const now = new Date();
+                      const years = now.getFullYear() - birth.getFullYear();
+                      const months = now.getMonth() - birth.getMonth();
+                      if (years === 0) return `${months} мес.`;
+                      return `${years} ${years === 1 ? 'год' : (years >= 2 && years <= 4) ? 'года' : 'лет'}`;
+                    };
+
+                    const ageText = getAgeText();
+
+                    return (
+                      <div
+                        key={pet.id}
+                        onClick={() => router.push(`/pets/${pet.id}`)}
+                        className="snap-start shrink-0 w-32 sm:w-40 flex flex-col group cursor-pointer"
+                      >
+                        {/* Карточка (Фотография) */}
+                        <div className="w-full aspect-[3/4] rounded-2xl overflow-hidden relative border border-gray-100 shadow-sm bg-gray-50 mb-2">
+                          {photoSrc ? (
+                            <img
+                              src={photoSrc}
+                              alt={pet.name}
+                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-50 to-emerald-50 text-4xl font-bold text-gray-300">
+                              🐾
+                            </div>
+                          )}
+                          
+                          {/* Бейдж срочности или статуса */}
+                          {pet.status === 'looking_for_home' && (
+                            <div className="absolute top-2 right-2 bg-orange-500/90 backdrop-blur text-white text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                              Ищет дом
+                            </div>
+                          )}
+
+                          {/* Градиент */}
+                          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+                          {/* Имя питомца (На карточке) */}
+                          <div className="absolute bottom-0 left-0 right-0 p-3 flex justify-between items-end">
+                            <div className="font-bold text-white text-[13px] sm:text-[15px] leading-tight line-clamp-1 drop-shadow-md">
+                              {pet.name}
+                            </div>
+                            {pet.gender && (
+                              <div className={pet.gender === 'male' ? 'text-blue-300' : 'text-pink-300'}>
+                                {pet.gender === 'male' ? '♂' : '♀'}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Информация (Под карточкой) */}
+                        <div className="px-1">
+                          <div className="text-[12px] sm:text-[13px] font-medium text-gray-800 line-clamp-1">
+                            {pet.breed || pet.species}
+                          </div>
+                          {ageText && (
+                            <div className="text-[11px] sm:text-[12px] text-gray-500">
+                              {ageText}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -457,9 +604,82 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
             </div>
           )}
 
+          {/* Быстрые контакты (Telegram/Apple Style) */}
+          {(org.phone || org.email || org.website) && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-5">
+                <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5 text-violet-600" />
+                Связаться
+              </h3>
+              
+              <div className="grid grid-cols-4 gap-2">
+                {org.phone && (
+                  <a 
+                    href={`tel:${org.phone}`}
+                    className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-gray-50 transition-colors group"
+                    title="Позвонить"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 group-hover:scale-105 transition-transform duration-200">
+                      <PhoneIcon className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-medium text-gray-500">Вызов</span>
+                  </a>
+                )}
+                
+                {org.phone && (
+                  <a 
+                    href={`https://t.me/+${org.phone.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-gray-50 transition-colors group"
+                    title="Написать в Telegram"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-sky-50 text-sky-500 flex items-center justify-center group-hover:bg-sky-100 group-hover:scale-105 transition-transform duration-200">
+                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                      </svg>
+                    </div>
+                    <span className="text-[11px] font-medium text-gray-500">Telegram</span>
+                  </a>
+                )}
+
+                {org.email && (
+                  <a 
+                    href={`mailto:${org.email}`}
+                    className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-gray-50 transition-colors group"
+                    title="Написать письмо"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center group-hover:bg-amber-100 group-hover:scale-105 transition-transform duration-200">
+                      <EnvelopeIcon className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-medium text-gray-500">Почта</span>
+                  </a>
+                )}
+
+                {org.website && (
+                  <a 
+                    href={org.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-gray-50 transition-colors group"
+                    title="Перейти на сайт"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-violet-50 text-violet-500 flex items-center justify-center group-hover:bg-violet-100 group-hover:scale-105 transition-transform duration-200">
+                      <GlobeAltIcon className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-medium text-gray-500">Сайт</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Информация */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Информация</h3>
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-5">
+              <BuildingOfficeIcon className="w-5 h-5 text-violet-600" />
+              Информация
+            </h3>
             <div className="space-y-4 text-sm">
               <div>
                 <div className="text-gray-500 mb-1">Тип</div>

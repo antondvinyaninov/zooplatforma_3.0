@@ -18,6 +18,15 @@ export interface Organization {
   email?: string;
   phone?: string;
   website?: string;
+  whatsapp_link?: string;
+  telegram_link?: string;
+  max_link?: string;
+  telegram_channel_link?: string;
+  max_channel_link?: string;
+  vk_link?: string;
+  youtube_link?: string;
+  rutube_link?: string;
+  ok_link?: string;
 
   // Адрес
   address_full?: string;
@@ -75,6 +84,7 @@ export interface OrganizationMember {
   joined_at: string;
   user_name?: string;
   user_avatar?: string;
+  org_avatar?: string;
 }
 
 export interface CreateOrganizationData {
@@ -113,12 +123,23 @@ export interface UpdateOrganizationData {
   email?: string;
   phone?: string;
   website?: string;
+  whatsapp_link?: string;
+  telegram_link?: string;
+  max_link?: string;
+  telegram_channel_link?: string;
+  max_channel_link?: string;
+  vk_link?: string;
+  youtube_link?: string;
+  rutube_link?: string;
+  ok_link?: string;
   address_full?: string;
   address_city?: string;
   geo_lat?: number;
   geo_lon?: number;
   description?: string;
   bio?: string;
+  logo?: string;
+  cover_photo?: string;
   director_name?: string;
   director_position?: string;
   profile_visibility?: string;
@@ -161,31 +182,43 @@ export const organizationsApi = {
   // Загрузить логотип
   async uploadLogo(orgId: number, file: File) {
     const formData = new FormData();
-    formData.append('logo', file);
+    formData.append('file', file);
+    formData.append('media_type', 'photo');
 
-    // Для FormData используем прямой fetch с правильным URL
-    const API_URL = '';
-    const response = await fetch(`${API_URL}/api/organizations/${orgId}/logo`, {
-      method: 'POST',
-      credentials: 'include',
-      body: formData,
-    });
-    return response.json();
+    // Сначала загружаем файл в S3 через универсальный эндпоинт
+    const uploadRes = await apiClient.post<{ url: string }>('/api/media/upload', formData);
+    if (!uploadRes.success || !uploadRes.data?.url) {
+      return { success: false, error: uploadRes.error || 'Ошибка загрузки файла' };
+    }
+
+    // Привязываем URL к организации
+    const updateRes = await this.update(orgId, { logo: uploadRes.data.url });
+    if (!updateRes.success) {
+      return { success: false, error: updateRes.error || 'Ошибка обновления логотипа' };
+    }
+
+    return { success: true, data: { logo: uploadRes.data.url } };
   },
 
   // Загрузить обложку
   async uploadCover(orgId: number, file: File) {
     const formData = new FormData();
-    formData.append('cover', file);
+    formData.append('file', file);
+    formData.append('media_type', 'photo');
 
-    // Для FormData используем прямой fetch с правильным URL
-    const API_URL = '';
-    const response = await fetch(`${API_URL}/api/organizations/${orgId}/cover`, {
-      method: 'POST',
-      credentials: 'include',
-      body: formData,
-    });
-    return response.json();
+    // Сначала загружаем файл в S3 через универсальный эндпоинт
+    const uploadRes = await apiClient.post<{ url: string }>('/api/media/upload', formData);
+    if (!uploadRes.success || !uploadRes.data?.url) {
+      return { success: false, error: uploadRes.error || 'Ошибка загрузки файла' };
+    }
+
+    // Привязываем URL к организации
+    const updateRes = await this.update(orgId, { cover_photo: uploadRes.data.url });
+    if (!updateRes.success) {
+      return { success: false, error: updateRes.error || 'Ошибка обновления обложки' };
+    }
+
+    return { success: true, data: { cover_photo: uploadRes.data.url } };
   },
 
   // Подать заявку на вступление

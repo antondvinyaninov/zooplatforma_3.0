@@ -71,8 +71,8 @@ func (c *Client) UploadFile(key string, data io.Reader, contentType string) (str
 
 	_ = result
 
-	// Возвращаем публичный URL
-	url := fmt.Sprintf("https://%s.%s/%s", c.bucketName, c.endpoint, key)
+	// Возвращаем публичный URL (FirstVDS работает через Path Style: https://endpoint/bucket/key)
+	url := fmt.Sprintf("https://%s/%s/%s", c.endpoint, c.bucketName, key)
 	return url, nil
 }
 

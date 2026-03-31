@@ -425,3 +425,129 @@ func (h *Handler) GetByID(c *gin.Context) {
 
 	c.JSON(200, gin.H{"success": true, "data": pet})
 }
+
+// GetOrganizationPets - получить всех питомцев принадлежащих организации
+func (h *Handler) GetOrganizationPets(c *gin.Context) {
+	orgIDParam := c.Param("id")
+
+	query := `
+		SELECT 
+			p.id, p.name, p.species, p.breed, p.gender, p.birth_date,
+			p.color, p.size, p.photo_url, p.user_id, p.description,
+			COALESCE(o.name, u.name) as owner_name, 
+			CASE WHEN p.org_id IS NOT NULL THEN NULL ELSE u.last_name END as owner_last_name, 
+			COALESCE(NULLIF(p.city, ''), CASE WHEN p.org_id IS NOT NULL THEN COALESCE(NULLIF(o.city, ''), NULLIF(o.address_city, ''), NULLIF(o.address, '')) ELSE NULLIF(u.location, '') END) as location, 
+			CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.phone, '') ELSE NULLIF(u.phone, '') END as phone, 
+			p.location_type, 
+			CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.logo, '') ELSE NULLIF(u.avatar, '') END as owner_avatar,
+			b.name as breed_name, p.catalog_status, p.catalog_data, s.name as species_name,
+			p.org_id
+		FROM pets p
+		LEFT JOIN users u ON p.user_id = u.id
+		LEFT JOIN organizations o ON p.org_id = o.id
+		LEFT JOIN breeds b ON p.breed_id = b.id
+		LEFT JOIN species s ON p.species_id = s.id
+		WHERE p.org_id = $1
+		  AND (p.catalog_status != 'draft' OR p.catalog_status IS NULL)
+		  AND (
+		      (p.photo IS NOT NULL AND p.photo != '') 
+		      OR 
+		      (p.photo_url IS NOT NULL AND p.photo_url != '')
+		  )
+		  AND p.name IS NOT NULL AND p.name != ''
+		ORDER BY p.created_at DESC
+	`
+
+	rows, err := h.db.Query(query, orgIDParam)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	pets := []map[string]interface{}{}
+
+	for rows.Next() {
+		var (
+			id, userID                                        int
+			name, species                                     string
+			breed, gender, color, size, photoURL, description sql.NullString
+			birthDate                                         sql.NullString
+			ownerName, ownerLastName, location, phone, locationType, ownerAvatar, breedName sql.NullString
+			catalogStatus                                     sql.NullString
+			catalogDataRaw                                    []byte
+			speciesName                                       sql.NullString
+			orgID                                             sql.NullInt64
+		)
+
+		err := rows.Scan(
+			&id, &name, &species, &breed, &gender, &birthDate,
+			&color, &size, &photoURL, &userID, &description,
+			&ownerName, &ownerLastName, &location, &phone, &locationType, &ownerAvatar, &breedName,
+			&catalogStatus, &catalogDataRaw, &speciesName, &orgID,
+		)
+		if err != nil {
+			continue
+		}
+
+		status := catalogStatus.String
+		if status == "" || status == "draft" {
+			status = "looking_for_home"
+			if locationType.Valid {
+				switch locationType.String {
+				case "shelter":
+					status = "looking_for_home"
+				case "foster":
+					status = "looking_for_home"
+				case "clinic":
+					status = "needs_help"
+				}
+			}
+		}
+
+		ownerFullName := ownerName.String
+		if ownerLastName.Valid && ownerLastName.String != "" {
+			ownerFullName = ownerFullName + " " + ownerLastName.String
+		}
+
+		resolvedBreed := breed.String
+		if breedName.Valid && breedName.String != "" {
+			resolvedBreed = breedName.String
+		}
+
+		resolvedSpecies := species
+		if speciesName.Valid && speciesName.String != "" {
+			resolvedSpecies = speciesName.String
+		}
+
+		var parsedCatalogData map[string]interface{}
+		if len(catalogDataRaw) > 0 {
+			_ = json.Unmarshal(catalogDataRaw, &parsedCatalogData)
+		}
+
+		pet := map[string]interface{}{
+			"id":             id,
+			"name":           name,
+			"species":        resolvedSpecies,
+			"breed":          resolvedBreed,
+			"gender":         gender.String,
+			"birth_date":     birthDate.String,
+			"color":          color.String,
+			"size":           size.String,
+			"photo":          photoURL.String,
+			"user_id":        userID,
+			"description":    description.String,
+			"owner_name":     ownerFullName,
+			"owner_avatar":   ownerAvatar.String,
+			"city":           location.String,
+			"phone":          phone.String,
+			"status":         status,
+			"catalog_status": catalogStatus.String,
+			"catalog_data":   parsedCatalogData,
+		}
+
+		pets = append(pets, pet)
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": pets})
+}

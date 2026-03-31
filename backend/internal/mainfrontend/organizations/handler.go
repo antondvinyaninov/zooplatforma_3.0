@@ -2,6 +2,7 @@ package organizations
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,6 +23,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 		SELECT 
 			id, name, short_name, legal_form, type, inn, ogrn, kpp, registration_date,
 			email, phone, website,
+			vk_link, telegram_link, whatsapp_link, max_link, youtube_link, ok_link, rutube_link, telegram_channel_link, max_channel_link,
 			address_full, address_postal_code, address_region, address_city,
 			address_street, address_house, address_office,
 			geo_lat, geo_lon,
@@ -39,6 +41,9 @@ func (h *Handler) GetByID(c *gin.Context) {
 		name, orgType                                              string
 		shortName, legalForm, inn, ogrn, kpp, registrationDate     sql.NullString
 		email, phone, website                                      sql.NullString
+		vkLink, telegramLink, whatsappLink, maxLink                sql.NullString
+		youtubeLink, okLink, rutubeLink                            sql.NullString
+		telegramChannelLink, maxChannelLink                        sql.NullString
 		addressFull, addressPostalCode, addressRegion, addressCity sql.NullString
 		addressStreet, addressHouse, addressOffice                 sql.NullString
 		geoLat, geoLon                                             sql.NullFloat64
@@ -52,6 +57,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 	err := h.db.QueryRow(query, id).Scan(
 		&orgID, &name, &shortName, &legalForm, &orgType, &inn, &ogrn, &kpp, &registrationDate,
 		&email, &phone, &website,
+		&vkLink, &telegramLink, &whatsappLink, &maxLink, &youtubeLink, &okLink, &rutubeLink, &telegramChannelLink, &maxChannelLink,
 		&addressFull, &addressPostalCode, &addressRegion, &addressCity,
 		&addressStreet, &addressHouse, &addressOffice,
 		&geoLat, &geoLon,
@@ -84,6 +90,15 @@ func (h *Handler) GetByID(c *gin.Context) {
 		"email":               email.String,
 		"phone":               phone.String,
 		"website":             website.String,
+		"vk_link":             vkLink.String,
+		"telegram_link":       telegramLink.String,
+		"whatsapp_link":       whatsappLink.String,
+		"max_link":            maxLink.String,
+		"youtube_link":        youtubeLink.String,
+		"ok_link":             okLink.String,
+		"rutube_link":         rutubeLink.String,
+		"telegram_channel_link": telegramChannelLink.String,
+		"max_channel_link":    maxChannelLink.String,
 		"address_full":        addressFull.String,
 		"address_postal_code": addressPostalCode.String,
 		"address_region":      addressRegion.String,
@@ -396,7 +411,7 @@ func (h *Handler) GetMembers(c *gin.Context) {
 
 	query := `
 		SELECT 
-			om.id, om.organization_id, om.user_id, om.role, om.position,
+			om.id, om.organization_id, om.user_id, om.role, om.position, om.org_avatar,
 			om.can_post, om.joined_at,
 			u.name as user_name, u.last_name as user_last_name, u.avatar as user_avatar
 		FROM organization_members om
@@ -426,6 +441,7 @@ func (h *Handler) GetMembers(c *gin.Context) {
 			id, organizationID, userID int
 			role                       string
 			position                   sql.NullString
+			orgAvatar                  sql.NullString
 			canPost                    bool
 			joinedAt                   string
 			userName, userLastName     string
@@ -433,7 +449,7 @@ func (h *Handler) GetMembers(c *gin.Context) {
 		)
 
 		err := rows.Scan(
-			&id, &organizationID, &userID, &role, &position,
+			&id, &organizationID, &userID, &role, &position, &orgAvatar,
 			&canPost, &joinedAt,
 			&userName, &userLastName, &userAvatar,
 		)
@@ -447,6 +463,7 @@ func (h *Handler) GetMembers(c *gin.Context) {
 			"user_id":         userID,
 			"role":            role,
 			"position":        position.String,
+			"org_avatar":      orgAvatar.String,
 			"can_post":        canPost,
 			"joined_at":       joinedAt,
 			"user_name":       userName + " " + userLastName,
@@ -507,4 +524,60 @@ func (h *Handler) ClaimOwnership(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"success": true, "message": "Ownership claimed successfully"})
+}
+
+// Update - обновить профиль организации
+func (h *Handler) Update(c *gin.Context) {
+	id := c.Param("id")
+
+	// TODO: получить user_id из токена авторизации
+	userID := 1
+
+	var role string
+	err := h.db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, id, userID).Scan(&role)
+	if err != nil || (role != "owner" && role != "admin") {
+		c.JSON(403, gin.H{"success": false, "error": "Только владельцы или администраторы могут редактировать профиль организации"})
+		return
+	}
+
+	var req map[string]interface{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": "Invalid request payload: " + err.Error()})
+		return
+	}
+
+	// Формируем динамический запрос
+	query := "UPDATE organizations SET "
+	var args []interface{}
+	argID := 1
+
+	for key, value := range req {
+		// Защита от изменения служебных полей
+		if key == "id" || key == "created_at" || key == "updated_at" || key == "owner_user_id" {
+			continue
+		}
+
+		if argID > 1 {
+			query += ", "
+		}
+		query += key + fmt.Sprintf(" = $%d", argID)
+		args = append(args, value)
+		argID++
+	}
+
+	if len(args) == 0 {
+		c.JSON(200, gin.H{"success": true, "message": "Nothing to update"})
+		return
+	}
+
+	query += fmt.Sprintf(", updated_at = NOW() WHERE id = $%d", argID)
+	args = append(args, id)
+
+	_, err = h.db.Exec(query, args...)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Database error: " + err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "message": "Организация успешно обновлена"})
 }

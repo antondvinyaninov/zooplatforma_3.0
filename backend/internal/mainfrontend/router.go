@@ -125,6 +125,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 	{
 		petsGroup.GET("/user/:id", petsHandler.GetUserPets)
 		petsGroup.GET("/catalog", petsHandler.GetCatalog)
+		petsGroup.GET("/organization/:id", petsHandler.GetOrganizationPets)
 		petsGroup.GET("/:id", petsHandler.GetByID)
 	}
 
@@ -169,6 +170,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		organizationsGroup.GET("/members/:id", organizationsHandler.GetMembers)
 		organizationsGroup.POST("", organizationsHandler.Create)
 		organizationsGroup.POST("/claim-ownership/:id", organizationsHandler.ClaimOwnership)
+		organizationsGroup.PUT("/:id", organizationsHandler.Update)
 	}
 
 	// Messages routes

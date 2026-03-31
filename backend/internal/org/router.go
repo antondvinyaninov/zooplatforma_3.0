@@ -646,9 +646,12 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		rows, err := db.Query(`
 			SELECT u.id, 
 			       COALESCE(u.name, '') || CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN ' ' || u.last_name ELSE '' END, 
+			       u.email,
 			       COALESCE(u.avatar, ''), 
 			       COALESCE(om.role, ''), 
-			       COALESCE(om.position, '')
+			       COALESCE(om.position, ''),
+			       COALESCE(om.org_avatar, ''),
+			       COALESCE(om.permissions::text, '{"pets":true,"medical":true,"finance":false}')
 			FROM organization_members om
 			JOIN users u ON om.user_id = u.id
 			WHERE om.organization_id = $1
@@ -663,23 +666,221 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		var staff []map[string]interface{}
 		for rows.Next() {
 			var id int
-			var name, avatar, role, position string
-			if err := rows.Scan(&id, &name, &avatar, &role, &position); err == nil {
+			var name, email, avatar, role, position, orgAvatar, permStr string
+			if err := rows.Scan(&id, &name, &email, &avatar, &role, &position, &orgAvatar, &permStr); err == nil {
+			    var perms map[string]interface{}
+			    json.Unmarshal([]byte(permStr), &perms)
 				staff = append(staff, map[string]interface{}{
 					"id": id,
 					"name": name,
+					"email": email,
 					"avatar": avatar,
+					"orgAvatarUrl": orgAvatar,
 					"role": role,
-					"position": position,
+					"jobTitle": position,
+					"permissions": perms,
+					"isOwner": role == "owner",
 				})
-			} else {
-				fmt.Printf("❌ Staff scan error: %v\n", err)
 			}
 		}
 		if staff == nil {
 			staff = []map[string]interface{}{}
 		}
 		c.JSON(200, gin.H{"success": true, "data": staff})
+	})
+
+	r.GET("/:orgId/staff/:staffId", func(c *gin.Context) {
+		intUserID, ok := getUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+			return
+		}
+		orgId := c.Param("orgId")
+		staffId := c.Param("staffId")
+
+		var myRole string
+		if err := db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&myRole); err != nil {
+			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
+			return
+		}
+
+        var id int
+        var name, email, avatar, role, position, orgAvatar, permStr string
+		err := db.QueryRow(`
+			SELECT u.id, 
+			       COALESCE(u.name, '') || CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN ' ' || u.last_name ELSE '' END, 
+			       u.email,
+			       COALESCE(u.avatar, ''), 
+			       COALESCE(om.role, ''), 
+			       COALESCE(om.position, ''),
+			       COALESCE(om.org_avatar, ''),
+			       COALESCE(om.permissions::text, '{"pets":true,"medical":true,"finance":false}')
+			FROM organization_members om
+			JOIN users u ON om.user_id = u.id
+			WHERE om.organization_id = $1 AND u.id = $2
+		`, orgId, staffId).Scan(&id, &name, &email, &avatar, &role, &position, &orgAvatar, &permStr)
+		
+		if err == sql.ErrNoRows {
+		    c.JSON(404, gin.H{"success": false, "error": "Staff not found"})
+			return
+		} else if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			return
+		}
+		
+        var perms map[string]interface{}
+        json.Unmarshal([]byte(permStr), &perms)
+        
+        c.JSON(200, gin.H{"success": true, "data": map[string]interface{}{
+            "id": id,
+            "name": name,
+            "email": email,
+            "avatar": avatar,
+            "orgAvatarUrl": orgAvatar,
+            "role": role,
+            "jobTitle": position,
+            "permissions": perms,
+            "isOwner": role == "owner",
+        }})
+	})
+
+	r.PUT("/:orgId/staff/:staffId", func(c *gin.Context) {
+		intUserID, ok := getUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+			return
+		}
+		orgId := c.Param("orgId")
+		staffId := c.Param("staffId")
+
+		var myRole string
+		if err := db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&myRole); err != nil {
+			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
+			return
+		}
+		
+		if myRole != "owner" && myRole != "admin" && fmt.Sprintf("%d", intUserID) != staffId {
+		    c.JSON(403, gin.H{"success": false, "error": "Insufficient permissions"})
+			return
+		}
+
+		var input struct {
+			JobTitle     *string                `json:"jobTitle"`
+			OrgAvatarUrl *string                `json:"orgAvatarUrl"`
+			Permissions  map[string]interface{} `json:"permissions"`
+		}
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(400, gin.H{"success": false, "error": "Invalid input"})
+			return
+		}
+		
+		permBytes, _ := json.Marshal(input.Permissions)
+
+		_, err := db.Exec(`
+		    UPDATE organization_members 
+		    SET position = COALESCE($1, position),
+		        org_avatar = COALESCE($2, org_avatar),
+		        permissions = COALESCE($3, permissions)
+		    WHERE organization_id = $4 AND user_id = $5
+		`, input.JobTitle, input.OrgAvatarUrl, string(permBytes), orgId, staffId)
+		
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			return
+		}
+
+		c.JSON(200, gin.H{"success": true})
+	})
+
+	r.POST("/:orgId/staff", func(c *gin.Context) {
+		intUserID, ok := getUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+			return
+		}
+		orgId := c.Param("orgId")
+
+		var myRole string
+		if err := db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&myRole); err != nil {
+			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
+			return
+		}
+		if myRole != "owner" && myRole != "admin" {
+		    c.JSON(403, gin.H{"success": false, "error": "Insufficient permissions"})
+			return
+		}
+
+		var input struct {
+			Email    string `json:"email"`
+			JobTitle string `json:"jobTitle"`
+		}
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(400, gin.H{"success": false, "error": "Invalid input"})
+			return
+		}
+		
+		var targetUserId int
+		err := db.QueryRow(`SELECT id FROM users WHERE email = $1`, input.Email).Scan(&targetUserId)
+		if err == sql.ErrNoRows {
+		    c.JSON(404, gin.H{"success": false, "error": "Пользователь с таким email не найден в системе"})
+			return
+		} else if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			return
+		}
+		
+		jobTitle := "Специалист"
+		if input.JobTitle != "" {
+		    jobTitle = input.JobTitle
+		}
+		
+		_, err = db.Exec(`
+		    INSERT INTO organization_members (organization_id, user_id, role, position, permissions)
+		    VALUES ($1, $2, 'specialist', $3, '{"pets":true,"medical":true,"finance":false}')
+		    ON CONFLICT (organization_id, user_id) DO NOTHING
+		`, orgId, targetUserId, jobTitle)
+		
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			return
+		}
+
+		c.JSON(200, gin.H{"success": true})
+	})
+	
+	r.DELETE("/:orgId/staff/:staffId", func(c *gin.Context) {
+		intUserID, ok := getUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+			return
+		}
+		orgId := c.Param("orgId")
+		staffId := c.Param("staffId")
+
+		var myRole string
+		if err := db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&myRole); err != nil {
+			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
+			return
+		}
+		if myRole != "owner" && myRole != "admin" {
+		    c.JSON(403, gin.H{"success": false, "error": "Insufficient permissions"})
+			return
+		}
+		
+		var targetRole string
+		db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, staffId).Scan(&targetRole)
+		if targetRole == "owner" {
+		    c.JSON(400, gin.H{"success": false, "error": "Cannot delete owner"})
+			return
+		}
+
+		_, err := db.Exec(`DELETE FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, staffId)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Database error"})
+			return
+		}
+
+		c.JSON(200, gin.H{"success": true})
 	})
 
 	// ─────────────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { use, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { organizationsApi, Organization, OrganizationMember } from '@/lib/organizations-api';
+import { getMediaUrl } from '@/lib/utils';
 import { BuildingOfficeIcon, CameraIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import MembersManager from '@/components/main/organizations/MembersManager';
 
@@ -66,10 +67,8 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
           address_full: response.data.address_full || '',
           address_city: response.data.address_city || '',
         });
-        setLogoPreview(response.data.logo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${response.data.logo}` : null);
-        setCoverPreview(
-          response.data.cover_photo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${response.data.cover_photo}` : null,
-        );
+        setLogoPreview(getMediaUrl(response.data.logo));
+        setCoverPreview(getMediaUrl(response.data.cover_photo));
       }
     } catch (error) {
       console.error('Error loading organization:', error);
@@ -110,16 +109,16 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
     try {
       const response = await organizationsApi.uploadLogo(Number(id), file);
       if (response.success && response.data) {
-        setLogoPreview(`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${response.data.logo_url}`);
+        setLogoPreview(getMediaUrl(response.data.logo_url || response.data.logo));
         alert('Логотип успешно обновлен!');
       } else {
         alert(response.error || 'Ошибка загрузки логотипа');
-        setLogoPreview(org?.logo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.logo}` : null);
+        setLogoPreview(getMediaUrl(org?.logo));
       }
     } catch (error) {
       console.error('Error uploading logo:', error);
       alert('Ошибка загрузки логотипа');
-      setLogoPreview(org?.logo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.logo}` : null);
+      setLogoPreview(getMediaUrl(org?.logo));
     } finally {
       setIsUploadingLogo(false);
     }
@@ -145,16 +144,16 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
     try {
       const response = await organizationsApi.uploadCover(Number(id), file);
       if (response.success && response.data) {
-        setCoverPreview(`${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${response.data.cover_url}`);
+        setCoverPreview(getMediaUrl(response.data.cover_url || response.data.cover_photo));
         alert('Обложка успешно обновлена!');
       } else {
         alert(response.error || 'Ошибка загрузки обложки');
-        setCoverPreview(org?.cover_photo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.cover_photo}` : null);
+        setCoverPreview(getMediaUrl(org?.cover_photo));
       }
     } catch (error) {
       console.error('Error uploading cover:', error);
       alert('Ошибка загрузки обложки');
-      setCoverPreview(org?.cover_photo ? `${process.env.NEXT_PUBLIC_MEDIA_URL || ''}${org.cover_photo}` : null);
+      setCoverPreview(getMediaUrl(org?.cover_photo));
     } finally {
       setIsUploadingCover(false);
     }

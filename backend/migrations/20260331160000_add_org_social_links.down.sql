@@ -1,0 +1,10 @@
+ALTER TABLE organizations
+DROP COLUMN vk_link,
+DROP COLUMN telegram_link,
+DROP COLUMN whatsapp_link,
+DROP COLUMN max_link,
+DROP COLUMN youtube_link,
+DROP COLUMN ok_link,
+DROP COLUMN rutube_link,
+DROP COLUMN telegram_channel_link,
+DROP COLUMN max_channel_link;

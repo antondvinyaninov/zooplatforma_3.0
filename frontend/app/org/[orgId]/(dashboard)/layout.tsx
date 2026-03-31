@@ -114,7 +114,7 @@ export default function OrgDashboardLayout({
     role: string;
   } | null>(null);
   const [orgInfo, setOrgInfo] = useState<{ name: string; logo: string }>({ name: '', logo: '' });
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('organization');
   const [activeModules, setActiveModules] = useState<string[]>([]);
 
   // Загружаем активные модули из localStorage
@@ -127,13 +127,12 @@ export default function OrgDashboardLayout({
 
   // Определяем активный таб по URL
   useEffect(() => {
-    if (pathname.includes('/dashboard')) setActiveTab('dashboard');
-    else if (pathname.includes('/organization')) setActiveTab('organization');
+    if (pathname.includes('/organization')) setActiveTab('organization');
     else if (pathname.includes('/pets')) setActiveTab('pets');
     else if (pathname.includes('/modules')) setActiveTab('modules');
     else if (pathname.includes('/staff')) setActiveTab('staff');
     else if (pathname.includes('/settings')) setActiveTab('settings');
-    else setActiveTab('dashboard');
+    else setActiveTab('organization');
   }, [pathname]);
 
   // Проверяем авторизацию и загружаем данные
@@ -176,7 +175,6 @@ export default function OrgDashboardLayout({
   }, [orgId, router]);
 
   const baseTabs: AdminTab[] = [
-    { id: 'dashboard', label: 'Главная', icon: <ChartBarIcon className="w-5 h-5" /> },
     { id: 'organization', label: 'Организация', icon: <BuildingOfficeIcon className="w-5 h-5" /> },
   ];
 
@@ -199,7 +197,6 @@ export default function OrgDashboardLayout({
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
     const routes: Record<string, string> = {
-      dashboard: `/org/${orgId}/dashboard`,
       organization: `/org/${orgId}/organization`,
       pets: `/org/${orgId}/pets`,
       registration: `/org/${orgId}/registration`,
