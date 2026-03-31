@@ -67,8 +67,8 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
           address_full: response.data.address_full || '',
           address_city: response.data.address_city || '',
         });
-        setLogoPreview(getMediaUrl(response.data.logo));
-        setCoverPreview(getMediaUrl(response.data.cover_photo));
+        setLogoPreview(getMediaUrl(response.data.logo) || null);
+        setCoverPreview(getMediaUrl(response.data.cover_photo) || null);
       }
     } catch (error) {
       console.error('Error loading organization:', error);
@@ -109,16 +109,16 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
     try {
       const response = await organizationsApi.uploadLogo(Number(id), file);
       if (response.success && response.data) {
-        setLogoPreview(getMediaUrl(response.data.logo_url || response.data.logo));
+        setLogoPreview(getMediaUrl(response.data.logo_url || response.data.logo) || null);
         alert('Логотип успешно обновлен!');
       } else {
         alert(response.error || 'Ошибка загрузки логотипа');
-        setLogoPreview(getMediaUrl(org?.logo));
+        setLogoPreview(getMediaUrl(org?.logo) || null);
       }
     } catch (error) {
       console.error('Error uploading logo:', error);
       alert('Ошибка загрузки логотипа');
-      setLogoPreview(getMediaUrl(org?.logo));
+      setLogoPreview(getMediaUrl(org?.logo) || null);
     } finally {
       setIsUploadingLogo(false);
     }
@@ -144,16 +144,16 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
     try {
       const response = await organizationsApi.uploadCover(Number(id), file);
       if (response.success && response.data) {
-        setCoverPreview(getMediaUrl(response.data.cover_url || response.data.cover_photo));
+        setCoverPreview(getMediaUrl(response.data.cover_url || response.data.cover_photo) || null);
         alert('Обложка успешно обновлена!');
       } else {
         alert(response.error || 'Ошибка загрузки обложки');
-        setCoverPreview(getMediaUrl(org?.cover_photo));
+        setCoverPreview(getMediaUrl(org?.cover_photo) || null);
       }
     } catch (error) {
       console.error('Error uploading cover:', error);
       alert('Ошибка загрузки обложки');
-      setCoverPreview(getMediaUrl(org?.cover_photo));
+      setCoverPreview(getMediaUrl(org?.cover_photo) || null);
     } finally {
       setIsUploadingCover(false);
     }
