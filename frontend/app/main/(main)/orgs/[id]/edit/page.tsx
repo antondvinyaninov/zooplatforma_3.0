@@ -109,7 +109,7 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
     try {
       const response = await organizationsApi.uploadLogo(Number(id), file);
       if (response.success && response.data) {
-        setLogoPreview(getMediaUrl(response.data.logo_url || response.data.logo) || null);
+        setLogoPreview(getMediaUrl(response.data.logo) || null);
         alert('Логотип успешно обновлен!');
       } else {
         alert(response.error || 'Ошибка загрузки логотипа');
@@ -144,7 +144,7 @@ export default function EditOrganizationPage({ params }: EditOrganizationPagePro
     try {
       const response = await organizationsApi.uploadCover(Number(id), file);
       if (response.success && response.data) {
-        setCoverPreview(getMediaUrl(response.data.cover_url || response.data.cover_photo) || null);
+        setCoverPreview(getMediaUrl(response.data.cover_photo) || null);
         alert('Обложка успешно обновлена!');
       } else {
         alert(response.error || 'Ошибка загрузки обложки');
