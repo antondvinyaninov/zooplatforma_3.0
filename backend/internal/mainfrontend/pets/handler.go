@@ -97,7 +97,7 @@ func (h *Handler) GetUserPets(c *gin.Context) {
 				p.location_type, 
 				CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.logo, '') ELSE NULLIF(u.avatar, '') END as owner_avatar,
 				b.name as breed_name, p.catalog_status, p.catalog_data, s.name as species_name,
-				p.org_id
+				p.org_id, p.views_count
 			FROM pets p
 			LEFT JOIN users u ON p.user_id = u.id
 			LEFT JOIN organizations o ON p.org_id = o.id
@@ -136,13 +136,14 @@ func (h *Handler) GetUserPets(c *gin.Context) {
 			catalogDataRaw                                    []byte
 			speciesName                                       sql.NullString
 			orgID                                             sql.NullInt64
+			viewsCount                                        sql.NullInt64
 		)
 
 		err := rows.Scan(
 			&id, &name, &species, &breed, &gender, &birthDate,
 			&color, &size, &photoURL, &userID, &description,
 			&ownerName, &ownerLastName, &location, &phone, &locationType, &ownerAvatar, &breedName,
-			&catalogStatus, &catalogDataRaw, &speciesName, &orgID,
+			&catalogStatus, &catalogDataRaw, &speciesName, &orgID, &viewsCount,
 		)
 		if err != nil {
 			continue
@@ -203,6 +204,7 @@ func (h *Handler) GetUserPets(c *gin.Context) {
 			"status":      status,
 			"catalog_status": catalogStatus.String,
 			"catalog_data":   parsedCatalogData,
+			"views_count":    viewsCount.Int64,
 		}
 
 		pets = append(pets, pet)
@@ -443,7 +445,7 @@ func (h *Handler) GetOrganizationPets(c *gin.Context) {
 			p.location_type, 
 			CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.logo, '') ELSE NULLIF(u.avatar, '') END as owner_avatar,
 			b.name as breed_name, p.catalog_status, p.catalog_data, s.name as species_name,
-			p.org_id
+			p.org_id, p.views_count
 		FROM pets p
 		LEFT JOIN users u ON p.user_id = u.id
 		LEFT JOIN organizations o ON p.org_id = o.id
@@ -482,13 +484,14 @@ func (h *Handler) GetOrganizationPets(c *gin.Context) {
 			catalogDataRaw                                    []byte
 			speciesName                                       sql.NullString
 			orgID                                             sql.NullInt64
+			viewsCount                                        sql.NullInt64
 		)
 
 		err := rows.Scan(
 			&id, &name, &species, &breed, &gender, &birthDate,
 			&color, &size, &photoURL, &userID, &description,
 			&ownerName, &ownerLastName, &location, &phone, &locationType, &ownerAvatar, &breedName,
-			&catalogStatus, &catalogDataRaw, &speciesName, &orgID,
+			&catalogStatus, &catalogDataRaw, &speciesName, &orgID, &viewsCount,
 		)
 		if err != nil {
 			continue
@@ -548,6 +551,7 @@ func (h *Handler) GetOrganizationPets(c *gin.Context) {
 			"status":         status,
 			"catalog_status": catalogStatus.String,
 			"catalog_data":   parsedCatalogData,
+			"views_count":    viewsCount.Int64,
 		}
 
 		pets = append(pets, pet)
