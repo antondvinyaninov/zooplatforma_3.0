@@ -360,9 +360,14 @@ func (h *Handler) Create(c *gin.Context) {
 		) RETURNING id
 	`
 
+	var regDate interface{} = req.RegistrationDate
+	if req.RegistrationDate == "" {
+		regDate = nil
+	}
+
 	err := h.db.QueryRow(
 		insertQuery,
-		req.Name, req.ShortName, req.LegalForm, req.Type, req.INN, req.OGRN, req.KPP, req.RegistrationDate,
+		req.Name, req.ShortName, req.LegalForm, req.Type, req.INN, req.OGRN, req.KPP, regDate,
 		req.Email, req.Phone, req.Website,
 		req.AddressFull, req.AddressPostalCode, req.AddressRegion, req.AddressCity,
 		req.AddressStreet, req.AddressHouse, req.AddressOffice,
@@ -555,6 +560,10 @@ func (h *Handler) Update(c *gin.Context) {
 		// Защита от изменения служебных полей
 		if key == "id" || key == "created_at" || key == "updated_at" || key == "owner_user_id" {
 			continue
+		}
+
+		if key == "registration_date" && value == "" {
+			value = nil
 		}
 
 		if argID > 1 {
