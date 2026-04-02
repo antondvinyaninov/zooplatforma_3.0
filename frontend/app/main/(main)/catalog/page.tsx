@@ -185,9 +185,16 @@ export default function CatalogPage() {
 
     const cleanCityPrefix = (str: string) => str.replace(/^(г\.|город|гор\.)\s*/i, '').trim();
     const petCityClean = cleanCityPrefix((pet.city || pet.region || '').split(',')[0]);
+    
+    // Получаем список всех городов выбранного региона для проверки
+    const regionObj = citiesData.regions.find(r => r.name === filterRegion);
+    const citiesInSelectedRegion = regionObj ? regionObj.cities.map(c => c.toLowerCase()) : [];
+
     const matchesRegion = filterRegion === 'all' || 
                           (pet.region === filterRegion) || 
-                          ((pet.city || '').toLowerCase().includes(filterRegion.toLowerCase()));
+                          ((pet.city || '').toLowerCase().includes(filterRegion.toLowerCase())) ||
+                          citiesInSelectedRegion.includes(petCityClean.toLowerCase());
+
     const matchesCity = filterCity === 'all' || 
                         petCityClean.toLowerCase() === filterCity.toLowerCase() || 
                         (pet.city && pet.city.toLowerCase().includes(filterCity.toLowerCase()));
