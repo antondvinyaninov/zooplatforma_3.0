@@ -20,11 +20,40 @@ export default function AddStaffDrawer({ isOpen, onClose, orgId, onSuccess }: Ad
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Моковые результаты поиска
-  const mockSearchResults = searchQuery.length > 2 ? [
-    { id: 101, name: 'Анна Смирнова', email: 'anna@example.com', avatar: 'AS' },
-    { id: 102, name: 'Антон Двинянинов', email: 'anton@example.com', avatar: 'AD' }
-  ] : [];
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Поиск пользователей через API
+  React.useEffect(() => {
+    const fetchUsers = async () => {
+      if (searchQuery.length < 1) {
+        setSearchResults([]);
+        return;
+      }
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/org/${orgId}/users/search?q=${encodeURIComponent(searchQuery)}`, {
+          credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) {
+          setSearchResults(data.data || []);
+        } else {
+          setSearchResults([]);
+        }
+      } catch (e) {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+    
+    // Дебаунс 500мс
+    const timeoutId = setTimeout(() => {
+      fetchUsers();
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, orgId]);
 
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -35,7 +64,7 @@ export default function AddStaffDrawer({ isOpen, onClose, orgId, onSuccess }: Ad
     
     let targetEmail = email;
     if (mode === 'search' && selectedUserId) {
-      const u = mockSearchResults.find(u => u.id === selectedUserId);
+      const u = searchResults.find(u => u.id === selectedUserId);
       if (u) targetEmail = u.email;
     }
     
@@ -164,21 +193,33 @@ export default function AddStaffDrawer({ isOpen, onClose, orgId, onSuccess }: Ad
                     </div>
 
                     {/* Результаты поиска */}
-                    {searchQuery.length > 2 ? (
+                    {searchQuery.length >= 1 ? (
                       <div className="space-y-2 mt-4">
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">Найденные пользователи</div>
-                        {mockSearchResults.length > 0 ? (
-                          mockSearchResults.map(user => (
+                        {isSearching ? (
+                          <div className="text-center py-6 text-sm text-gray-500 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-center gap-2">
+                             <svg className="animate-spin h-4 w-4 text-violet-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Поиск...
+                          </div>
+                        ) : searchResults.length > 0 ? (
+                          searchResults.map(user => (
                             <div 
                               key={user.id}
                               onClick={() => setSelectedUserId(user.id)}
                               className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedUserId === user.id ? 'border-violet-600 bg-violet-50/50 ring-1 ring-violet-600' : 'border-gray-200 hover:border-violet-300'}`}
                             >
-                              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm shrink-0">
-                                {user.avatar}
+                              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm shrink-0 overflow-hidden relative">
+                                {user.avatar ? (
+                                  <img src={user.avatar} alt={user.name} className="absolute inset-0 w-full h-full object-cover" />
+                                ) : (
+                                  user.name?.[0]?.toUpperCase() || '👤'
+                                )}
                               </div>
                               <div>
-                                <div className="text-sm font-bold text-gray-900">{user.name}</div>
+                                <div className="text-sm font-bold text-gray-900">{user.name || `User #${user.id}`}</div>
                                 <div className="text-xs text-gray-500">{user.email}</div>
                               </div>
                               {selectedUserId === user.id && (

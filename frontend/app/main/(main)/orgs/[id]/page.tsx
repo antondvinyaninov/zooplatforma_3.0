@@ -55,13 +55,13 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
   // Проверка является ли пользователь участником организации
   const isMember = () => {
     if (!user || membersLoading) return false;
-    return members.some((m) => m.user_id === user.id);
+    return members.some((m) => String(m.user_id) === String(user.id));
   };
 
   // Проверка является ли пользователь owner/admin
   const isOwnerOrAdmin = () => {
     if (!user || membersLoading) return false;
-    return members.some((m) => m.user_id === user.id && ['owner', 'admin'].includes(m.role));
+    return members.some((m) => String(m.user_id) === String(user.id) && ['owner', 'admin'].includes(m.role));
   };
 
   // Проверка есть ли у организации владелец

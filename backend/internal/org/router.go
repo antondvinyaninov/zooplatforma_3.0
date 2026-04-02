@@ -629,7 +629,75 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 	// ─────────────────────────────────────────────────────────────────────────
 	// Модуль: Сотрудники организации
 	// ─────────────────────────────────────────────────────────────────────────
-	
+
+	r.GET("/:orgId/users/search", func(c *gin.Context) {
+		intUserID, ok := getUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+			return
+		}
+		
+		q := c.Query("q")
+		if len(q) < 1 {
+			c.JSON(200, gin.H{"success": true, "data": []map[string]interface{}{}})
+			return
+		}
+		
+		orgId := c.Param("orgId")
+		
+		var userRole string
+		_ = db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&userRole)
+		if userRole != "owner" && userRole != "admin" {
+			c.JSON(403, gin.H{"success": false, "error": "Permission denied"})
+			return
+		}
+		
+		query := `
+			SELECT id, name, email, profile_photo 
+			FROM users u
+			WHERE (u.name ILIKE $1 OR u.email ILIKE $1 OR u.id::text = $2)
+			AND u.id NOT IN (
+				SELECT user_id FROM organization_members WHERE organization_id = $3
+			)
+			LIMIT 20
+		`
+		
+		wildcard := "%" + q + "%"
+		rows, err := db.Query(query, wildcard, q, orgId)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": err.Error()})
+			return
+		}
+		defer rows.Close()
+		
+		var users []map[string]interface{}
+		for rows.Next() {
+			var id int
+			var name, email string
+			var avatar *string
+			
+			if err := rows.Scan(&id, &name, &email, &avatar); err == nil {
+				avatarStr := ""
+				if avatar != nil {
+					avatarStr = *avatar
+				}
+				
+				users = append(users, map[string]interface{}{
+					"id": id,
+					"name": name,
+					"email": email,
+					"avatar": avatarStr,
+				})
+			}
+		}
+		
+		if users == nil {
+			users = []map[string]interface{}{}
+		}
+		
+		c.JSON(200, gin.H{"success": true, "data": users})
+	})
+
 	r.GET("/:orgId/staff", func(c *gin.Context) {
 		intUserID, ok := getUserID(c)
 		if !ok {
