@@ -20,16 +20,15 @@ export default function AdminAuth() {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch('/api/admin/auth/me', {
+      const response = await fetch('/api/auth/me', {
         credentials: 'include',
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.user) {
-          // Пользователь уже авторизован - перенаправляем в кабинет
+        if ((data.success && data.user) || data.id) { // Usually authApi me returns User directly or {success, user}
           console.log('✅ User already authenticated, redirecting to /pets');
-          router.push('/pets');
+          router.push('/pethelper/pets');
           return;
         }
       }
@@ -44,8 +43,7 @@ export default function AdminAuth() {
     try {
       console.log('🔐 Attempting login...');
 
-      // Логинимся через Next.js proxy (обходим CORS)
-      const loginResponse = await fetch('/api/gateway/auth/login', {
+      const loginResponse = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -56,7 +54,7 @@ export default function AdminAuth() {
       const loginResult = await loginResponse.json();
       console.log('📥 Login result:', loginResult);
 
-      if (!loginResult.success) {
+      if (!loginResponse.ok || (loginResult.success === false)) {
         console.error('❌ Login failed:', loginResult.error);
         return { success: false, error: loginResult.error || 'Неверный email или пароль' };
       }
@@ -64,7 +62,7 @@ export default function AdminAuth() {
       console.log('✅ Login successful!');
 
       // Успешный вход - редирект в кабинет
-      router.push('/pets');
+      router.push('/pethelper/pets');
       return { success: true };
     } catch (err) {
       console.error('💥 Login error:', err);

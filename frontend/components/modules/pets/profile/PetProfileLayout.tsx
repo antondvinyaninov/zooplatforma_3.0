@@ -152,6 +152,15 @@ export default function PetProfileLayout({
 
   const handleCatalogStatusChange = async (newStatus: string) => {
     if (!pet) return;
+
+    if (newStatus !== 'draft') {
+      const hasPhoto = !!photoUrl || (pet.media_urls && pet.media_urls.length > 0);
+      if (!hasPhoto) {
+        alert('Для размещения в каталоге необходимо добавить хотя бы одно фото питомца.');
+        return;
+      }
+    }
+
     setPet({ ...pet, catalog_status: newStatus });
     if (newStatus === 'draft' && activeTab === 'fundraising') {
       setActiveTab('timeline');

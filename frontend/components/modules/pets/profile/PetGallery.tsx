@@ -175,15 +175,26 @@ export default function PetGallery({ pet, orgId, apiUrl, onPhotoUrlChange }: Pet
     if (!files || files.length === 0) return;
     setUploadError(null);
     const newUrls = [...localUrls];
+    let newMainPhoto = mainPhoto;
+    
     for (let i = 0; i < files.length; i++) {
       try {
         const uploaded = await uploadFile(files[i], 'photo');
-        if (uploaded?.url) newUrls.push(uploaded.url);
+        if (uploaded?.url) {
+          newUrls.push(uploaded.url);
+          if (!newMainPhoto && !isVideo(uploaded.url)) {
+            newMainPhoto = uploaded.url;
+          }
+        }
       } catch (err: unknown) {
         setUploadError(err instanceof Error ? err.message : 'Ошибка');
       }
     }
+    
     await saveMediaUrls(newUrls);
+    if (newMainPhoto && newMainPhoto !== mainPhoto) {
+      await setAsMain(newMainPhoto);
+    }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
