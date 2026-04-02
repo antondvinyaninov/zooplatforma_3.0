@@ -128,6 +128,9 @@ export default function PetPageClient({ initialPet, initialPosts }: PetPageClien
           {/* Галерея на десктопе */}
           {!isMobile && renderGallery()}
           
+          {/* Описание питомца (На мобилке оно будет сразу под названием, на десктопе под фото) */}
+          <DescriptionCard pet={pet} />
+
           {/* Публикации (на десктопе под фото) */}
           {!isMobile && <PublicationsList pet={pet} posts={posts} postsLoading={postsLoading} />}
         </div>
@@ -136,9 +139,6 @@ export default function PetPageClient({ initialPet, initialPosts }: PetPageClien
         <div className="lg:col-span-4 flex flex-col gap-4 lg:gap-2.5">
           {/* Карточка Организатора / Куратора / Нашедшего */}
           <AuthorCard pet={pet} isOwnerOrCurator={isOwnerOrCurator} />
-
-          {/* Описание */}
-          <DescriptionCard pet={pet} />
 
           {/* Специфичный блок (Прогресс сбора, Детали потери/находки) */}
           <StatusSpecificCard pet={pet} />

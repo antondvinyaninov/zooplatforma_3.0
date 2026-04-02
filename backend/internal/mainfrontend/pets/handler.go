@@ -90,7 +90,7 @@ func (h *Handler) GetUserPets(c *gin.Context) {
 			SELECT 
 				p.id, p.name, p.species, p.breed, p.gender, p.birth_date,
 				p.color, p.size, p.photo_url, p.user_id, p.description,
-				COALESCE(o.name, u.name) as owner_name, 
+				COALESCE(NULLIF(o.short_name, ''), o.name, u.name) as owner_name, 
 				CASE WHEN p.org_id IS NOT NULL THEN NULL ELSE u.last_name END as owner_last_name, 
 				COALESCE(NULLIF(p.city, ''), CASE WHEN p.org_id IS NOT NULL THEN COALESCE(NULLIF(o.city, ''), NULLIF(o.address_city, ''), NULLIF(o.address, '')) ELSE NULLIF(u.location, '') END) as location, 
 				CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.phone, '') ELSE NULLIF(u.phone, '') END as phone, 
@@ -253,7 +253,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 			p.age_type, p.approximate_years, p.approximate_months, p.is_sterilized, p.media_urls,
 			p.catalog_status, p.catalog_data,
 
-			COALESCE(o.name, u.name) as owner_name,
+			COALESCE(NULLIF(o.short_name, ''), o.name, u.name) as owner_name,
 			CASE WHEN p.org_id IS NOT NULL THEN NULL ELSE u.last_name END as last_name, 
 			CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.logo, '') ELSE NULLIF(u.avatar, '') END as avatar, 
 			COALESCE(NULLIF(p.city, ''), CASE WHEN p.org_id IS NOT NULL THEN COALESCE(NULLIF(o.city, ''), NULLIF(o.address_city, ''), NULLIF(o.address, '')) ELSE NULLIF(u.location, '') END) as location, 
@@ -436,7 +436,7 @@ func (h *Handler) GetOrganizationPets(c *gin.Context) {
 		SELECT 
 			p.id, p.name, p.species, p.breed, p.gender, p.birth_date,
 			p.color, p.size, p.photo_url, p.user_id, p.description,
-			COALESCE(o.name, u.name) as owner_name, 
+			COALESCE(NULLIF(o.short_name, ''), o.name, u.name) as owner_name, 
 			CASE WHEN p.org_id IS NOT NULL THEN NULL ELSE u.last_name END as owner_last_name, 
 			COALESCE(NULLIF(p.city, ''), CASE WHEN p.org_id IS NOT NULL THEN COALESCE(NULLIF(o.city, ''), NULLIF(o.address_city, ''), NULLIF(o.address, '')) ELSE NULLIF(u.location, '') END) as location, 
 			CASE WHEN p.org_id IS NOT NULL THEN NULLIF(o.phone, '') ELSE NULLIF(u.phone, '') END as phone, 
