@@ -438,7 +438,7 @@ func (h *Handler) GetMembers(c *gin.Context) {
 	query := `
 		SELECT 
 			om.id, om.organization_id, om.user_id, om.role, om.position, om.org_avatar,
-			om.can_post, om.joined_at,
+			om.can_post, om.joined_at, COALESCE(om.is_public, true) as is_public,
 			u.name as user_name, u.last_name as user_last_name, u.avatar as user_avatar
 		FROM organization_members om
 		JOIN users u ON om.user_id = u.id
@@ -469,6 +469,7 @@ func (h *Handler) GetMembers(c *gin.Context) {
 			position                   sql.NullString
 			orgAvatar                  sql.NullString
 			canPost                    bool
+			isPublic                   bool
 			joinedAt                   string
 			userName, userLastName     string
 			userAvatar                 sql.NullString
@@ -476,7 +477,7 @@ func (h *Handler) GetMembers(c *gin.Context) {
 
 		err := rows.Scan(
 			&id, &organizationID, &userID, &role, &position, &orgAvatar,
-			&canPost, &joinedAt,
+			&canPost, &joinedAt, &isPublic,
 			&userName, &userLastName, &userAvatar,
 		)
 		if err != nil {
@@ -491,6 +492,7 @@ func (h *Handler) GetMembers(c *gin.Context) {
 			"position":        position.String,
 			"org_avatar":      orgAvatar.String,
 			"can_post":        canPost,
+			"is_public":       isPublic,
 			"joined_at":       joinedAt,
 			"user_name":       userName + " " + userLastName,
 			"user_avatar":     userAvatar.String,

@@ -81,6 +81,7 @@ export interface OrganizationMember {
   can_post: boolean;
   can_edit: boolean;
   can_manage_members: boolean;
+  is_public?: boolean;
   joined_at: string;
   user_name?: string;
   user_avatar?: string;

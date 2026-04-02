@@ -113,7 +113,8 @@ export default function OrgStaffProfile({ orgId, staffId }: { orgId: string, sta
         body: JSON.stringify({
           jobTitle: profile.jobTitle,
           orgAvatarUrl: finalAvatarUrl,
-          permissions: profile.permissions || { pets: true, medical: true, finance: false }
+          permissions: profile.permissions || { pets: true, medical: true, finance: false },
+          isPublic: profile.isPublic !== false
         })
       });
       const data = await res.json();
@@ -291,8 +292,32 @@ export default function OrgStaffProfile({ orgId, staffId }: { orgId: string, sta
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 space-y-4">
                 <h2 className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2 border-b border-gray-100 pb-2">Редактирование профиля</h2>
                 
-                <div className="space-y-1">
-                  <label className="block text-sm font-semibold text-gray-700">Внутренняя должность (Публичная)</label>
+                <div className="space-y-1 mb-4 border-b border-gray-100 pb-4">
+                  <div className="flex items-center justify-between max-w-lg">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700">Показывать на публичной странице</label>
+                      <p className="text-xs text-gray-500 mt-0.5">Включите, чтобы карточка отображалась в разделе «Команда».</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setProfile({...profile, isPublic: profile.isPublic === false ? true : false})}
+                      className={`${
+                        profile.isPublic !== false ? 'bg-violet-600' : 'bg-gray-200'
+                      } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2`}
+                    >
+                      <span className="sr-only">Отображать в публичном профиле</span>
+                      <span
+                        aria-hidden="true"
+                        className={`${
+                          profile.isPublic !== false ? 'translate-x-5' : 'translate-x-0'
+                        } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1 pt-2">
+                  <label className="block text-sm font-semibold text-gray-700">Внутренняя должность</label>
                   <p className="text-xs text-gray-500 mb-2">Эта роль будет отображаться клиентам на вашей странице и в карточках питомцев.</p>
                   <input
                     type="text"

@@ -775,6 +775,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 
         var id int
         var name, email, avatar, role, position, orgAvatar, permStr string
+        var isPublic bool
 		err := db.QueryRow(`
 			SELECT u.id, 
 			       COALESCE(u.name, '') || CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN ' ' || u.last_name ELSE '' END, 
@@ -783,11 +784,12 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			       COALESCE(om.role, ''), 
 			       COALESCE(om.position, ''),
 			       COALESCE(om.org_avatar, ''),
-			       COALESCE(om.permissions::text, '{"pets":true,"medical":true,"finance":false}')
+			       COALESCE(om.permissions::text, '{"pets":true,"medical":true,"finance":false}'),
+                   COALESCE(om.is_public, true)
 			FROM organization_members om
 			JOIN users u ON om.user_id = u.id
 			WHERE om.organization_id = $1 AND u.id = $2
-		`, orgId, staffId).Scan(&id, &name, &email, &avatar, &role, &position, &orgAvatar, &permStr)
+		`, orgId, staffId).Scan(&id, &name, &email, &avatar, &role, &position, &orgAvatar, &permStr, &isPublic)
 		
 		if err == sql.ErrNoRows {
 		    c.JSON(404, gin.H{"success": false, "error": "Staff not found"})
@@ -810,6 +812,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
             "jobTitle": position,
             "permissions": perms,
             "isOwner": role == "owner",
+            "isPublic": isPublic,
         }})
 	})
 
@@ -837,6 +840,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			JobTitle     *string                `json:"jobTitle"`
 			OrgAvatarUrl *string                `json:"orgAvatarUrl"`
 			Permissions  map[string]interface{} `json:"permissions"`
+            IsPublic     *bool                  `json:"isPublic"`
 		}
 		if err := c.ShouldBindJSON(&input); err != nil {
 			c.JSON(400, gin.H{"success": false, "error": "Invalid input"})
@@ -849,9 +853,10 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		    UPDATE organization_members 
 		    SET position = COALESCE($1, position),
 		        org_avatar = COALESCE($2, org_avatar),
-		        permissions = COALESCE($3, permissions)
-		    WHERE organization_id = $4 AND user_id = $5
-		`, input.JobTitle, input.OrgAvatarUrl, string(permBytes), orgId, staffId)
+		        permissions = COALESCE($3, permissions),
+                is_public = COALESCE($4, is_public)
+		    WHERE organization_id = $5 AND user_id = $6
+		`, input.JobTitle, input.OrgAvatarUrl, string(permBytes), input.IsPublic, orgId, staffId)
 		
 		if err != nil {
 			c.JSON(500, gin.H{"success": false, "error": "Database error"})

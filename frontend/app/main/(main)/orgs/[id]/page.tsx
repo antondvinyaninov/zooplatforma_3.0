@@ -52,6 +52,8 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
   const [showClaimConfirm, setShowClaimConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'team' | 'pets'>('info');
 
+  const visibleMembers = members.filter((m) => m.is_public !== false);
+
   // Проверка является ли пользователь участником организации
   const isMember = () => {
     if (!user || membersLoading) return false;
@@ -291,7 +293,7 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
               <InformationCircleIcon className={`w-5 h-5 ${activeTab === 'info' ? 'text-gray-900' : 'text-gray-400'}`} />
               Инфо
             </button>
-            {members.length > 0 && (
+            {visibleMembers.length > 0 && (
               <button
                 onClick={() => setActiveTab('team')}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[15px] font-semibold transition-all duration-200 whitespace-nowrap ${
@@ -367,7 +369,7 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
           )}
 
           {/* Команда (Премиальные карточки) */}
-          {activeTab === 'team' && members.length > 0 && (
+          {activeTab === 'team' && visibleMembers.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative overflow-hidden">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -375,13 +377,13 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
                   Команда
                 </h2>
                 <div className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-full border border-gray-200">
-                  {members.length} {members.length === 1 ? 'сотрудник' : members.length < 5 ? 'сотрудника' : 'сотрудников'}
+                  {visibleMembers.length} {visibleMembers.length === 1 ? 'сотрудник' : visibleMembers.length < 5 ? 'сотрудника' : 'сотрудников'}
                 </div>
               </div>
 
               {/* Горизонтальный скролл со скрытым ползунком */}
               <div className="flex overflow-x-auto gap-4 pb-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] -mx-2 px-2">
-                {members.map((member) => {
+                {visibleMembers.map((member) => {
                   const avatarSrc = getMediaUrl(member.org_avatar) || getMediaUrl(member.user_avatar);
                       
                   return (
