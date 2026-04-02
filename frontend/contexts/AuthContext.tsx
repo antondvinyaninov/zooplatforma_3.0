@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem('auth_token');
             setToken(null);
           }
-        } else if (response.status === 401 || response.status === 403) {
+        } else if (response.status === 401 || response.status === 403 || !response.success) {
           // Токен невалидный - удаляем
           localStorage.removeItem('auth_token');
           setToken(null);

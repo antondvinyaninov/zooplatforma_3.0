@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useMediaUpload } from '@/app/main/hooks/useMediaUpload';
 import { useRouter } from 'next/navigation';
+import { organizationsApi } from '@/lib/organizations-api';
 
 // Иконка лапки
 function PawIcon({ className }: { className?: string }) {
@@ -142,6 +143,30 @@ export default function OrgStaffProfile({ orgId, staffId }: { orgId: string, sta
       }
     } catch (e) {
       alert('Ошибка при удалении сотрудника');
+    }
+  };
+
+  const handleTransferOwnership = async () => {
+    if (!confirm('ВНИМАНИЕ!\n\nВы навсегда передаете права владельца этой организации данному сотруднику.\nВы станете обычным администратором, а этот пользователь получит полный контроль и сможет удалить вас из организации.\n\nПродолжить?')) {
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      // staffId - это user_id данного сотрудника в контексте платформы
+      const targetUserId = parseInt(staffId);
+      const res = await organizationsApi.transferOwnership(parseInt(orgId), targetUserId);
+      
+      if (res.success) {
+        alert('Права владельца успешно переданы!');
+        router.push(`/org/${orgId}/staff`);
+      } else {
+        alert(res.error || 'Ошибка при передаче прав: только владелец может это сделать');
+      }
+    } catch (e) {
+      alert('Ошибка: Не удалось выполнить передачу прав. Убедитесь, что вы являетесь текущим владельцем.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -370,6 +395,12 @@ export default function OrgStaffProfile({ orgId, staffId }: { orgId: string, sta
                   <TrashIcon className="w-4 h-4" />
                   Исключить из штата
                 </button>
+                <div className="pt-2 border-t border-red-100/50 mt-2">
+                  <button onClick={handleTransferOwnership} disabled={isSaving} className="w-full bg-orange-100 hover:bg-orange-200 text-orange-800 border border-orange-200/50 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                    <ShieldCheckIcon className="w-4 h-4" />
+                    {isSaving ? 'Обработка...' : 'Передать права владельца'}
+                  </button>
+                </div>
                 <div className="text-[11px] text-red-600 leading-tight bg-red-50/50 p-2 rounded text-center border border-red-100">
                   Удаление закроет сотруднику вход. Связанные с ним питомцы останутся в базе вашей организации.
                 </div>

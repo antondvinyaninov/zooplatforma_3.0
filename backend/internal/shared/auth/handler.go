@@ -152,7 +152,8 @@ func (h *Handler) Login(c *gin.Context) {
 	)
 
 	if err == sql.ErrNoRows {
-		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Invalid email or password"})
+		// Возвращаем 200 OK + success: false вместо 401, чтобы избежать красных ошибок в консоли браузера
+		c.JSON(http.StatusOK, gin.H{"success": false, "error": "Неверный email или пароль"})
 		return
 	}
 
@@ -164,7 +165,8 @@ func (h *Handler) Login(c *gin.Context) {
 	// Проверяем пароль
 	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Invalid email or password"})
+		// Возвращаем 200 OK + success: false вместо 401 для скрытия из консоли
+		c.JSON(http.StatusOK, gin.H{"success": false, "error": "Неверный email или пароль"})
 		return
 	}
 
@@ -291,13 +293,15 @@ func (h *Handler) Me(c *gin.Context) {
 	// Получаем user_id из контекста (устанавливается в AuthOptional middleware)
 	userIDInterface, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
+		// Изменено с 401 на 200, чтобы браузер не выводил красные ошибки в консоль клиента
+		// при проверке сессии гостем (SPA всегда дёргает /me при загрузке)
+		c.JSON(http.StatusOK, gin.H{"success": false, "error": "Unauthorized"})
 		return
 	}
 
 	userID, ok := userIDInterface.(int)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Invalid user ID"})
+		c.JSON(http.StatusOK, gin.H{"success": false, "error": "Invalid user ID"})
 		return
 	}
 

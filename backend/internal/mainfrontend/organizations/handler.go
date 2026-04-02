@@ -555,6 +555,88 @@ func (h *Handler) ClaimOwnership(c *gin.Context) {
 	c.JSON(200, gin.H{"success": true, "message": "Ownership claimed successfully"})
 }
 
+// TransferOwnership - передача прав владельца организации
+func (h *Handler) TransferOwnership(c *gin.Context) {
+    // 1. Авторизуем пользователя
+    userID, ok := getUserID(c)
+    if !ok {
+        c.JSON(401, gin.H{"success": false, "error": "Unauthorized (missing user_id)"})
+        return
+    }
+
+    // 2. Параметры запроса
+    orgID := c.Param("id")
+    var req struct {
+        NewOwnerID int `json:"new_owner_id"`
+    }
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(400, gin.H{"success": false, "error": "Invalid payload: " + err.Error()})
+        return
+    }
+
+    // 3. Проверяем, что текущий пользователь – владелец
+    var curRole string
+    err := h.db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgID, userID).Scan(&curRole)
+    if err != nil || curRole != "owner" {
+        c.JSON(403, gin.H{"success": false, "error": "Только владелец может передать права"})
+        return
+    }
+
+    // 4. Проверяем, что новый владелец уже член организации
+    var isMember bool
+    err = h.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM organization_members WHERE organization_id = $1 AND user_id = $2)`, orgID, req.NewOwnerID).Scan(&isMember)
+    if err != nil || !isMember {
+        c.JSON(400, gin.H{"success": false, "error": "Новый владелец не является членом организации"})
+        return
+    }
+
+    // 5. Транзакция: обновляем роли и owner_user_id
+    tx, err := h.db.Begin()
+    if err != nil {
+        c.JSON(500, gin.H{"success": false, "error": "Failed to start transaction"})
+        return
+    }
+    defer tx.Rollback()
+
+    // 5.1 Сменить роль текущего владельца на admin
+    _, err = tx.Exec(`UPDATE organization_members SET role = 'admin' WHERE organization_id = $1 AND user_id = $2`, orgID, userID)
+    if err != nil {
+        c.JSON(500, gin.H{"success": false, "error": "Failed to demote current owner"})
+        return
+    }
+
+    // 5.2 Сменить роль нового владельца на owner
+    _, err = tx.Exec(`UPDATE organization_members SET role = 'owner' WHERE organization_id = $1 AND user_id = $2`, orgID, req.NewOwnerID)
+    if err != nil {
+        c.JSON(500, gin.H{"success": false, "error": "Failed to promote new owner"})
+        return
+    }
+
+    // 5.3 Обновить поле owner_user_id в таблице organizations
+    _, err = tx.Exec(`UPDATE organizations SET owner_user_id = $1 WHERE id = $2`, req.NewOwnerID, orgID)
+    if err != nil {
+        c.JSON(500, gin.H{"success": false, "error": "Failed to update organization owner"})
+        return
+    }
+
+    // 5.4 Записать в журнал действий (используем правильные названия колонок из таблицы admin_logs)
+    _, err = tx.Exec(`INSERT INTO admin_logs (admin_id, target_type, target_id, action_type, created_at) VALUES ($1, 'organization', $2, 'transfer_ownership', NOW())`, userID, orgID)
+    if err != nil {
+        c.JSON(500, gin.H{"success": false, "error": "Failed to write audit log: " + err.Error()})
+        return
+    }
+
+    // 6. Коммит
+    if err = tx.Commit(); err != nil {
+        c.JSON(500, gin.H{"success": false, "error": "Transaction commit failed"})
+        return
+    }
+
+    c.JSON(200, gin.H{"success": true, "message": "Права успешно переданы"})
+}
+
+// Update - обновить профиль организации
+
 // Update - обновить профиль организации
 func (h *Handler) Update(c *gin.Context) {
 	id := c.Param("id")

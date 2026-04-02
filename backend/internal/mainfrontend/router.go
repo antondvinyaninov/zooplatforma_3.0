@@ -170,6 +170,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		organizationsGroup.GET("/members/:id", organizationsHandler.GetMembers)
 		organizationsGroup.POST("", organizationsHandler.Create)
 		organizationsGroup.POST("/claim-ownership/:id", organizationsHandler.ClaimOwnership)
+	organizationsGroup.POST("/:id/transfer", organizationsHandler.TransferOwnership)
 		organizationsGroup.PUT("/:id", organizationsHandler.Update)
 	}
 

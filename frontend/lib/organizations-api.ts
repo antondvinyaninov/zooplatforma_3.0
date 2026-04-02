@@ -253,6 +253,13 @@ export const organizationsApi = {
     return apiClient.post<{ message: string }>(`/api/organizations/claim-ownership/${orgId}`, {});
   },
 
+  // Передать права владельца организации
+  async transferOwnership(orgId: number, newOwnerId: number) {
+    return apiClient.post<{ message: string }>(`/api/organizations/${orgId}/transfer`, {
+      new_owner_id: newOwnerId,
+    });
+  },
+
   // Проверить существование организации по ИНН
   async checkByInn(inn: string) {
     return apiClient.get<{ id: number; name: string } | null>(
