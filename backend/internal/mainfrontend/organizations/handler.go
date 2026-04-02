@@ -15,6 +15,21 @@ func NewHandler(db *sql.DB) *Handler {
 	return &Handler{db: db}
 }
 
+func getUserID(c *gin.Context) (int, bool) {
+	userIdVar, exists := c.Get("user_id")
+	if !exists {
+		return 0, false
+	}
+	switch v := userIdVar.(type) {
+	case float64:
+		return int(v), true
+	case int:
+		return v, true
+	default:
+		return 0, false
+	}
+}
+
 // GetByID - получить организацию по ID
 func (h *Handler) GetByID(c *gin.Context) {
 	id := c.Param("id")
@@ -189,8 +204,11 @@ func (h *Handler) GetAll(c *gin.Context) {
 
 // GetMy - получить организации пользователя
 func (h *Handler) GetMy(c *gin.Context) {
-	// TODO: получить user_id из токена авторизации
-	userID := 1
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized (missing user_id)"})
+		return
+	}
 
 	query := `
 		SELECT 
@@ -287,8 +305,11 @@ func (h *Handler) CheckByInn(c *gin.Context) {
 
 // Create - создать новую организацию
 func (h *Handler) Create(c *gin.Context) {
-	// TODO: получить user_id из токена авторизации
-	userID := 1
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized (missing user_id)"})
+		return
+	}
 
 	var req struct {
 		Name              string   `json:"name" binding:"required"`
@@ -483,8 +504,11 @@ func (h *Handler) GetMembers(c *gin.Context) {
 
 // ClaimOwnership - заявить о владении организацией
 func (h *Handler) ClaimOwnership(c *gin.Context) {
-	// TODO: получить user_id из токена авторизации
-	userID := 1
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized (missing user_id)"})
+		return
+	}
 	orgID := c.Param("id")
 
 	// Проверяем, есть ли уже владелец
@@ -535,8 +559,11 @@ func (h *Handler) ClaimOwnership(c *gin.Context) {
 func (h *Handler) Update(c *gin.Context) {
 	id := c.Param("id")
 
-	// TODO: получить user_id из токена авторизации
-	userID := 1
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized (missing user_id)"})
+		return
+	}
 
 	var role string
 	err := h.db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, id, userID).Scan(&role)
