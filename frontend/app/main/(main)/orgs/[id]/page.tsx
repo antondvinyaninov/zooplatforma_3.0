@@ -235,8 +235,8 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
               <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-                      {org.name}
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate" title={org.name}>
+                      {org.short_name || org.name}
                     </h1>
                     {org.is_verified && (
                       <CheckBadgeIcon
