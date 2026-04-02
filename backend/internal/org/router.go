@@ -653,7 +653,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		}
 		
 		query := `
-			SELECT id, name, email, profile_photo 
+			SELECT id, name, email, avatar 
 			FROM users u
 			WHERE (u.name ILIKE $1 OR u.email ILIKE $1 OR u.id::text = $2)
 			AND u.id NOT IN (
