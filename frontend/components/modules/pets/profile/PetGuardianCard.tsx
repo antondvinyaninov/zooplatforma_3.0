@@ -26,7 +26,7 @@ export default function PetGuardianCard({ pet, orgId }: PetGuardianCardProps) {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, zIndex: 1, position: 'relative' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               {pet.org_logo ? (
-                <img src={pet.org_logo} alt={pet.org_name} style={{ width: 56, height: 56, borderRadius: '14px', objectFit: 'cover', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px -2px rgba(0,0,0,0.08)' }} />
+                <img src={pet.org_logo} alt={pet.owner_name || pet.org_name} style={{ width: 56, height: 56, borderRadius: '14px', objectFit: 'cover', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px -2px rgba(0,0,0,0.08)' }} />
               ) : (
                 <div style={{ width: 56, height: 56, borderRadius: '14px', background: 'linear-gradient(135deg, #3b82f6, #4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', boxShadow: '0 4px 10px -2px rgba(59, 130, 246, 0.4)' }}>
                   <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -35,7 +35,7 @@ export default function PetGuardianCard({ pet, orgId }: PetGuardianCardProps) {
                 </div>
               )}
               <div>
-                <h4 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: '0 0 6px 0', letterSpacing: '-0.01em' }}>{pet.org_name || 'Организация'}</h4>
+                <h4 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: '0 0 6px 0', letterSpacing: '-0.01em' }}>{pet.owner_name || pet.org_name || 'Организация'}</h4>
                 <div style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', background: '#dbeafe', color: '#1e40af', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
                   ID: {pet.org_id}
                 </div>

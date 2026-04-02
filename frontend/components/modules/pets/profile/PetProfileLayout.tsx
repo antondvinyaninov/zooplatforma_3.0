@@ -477,7 +477,7 @@ export default function PetProfileLayout({
                   <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Ответственный</div>
                   <div style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>
                     {pet.org_id ? (
-                      <span>Организация (<a href={`/orgs/${pet.org_id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }} onMouseEnter={e => e.currentTarget.style.textDecoration='underline'} onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>{pet.org_name || 'Профиль'}</a>)</span>
+                      <span>Организация (<a href={`/orgs/${pet.org_id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }} onMouseEnter={e => e.currentTarget.style.textDecoration='underline'} onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>{pet.owner_name || pet.org_name || 'Профиль'}</a>)</span>
                     ) : pet.user_id ? (
                       <span>{pet.relationship === 'curator' ? 'Куратор' : pet.relationship === 'guardian' ? 'Опекун' : 'Владелец'} (<a href={`/main/${pet.user_id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }} onMouseEnter={e => e.currentTarget.style.textDecoration='underline'} onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>{pet.owner_name || 'Профиль'}</a>)</span>
                     ) : (

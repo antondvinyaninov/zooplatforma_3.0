@@ -326,7 +326,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				COALESCE(p.catalog_status, 'draft'),
 				COALESCE(p.catalog_data::text, '{}'),
 				COALESCE(p.org_id, 0),
-				COALESCE(o.name, ''), COALESCE(o.email, ''), COALESCE(o.phone, ''), COALESCE(o.logo, '')
+				COALESCE(NULLIF(o.short_name, ''), o.name, ''), COALESCE(o.email, ''), COALESCE(o.phone, ''), COALESCE(o.logo, '')
 			FROM pets p
 			LEFT JOIN species s ON p.species_id = s.id
 			LEFT JOIN breeds b ON p.breed_id = b.id
