@@ -109,6 +109,8 @@ func (h *Handler) GetUserPets(c *gin.Context) {
 			      (p.photo IS NOT NULL AND p.photo != '') 
 			      OR 
 			      (p.photo_url IS NOT NULL AND p.photo_url != '')
+			      OR
+			      (p.media_urls IS NOT NULL AND p.media_urls::text != '[]' AND p.media_urls::text != 'null')
 			  )
 			  AND p.name IS NOT NULL AND p.name != ''
 			ORDER BY p.created_at DESC
@@ -453,6 +455,8 @@ func (h *Handler) GetOrganizationPets(c *gin.Context) {
 		      (p.photo IS NOT NULL AND p.photo != '') 
 		      OR 
 		      (p.photo_url IS NOT NULL AND p.photo_url != '')
+		      OR
+		      (p.media_urls IS NOT NULL AND p.media_urls::text != '[]' AND p.media_urls::text != 'null')
 		  )
 		  AND p.name IS NOT NULL AND p.name != ''
 		ORDER BY p.created_at DESC

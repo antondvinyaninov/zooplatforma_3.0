@@ -160,7 +160,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				COALESCE(p.color, ''), COALESCE(p.size, ''),
 				COALESCE(p.org_pet_number, 0),
 				COALESCE(p.marking_specialist, ''), COALESCE(p.marking_org, ''),
-				p.created_at
+				COALESCE(p.created_at::text, '')
 			FROM pets p
 			LEFT JOIN species s ON p.species_id = s.id
 			LEFT JOIN breeds b ON p.breed_id = b.id
@@ -205,6 +205,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				&pet.MarkingSpecialist, &pet.MarkingOrg,
 				&pet.CreatedAt,
 			); err != nil {
+				fmt.Printf("Scan error org/pets: %v\n", err)
 				continue
 			}
 			pets = append(pets, pet)

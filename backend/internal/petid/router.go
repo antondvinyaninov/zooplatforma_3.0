@@ -40,28 +40,27 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 	pets := r.Group("/pets")
 	{
 		pets.GET("", func(c *gin.Context) {
-			userID, exists := c.Get("user_id")
+			_, exists := c.Get("user_id")
 			if !exists {
 				c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
 				return
 			}
 			
-			// Получаем всех питомцев пользователя
+			// Получаем всех питомцев системы
 			rows, err := db.Query(`
 				SELECT 
 					p.id, p.name, p.species_id, COALESCE(s.name, '') as species_name,
 					p.breed_id, COALESCE(b.name, '') as breed_name, p.user_id, COALESCE(u.name, '') as owner_name,
 					COALESCE(p.birth_date::text, ''), COALESCE(p.gender, ''),
 					COALESCE(p.description, ''), COALESCE(p.relationship, ''),
-					COALESCE(p.photo_url, ''),
-					p.created_at
+					COALESCE(p.photo_url, ''), COALESCE(p.color, ''), COALESCE(p.size, ''),
+					COALESCE(p.created_at::text, '')
 				FROM pets p
 				LEFT JOIN users u ON p.user_id = u.id
 				LEFT JOIN species s ON p.species_id = s.id
 				LEFT JOIN breeds b ON p.breed_id = b.id
-				WHERE p.user_id = $1
 				ORDER BY p.id DESC
-			`, userID)
+			`)
 
 			if err != nil {
 				c.JSON(500, gin.H{"success": false, "error": "Database error"})
@@ -80,9 +79,11 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				OwnerName    string  `json:"owner_name"`
 				BirthDate    string  `json:"birth_date"`
 				Gender       string  `json:"gender"`
-				Description  *string `json:"description"`
+				Description  string  `json:"description"`
 				Relationship string  `json:"relationship"`
-				PhotoURL     *string `json:"photo_url"`
+				PhotoURL     string  `json:"photo_url"`
+				Color        string  `json:"color"`
+				Size         string  `json:"size"`
 				CreatedAt    string  `json:"created_at"`
 			}
 
@@ -93,8 +94,9 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 					&pet.ID, &pet.Name, &pet.SpeciesID, &pet.SpeciesName,
 					&pet.BreedID, &pet.BreedName, &pet.OwnerID, &pet.OwnerName,
 					&pet.BirthDate, &pet.Gender, &pet.Description, &pet.Relationship,
-					&pet.PhotoURL, &pet.CreatedAt,
+					&pet.PhotoURL, &pet.Color, &pet.Size, &pet.CreatedAt,
 				); err != nil {
+					fmt.Printf("Scan error petid/pets: %v\n", err)
 					continue
 				}
 				petList = append(petList, pet)

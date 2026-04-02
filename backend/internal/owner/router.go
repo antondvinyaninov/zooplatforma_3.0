@@ -50,7 +50,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 					p.user_id, COALESCE(u.name, '') as owner_name,
 					COALESCE(p.birth_date::text, ''), COALESCE(p.gender, ''), 
 					p.description, COALESCE(p.relationship, 'owner'),
-					p.photo_url, p.created_at
+					p.photo_url, COALESCE(p.color, ''), COALESCE(p.size, ''), COALESCE(p.created_at::text, '')
 				FROM pets p
 				LEFT JOIN species s ON p.species_id = s.id
 				LEFT JOIN breeds b ON p.breed_id = b.id
@@ -80,6 +80,8 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				Description  *string `json:"description"`
 				Relationship string  `json:"relationship"`
 				PhotoURL     *string `json:"photo_url"`
+				Color        string  `json:"color"`
+				Size         string  `json:"size"`
 				CreatedAt    string  `json:"created_at"`
 			}
 
@@ -90,8 +92,9 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 					&pet.ID, &pet.Name, &pet.SpeciesID, &pet.SpeciesName,
 					&pet.BreedID, &pet.BreedName, &pet.OwnerID, &pet.OwnerName,
 					&pet.BirthDate, &pet.Gender, &pet.Description, &pet.Relationship,
-					&pet.PhotoURL, &pet.CreatedAt,
+					&pet.PhotoURL, &pet.Color, &pet.Size, &pet.CreatedAt,
 				); err != nil {
+					fmt.Printf("Scan error owner/pets: %v\n", err)
 					continue
 				}
 				pets = append(pets, pet)
