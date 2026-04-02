@@ -640,7 +640,7 @@ export default function OrganizationDashboardPage({
             </div>
             
             <div className={`px-5 ${isMobile ? 'py-4' : 'pt-14 pb-5'} text-center border-b border-gray-100`}>
-              <h1 className="font-bold text-lg text-gray-900 leading-tight">{org.name}</h1>
+              <h1 className="font-bold text-lg text-gray-900 leading-tight" title={org.name}>{org.short_name || org.name}</h1>
               <span className="text-xs text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full mt-2 inline-block font-medium">
                 {getOrganizationTypeName(org.type)}
               </span>

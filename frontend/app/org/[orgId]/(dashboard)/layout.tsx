@@ -151,9 +151,9 @@ export default function OrgDashboardLayout({
         if (orgsRes.ok) {
           const orgsData = await orgsRes.json();
           const currentOrg = (orgsData.data || []).find(
-            (o: { id: number }) => String(o.id) === String(orgId)
+            (o: { id: number, name: string, short_name?: string, logo: string }) => String(o.id) === String(orgId)
           );
-          if (currentOrg) setOrgInfo({ name: currentOrg.name || '', logo: currentOrg.logo || '' });
+          if (currentOrg) setOrgInfo({ name: currentOrg.short_name || currentOrg.name || '', logo: currentOrg.logo || '' });
         }
 
         const memberRes = await fetch(`/api/org/${orgId}/membership`, { credentials: 'include' });

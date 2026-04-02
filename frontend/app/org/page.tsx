@@ -172,9 +172,9 @@ export default function OrgPage() {
                   <div style={{ width: 48, height: 48, borderRadius: 10, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     {org.logo ? <img src={org.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10 }} /> : <span style={{ fontSize: 20 }}>🏢</span>}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 15 }}>{org.name}</div>
-                    <div style={{ color: '#6b7280', fontSize: 13 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15 }} className="truncate" title={org.name}>{org.short_name || org.name}</div>
+                    <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
                       {ORG_TYPE_LABELS[org.type] || org.type}{org.address_city ? ` · ${org.address_city}` : ''}
                     </div>
                   </div>

@@ -12,6 +12,7 @@ import {
 interface Organization {
   id: number;
   name: string;
+  short_name?: string;
   type: string;
   city: string;
   region: string;
@@ -250,8 +251,8 @@ export default function OrganizationsPage() {
                 className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">{org.name}</h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 truncate" title={org.name}>{org.short_name || org.name}</h3>
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${getTypeColor(org.type)}`}
                     >
