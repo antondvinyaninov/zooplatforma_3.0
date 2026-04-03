@@ -24,6 +24,7 @@ import (
 	"github.com/zooplatforma/backend/internal/shared/config"
 	"github.com/zooplatforma/backend/internal/shared/s3"
 	"github.com/zooplatforma/backend/internal/shared/websocket"
+	"github.com/zooplatforma/backend/internal/shared/notificationservice"
 )
 
 func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websocket.Hub) {
@@ -32,6 +33,9 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 	if err != nil {
 		panic(fmt.Sprintf("Failed to initialize S3 client: %v", err))
 	}
+
+	// Инициализируем сервис уведомлений
+	notificationSvc := notificationservice.New(db, hub)
 
 	authHandler := auth.NewHandler(db, cfg)
 	postsHandler := posts.NewHandler(db)
@@ -66,6 +70,22 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		authGroup.POST("/merge-confirm", authHandler.MergeConfirm)
 		authGroup.POST("/impersonate/:id", authHandler.ImpersonateUser)
 		authGroup.GET("/me", authHandler.Me)
+
+		// Тестовый роут для отправки уведомления
+		authGroup.POST("/test-notification", func(c *gin.Context) {
+			userIDInterface, exists := c.Get("user_id")
+			if !exists {
+				c.JSON(401, gin.H{"error": "Unauthorized"})
+				return
+			}
+			userID := userIDInterface.(int)
+			err := notificationSvc.NotifyNewLike(c.Request.Context(), userID, 1, "Тестовый Бот", "post", 1)
+			if err != nil {
+				c.JSON(500, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(200, gin.H{"success": true, "message": "Test notification sent"})
+		})
 	}
 
 	// Users routes

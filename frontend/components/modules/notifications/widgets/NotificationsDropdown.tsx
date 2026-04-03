@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { notificationsApi, Notification } from '@/lib/api';
 import { getMediaUrl, getFullName } from '@/lib/utils';
+import { getWebSocketUrl } from '@/lib/urls';
 
 export default function NotificationsDropdown() {
   const { isAuthenticated } = useAuth();
@@ -27,13 +28,54 @@ export default function NotificationsDropdown() {
     if (isAuthenticated) {
       loadUnreadCount();
 
-      // Обновляем каждые 2 минуты
-      const interval = setInterval(loadUnreadCount, 120000);
-      return () => clearInterval(interval);
+      // Подключаемся к WebSocket для получения real-time уведомлений
+      let ws: WebSocket | null = null;
+      let reconnectTimeout: NodeJS.Timeout;
+
+      const connectWS = () => {
+        // Подключаемся, используя token=authenticated (авторизация по кукам)
+        ws = new WebSocket(`${getWebSocketUrl()}?token=authenticated`);
+
+        ws.onopen = () => {
+          console.log('🔗 WebSocket (Notifications) подключен');
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'new_notification') {
+              // Мгновенно увеличиваем счетчик
+              setUnreadCount((prev) => prev + 1);
+              
+              // Если дропдаун открыт, пытаемся подгрузить новые
+              if (isOpen) {
+                loadNotifications();
+              }
+            }
+          } catch (e) {
+            console.error('Ошибка парсинга WS-сообщения:', e);
+          }
+        };
+
+        ws.onclose = () => {
+          console.log('❌ WebSocket (Notifications) отключен. Переподключение через 5с...');
+          reconnectTimeout = setTimeout(connectWS, 5000);
+        };
+      };
+
+      connectWS();
+
+      return () => {
+        if (ws) {
+          ws.onclose = null; // убираем реконнект
+          ws.close();
+        }
+        clearTimeout(reconnectTimeout);
+      };
     } else {
       setUnreadCount(0);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

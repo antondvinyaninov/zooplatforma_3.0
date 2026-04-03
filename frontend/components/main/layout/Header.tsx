@@ -5,7 +5,7 @@ import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 import CityDetector from './CityDetector';
 import UserMenu from './UserMenu';
-import NotificationsDropdown from './NotificationsDropdown';
+import NotificationsDropdown from '@/components/modules/notifications/widgets/NotificationsDropdown';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
