@@ -372,7 +372,7 @@ export default function PetHealth({ pet, orgId, apiUrl, onUpdate }: PetHealthPro
         {showAddVaccination && (
           <div className={s.card} style={{ marginBottom: 16, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <h4 style={{ fontWeight: 600, marginBottom: 16, fontSize: '15px' }}>{editingVaccination ? 'Редактировать прививку' : 'Новая прививка'}</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
               <div><label className={s.fieldLabel}>Дата*</label><input type="date" className={s.inputNode} value={newVaccination.date} onChange={e => setNewVaccination({...newVaccination, date: e.target.value})} /></div>
               <div>
                 <label className={s.fieldLabel}>Тип вакцины</label>
@@ -476,7 +476,7 @@ export default function PetHealth({ pet, orgId, apiUrl, onUpdate }: PetHealthPro
         {showAddTreatment && (
           <div className={s.card} style={{ marginBottom: 16, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <h4 style={{ fontWeight: 600, marginBottom: 16, fontSize: '15px' }}>{editingTreatment ? 'Редактировать обработку' : 'Новая обработка'}</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
               <div><label className={s.fieldLabel}>Дата*</label><input type="date" className={s.inputNode} value={newTreatment.date} onChange={e => setNewTreatment({...newTreatment, date: e.target.value})} /></div>
               <div>
                 <label className={s.fieldLabel}>Тип обработки</label>
@@ -577,7 +577,7 @@ export default function PetHealth({ pet, orgId, apiUrl, onUpdate }: PetHealthPro
         {showAddMedicalRecord && (
           <div className={s.card} style={{ marginBottom: 16, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <h4 style={{ fontWeight: 600, marginBottom: 16, fontSize: '15px' }}>{editingMedicalRecord ? 'Редактировать запись' : 'Новая мед. запись'}</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
               <div><label className={s.fieldLabel}>Дата*</label><input type="date" className={s.inputNode} value={newMedicalRecord.date} onChange={e => setNewMedicalRecord({...newMedicalRecord, date: e.target.value})} /></div>
               <div>
                 <label className={s.fieldLabel}>Категория</label>

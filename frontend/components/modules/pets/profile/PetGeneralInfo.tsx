@@ -395,7 +395,7 @@ export default function PetGeneralInfo({ pet, orgId, apiUrl, onUpdate }: PetGene
           <div className={s.sectionDesc}>Базовая информация о питомце. Наведите на поле, чтобы отредактировать.</div>
         </div>
         <div className={s.card}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
             <EditableRow field="name" label="Имя питомца" value={pet.name || ''} displayValue={pet.name || '—'} />
             
             {/* Вид не так просто редактировать инлайн (нужно менять species_id), пока оставим view-only или селект: */}
@@ -433,14 +433,14 @@ export default function PetGeneralInfo({ pet, orgId, apiUrl, onUpdate }: PetGene
                     ✏️
                   </button>
 
-                  <div style={{ display: 'flex', gap: 40, flex: 1 }}>
-                    <div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 32px', flex: 1 }}>
+                    <div style={{ minWidth: 140 }}>
                       <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>Возраст (авто-расчёт)</div>
                       <div style={{ fontSize: 15, color: '#111827', display: 'flex', alignItems: 'center', gap: 6, minHeight: 28 }}>
                         🎂 {ageString}
                       </div>
                     </div>
-                    <div>
+                    <div style={{ minWidth: 140 }}>
                       <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>Дата рождения</div>
                       <div style={{ fontSize: 15, color: '#111827', minHeight: 28, display: 'flex', alignItems: 'center' }}>
                         {pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('ru-RU') : 'Не указана'}
@@ -473,7 +473,7 @@ export default function PetGeneralInfo({ pet, orgId, apiUrl, onUpdate }: PetGene
           <div className={s.sectionDesc}>Окрас, шерсть, размер и особые приметы питомца.</div>
         </div>
         <div className={s.card}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
             <EditableRow 
               field="size" label="Размер" 
               value={pet.size || ''} 
@@ -497,7 +497,7 @@ export default function PetGeneralInfo({ pet, orgId, apiUrl, onUpdate }: PetGene
           <div className={s.sectionDesc}>Данные о стерилизации или кастрации питомца.</div>
         </div>
         <div className={s.card}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
             <EditableRow 
               field="sterilization_date" label="Дата стерилизации (кастрации)" 
               value={pet.sterilization_date || ''} 

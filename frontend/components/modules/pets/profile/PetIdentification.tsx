@@ -168,14 +168,14 @@ export default function PetIdentification({ pet, orgId, apiUrl, onUpdate, extraA
           </div>
         </div>
         {/* Первая строка: только номера (бирка, клеймо, чип) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 mb-5">
+        <div className="grid grid-cols-1 xl:grid-cols-3 lg:grid-cols-2 gap-4 xl:gap-5 mb-5">
           {renderEditableRow({ field: "tag_number",  label: "№ бирки",   value: pet.tag_number,  displayValue: pet.tag_number,    })}
           {renderEditableRow({ field: "brand_number",  label: "Клеймо",   value: pet.brand_number,  displayValue: pet.brand_number,    })}
           {renderEditableRow({ field: "chip_number",  label: "№ чипа",   value: pet.chip_number,  displayValue: pet.chip_number,    })}
         </div>
         
         {/* Вторая строка: дата, специалист и организация */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 xl:grid-cols-3 lg:grid-cols-2 gap-4 xl:gap-5">
           {renderEditableRow({ field: "marking_date",  label: "Дата маркирования",   value: pet.marking_date,  displayValue: formatDate(pet.marking_date),   as: "date",   })}
           {renderEditableRow({ field: "marking_specialist",  label: "Специалист",   value: pet.marking_specialist,  displayValue: pet.marking_specialist,   placeholder: "ФИО специалиста",   })}
           {renderEditableRow({ field: "marking_org",  label: "Организация",   value: pet.marking_org,  displayValue: pet.marking_org,   placeholder: "Название клиники/организации",   })}
