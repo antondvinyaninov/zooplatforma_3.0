@@ -46,6 +46,15 @@ export default function NotificationsDropdown() {
             if (data.type === 'new_notification') {
               // Мгновенно увеличиваем счетчик
               setUnreadCount((prev) => prev + 1);
+
+              // Воспроизводим звук (Мяу!)
+              try {
+                const audio = new Audio('/sounds/meow.mp3');
+                // Звук может быть заблокирован браузером, если юзер еще не кликнул по странице
+                audio.play().catch(e => console.log('Audio playback blocked by browser expectedly:', e));
+              } catch (e) {
+                console.error("Failed to play sound", e);
+              }
               
               // Если дропдаун открыт, пытаемся подгрузить новые
               if (isOpen) {
