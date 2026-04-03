@@ -441,7 +441,8 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
   };
 
   const handleShare = async (type: 'copy' | 'vk' | 'telegram' | 'whatsapp') => {
-    const postUrl = `${window.location.origin}/?metka=${post.id}`;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://zooplatforma.ru';
+    const postUrl = `${baseUrl}/?metka=${post.id}`;
     const text = post.content.substring(0, 100) + (post.content.length > 100 ? '...' : '');
 
     switch (type) {
@@ -1000,7 +1001,8 @@ function PostCard({ post, onDelete, onUpdate }: PostCardProps) {
 
                 if (navigator.share) {
                   try {
-                    const postUrl = `${window.location.origin}/?metka=${post.id}`;
+                    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://zooplatforma.ru';
+                    const postUrl = `${baseUrl}/?metka=${post.id}`;
                     const shareTitle = `ЗооПлатформа | ${post.author_type === 'organization' ? post.organization?.short_name || post.organization?.name : getFullName(post.user?.first_name || post.user?.name || '', post.user?.last_name)}`;
                     const shareText = post.content.substring(0, 100) + (post.content.length > 100 ? '...' : '');
                     

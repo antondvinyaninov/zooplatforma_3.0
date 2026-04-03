@@ -229,7 +229,8 @@ export default function CatalogPage() {
 
   // Быстрые действия
   const handleShare = async (petId: number) => {
-    const url = `${window.location.origin}/petid/${petId}`;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://zooplatforma.ru';
+    const url = `${baseUrl}/petid/${petId}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedPetId(petId);
