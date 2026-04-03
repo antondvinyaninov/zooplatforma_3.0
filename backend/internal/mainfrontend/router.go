@@ -79,8 +79,13 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 				return
 			}
 			userID := userIDInterface.(int)
-			// Используем ID 9999, чтобы система не подумала, что пользователь лайкает сам себя (в этом случае пуш отменяется)
-			err := notificationSvc.NotifyNewLike(c.Request.Context(), userID, 9999, "Системный Кот", "post", 1)
+			// Находим любого другого пользователя для симуляции лайка (чтобы не сработал Foreign Key constraint и защита от самолайков)
+			var botID int
+			err := db.QueryRow("SELECT id FROM users WHERE id != $1 LIMIT 1", userID).Scan(&botID)
+			if err != nil {
+				botID = userID // fallback (но тогда защита срежет пуш)
+			}
+			err = notificationSvc.NotifyNewLike(c.Request.Context(), userID, botID, "Тестировщик Системы", "post", 1)
 			if err != nil {
 				c.JSON(500, gin.H{"error": err.Error()})
 				return
