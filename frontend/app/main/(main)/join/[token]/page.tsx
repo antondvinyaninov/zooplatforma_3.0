@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api';
 import { getMediaUrl } from '@/lib/utils';
@@ -12,8 +12,10 @@ interface InviteData {
   participants_count: number;
 }
 
-export default function JoinChatPage({ params }: { params: { token: string } }) {
+export default function JoinChatPage({ params }: { params: Promise<{ token: string }> }) {
   const router = useRouter();
+  const resolvedParams = use(params);
+  const token = resolvedParams.token;
   const [data, setData] = useState<InviteData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
@@ -22,7 +24,7 @@ export default function JoinChatPage({ params }: { params: { token: string } }) 
   useEffect(() => {
     const fetchPreview = async () => {
       try {
-        const res = await apiClient.get<InviteData>(`/api/chats/invite/${params.token}/preview`);
+        const res = await apiClient.get<InviteData>(`/api/chats/invite/${token}/preview`);
         if (res.success && res.data) {
           setData(res.data);
         } else {
@@ -35,12 +37,12 @@ export default function JoinChatPage({ params }: { params: { token: string } }) 
       }
     };
     fetchPreview();
-  }, [params.token]);
+  }, [token]);
 
   const handleJoin = async () => {
     setIsJoining(true);
     try {
-      const res = await apiClient.post<{ chat_id: number }>(`/api/chats/invite/${params.token}/join`, {});
+      const res = await apiClient.post<{ chat_id: number }>(`/api/chats/invite/${token}/join`, {});
       if (res.success && res.data?.chat_id) {
         router.push(`/main/messenger?chatId=${res.data.chat_id}`);
       } else {
