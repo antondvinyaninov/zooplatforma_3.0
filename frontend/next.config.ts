@@ -19,6 +19,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 's3.firstvds.ru',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: '*.vkuserphoto.ru',
         port: '',
         pathname: '/**',
