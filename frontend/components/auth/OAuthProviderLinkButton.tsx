@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type Provider = 'ok_ru' | 'mail_ru';
 
@@ -57,13 +57,26 @@ export default function OAuthProviderLinkButton({
   const onSuccessRef = useRef<typeof onSuccess>(onSuccess);
   const onErrorRef = useRef<typeof onError>(onError);
   const initializedRef = useRef(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     onSuccessRef.current = onSuccess;
     onErrorRef.current = onError;
   }, [onSuccess, onError]);
 
+  const isLocalhost =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.startsWith('192.168.'));
+
   useEffect(() => {
+    if (isLocalhost) return;
+
     let isCancelled = false;
     if (!containerRef.current || initializedRef.current) return;
     initializedRef.current = true;
@@ -154,6 +167,17 @@ export default function OAuthProviderLinkButton({
       if (containerRef.current) containerRef.current.innerHTML = '';
     };
   }, [provider, endpoint, idField]);
+
+  if (mounted && isLocalhost) {
+    return (
+      <div className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-400 cursor-not-allowed select-none">
+        <svg className="w-5 h-5 opacity-40" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+        </svg>
+        <span>Недоступно (localhost)</span>
+      </div>
+    );
+  }
 
   return <div ref={containerRef} className="vkid-container max-w-[320px]" />;
 }
