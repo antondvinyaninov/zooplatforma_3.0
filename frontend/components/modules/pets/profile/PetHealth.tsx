@@ -49,6 +49,52 @@ interface Treatment {
   notes?: string;
 }
 
+function DateField({ label, value, onChange, required = false }: { label: string, value: string, onChange: (val: string) => void, required?: boolean }) {
+  const [manual, setManual] = useState(false);
+  const [rawText, setRawText] = useState('');
+
+  useEffect(() => {
+    if (value && value.includes('-')) {
+      const parts = value.split('-');
+      if (parts.length === 3) setRawText(`${parts[2]}.${parts[1]}.${parts[0]}`);
+      else setRawText(value);
+    } else {
+      setRawText(value || '');
+    }
+  }, [value, manual]);
+
+  const handleRawChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let t = e.target.value;
+    if (e.nativeEvent && (e.nativeEvent as any).inputType !== 'deleteContentBackward') {
+      if (t.length === 2 && !t.includes('.')) t += '.';
+      else if (t.length === 5 && (t.match(/\./g) || []).length === 1) t += '.';
+    }
+    setRawText(t);
+    const match = t.match(/^(\d{2})[.,/](\d{2})[.,/](\d{4})$/);
+    if (match) {
+      onChange(`${match[3]}-${match[2]}-${match[1]}`);
+    } else {
+      onChange(t);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <label className={s.fieldLabel} style={{ marginBottom: 0 }}>{label}{required ? '*' : ''}</label>
+        <button type="button" onClick={() => setManual(!manual)} style={{ fontSize: 11, color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          {manual ? 'Календарь' : 'Ввести вручную'}
+        </button>
+      </div>
+      {manual ? (
+        <input type="text" className={s.inputNode} placeholder="ДД.ММ.ГГГГ" value={rawText} onChange={handleRawChange} />
+      ) : (
+        <input type="date" className={s.inputNode} value={value} onChange={e => onChange(e.target.value)} />
+      )}
+    </div>
+  );
+}
+
 export default function PetHealth({ pet, orgId, apiUrl, onUpdate }: PetHealthProps) {
   // State for Weight editing
   const [isEditingWeight, setIsEditingWeight] = useState(false);
@@ -373,7 +419,7 @@ export default function PetHealth({ pet, orgId, apiUrl, onUpdate }: PetHealthPro
           <div className={s.card} style={{ marginBottom: 16, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <h4 style={{ fontWeight: 600, marginBottom: 16, fontSize: '15px' }}>{editingVaccination ? 'Редактировать прививку' : 'Новая прививка'}</h4>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
-              <div><label className={s.fieldLabel}>Дата*</label><input type="date" className={s.inputNode} value={newVaccination.date} onChange={e => setNewVaccination({...newVaccination, date: e.target.value})} /></div>
+              <DateField label="Дата" required value={newVaccination.date} onChange={v => setNewVaccination({...newVaccination, date: v})} />
               <div>
                 <label className={s.fieldLabel}>Тип вакцины</label>
                 <select className={s.inputNode} value={newVaccination.vaccine_type} onChange={e => setNewVaccination({...newVaccination, vaccine_type: e.target.value})}>
@@ -384,7 +430,7 @@ export default function PetHealth({ pet, orgId, apiUrl, onUpdate }: PetHealthPro
                 </select>
               </div>
               <div><label className={s.fieldLabel}>Название вакцины*</label><input type="text" className={s.inputNode} placeholder="Нобивак Rabies" value={newVaccination.vaccine_name} onChange={e => setNewVaccination({...newVaccination, vaccine_name: e.target.value})} /></div>
-              <div><label className={s.fieldLabel}>Следующая (дата)</label><input type="date" className={s.inputNode} value={newVaccination.next_date || ''} onChange={e => setNewVaccination({...newVaccination, next_date: e.target.value})} /></div>
+              <DateField label="Следующая (дата)" value={newVaccination.next_date || ''} onChange={v => setNewVaccination({...newVaccination, next_date: v})} />
               <div><label className={s.fieldLabel}>Ветеринар</label><input type="text" className={s.inputNode} value={newVaccination.veterinarian || ''} onChange={e => setNewVaccination({...newVaccination, veterinarian: e.target.value})} /></div>
               <div><label className={s.fieldLabel}>Клиника</label><input type="text" className={s.inputNode} value={newVaccination.clinic || ''} onChange={e => setNewVaccination({...newVaccination, clinic: e.target.value})} /></div>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -477,7 +523,7 @@ export default function PetHealth({ pet, orgId, apiUrl, onUpdate }: PetHealthPro
           <div className={s.card} style={{ marginBottom: 16, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <h4 style={{ fontWeight: 600, marginBottom: 16, fontSize: '15px' }}>{editingTreatment ? 'Редактировать обработку' : 'Новая обработка'}</h4>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
-              <div><label className={s.fieldLabel}>Дата*</label><input type="date" className={s.inputNode} value={newTreatment.date} onChange={e => setNewTreatment({...newTreatment, date: e.target.value})} /></div>
+              <DateField label="Дата" required value={newTreatment.date} onChange={v => setNewTreatment({...newTreatment, date: v})} />
               <div>
                 <label className={s.fieldLabel}>Тип обработки</label>
                 <select className={s.inputNode} value={newTreatment.treatment_type} onChange={e => setNewTreatment({...newTreatment, treatment_type: e.target.value})}>
@@ -488,7 +534,7 @@ export default function PetHealth({ pet, orgId, apiUrl, onUpdate }: PetHealthPro
               </div>
               <div><label className={s.fieldLabel}>Препарат*</label><input type="text" className={s.inputNode} placeholder="Симпарика, Мильбемакс" value={newTreatment.product_name} onChange={e => setNewTreatment({...newTreatment, product_name: e.target.value})} /></div>
               <div><label className={s.fieldLabel}>Дозировка</label><input type="text" className={s.inputNode} value={newTreatment.dosage || ''} onChange={e => setNewTreatment({...newTreatment, dosage: e.target.value})} /></div>
-              <div><label className={s.fieldLabel}>Следующая обработка</label><input type="date" className={s.inputNode} value={newTreatment.next_date || ''} onChange={e => setNewTreatment({...newTreatment, next_date: e.target.value})} /></div>
+              <DateField label="Следующая обработка" value={newTreatment.next_date || ''} onChange={v => setNewTreatment({...newTreatment, next_date: v})} />
               <div style={{ gridColumn: '1 / -1' }}><label className={s.fieldLabel}>Примечания</label><input type="text" className={s.inputNode} value={newTreatment.notes || ''} onChange={e => setNewTreatment({...newTreatment, notes: e.target.value})} /></div>
             </div>
             <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
@@ -578,7 +624,7 @@ export default function PetHealth({ pet, orgId, apiUrl, onUpdate }: PetHealthPro
           <div className={s.card} style={{ marginBottom: 16, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <h4 style={{ fontWeight: 600, marginBottom: 16, fontSize: '15px' }}>{editingMedicalRecord ? 'Редактировать запись' : 'Новая мед. запись'}</h4>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
-              <div><label className={s.fieldLabel}>Дата*</label><input type="date" className={s.inputNode} value={newMedicalRecord.date} onChange={e => setNewMedicalRecord({...newMedicalRecord, date: e.target.value})} /></div>
+              <DateField label="Дата" required value={newMedicalRecord.date} onChange={v => setNewMedicalRecord({...newMedicalRecord, date: v})} />
               <div>
                 <label className={s.fieldLabel}>Категория</label>
                 <select className={s.inputNode} value={newMedicalRecord.record_type} onChange={e => setNewMedicalRecord({...newMedicalRecord, record_type: e.target.value})}>
