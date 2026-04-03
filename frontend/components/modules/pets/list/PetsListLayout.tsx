@@ -77,11 +77,24 @@ export default function PetsListLayout({
   if (isMobile) {
     const MobilePetsListLayout = require('../mobile/MobilePetsListLayout').default;
     return (
-      <MobilePetsListLayout
-        title={title} subtitle={subtitle} pets={pets} variant={variant}
-        petRoutePrefix={petRoutePrefix} extraHeaderActions={extraHeaderActions}
-        setShowModal={setShowModal}
-      />
+      <>
+        <MobilePetsListLayout
+          title={title} subtitle={subtitle} pets={pets} variant={variant}
+          petRoutePrefix={petRoutePrefix} extraHeaderActions={extraHeaderActions}
+          setShowModal={setShowModal}
+        />
+        {/* Модальное окно создания для мобильной версии */}
+        {showModal && (
+          <AddPetModal
+            orgId={orgId}
+            onClose={() => setShowModal(false)}
+            onSuccess={async () => {
+              setShowModal(false);
+              await fetchPets();
+            }}
+          />
+        )}
+      </>
     );
   }
 
