@@ -944,10 +944,10 @@ func (h *Handler) ToggleLike(c *gin.Context) {
 		var postAuthorID int
 		err := h.db.QueryRow(`SELECT author_id FROM posts WHERE id = $1 AND author_type = 'user'`, postID).Scan(&postAuthorID)
 		if err == nil && postAuthorID != userID {
-			_, _ = h.db.Exec(`
-				INSERT INTO notifications (user_id, actor_id, type, message, is_read, created_at, updated_at)
-				VALUES ($1, $2, 'like', 'оценил(а) вашу запись', false, NOW(), NOW())
-			`, postAuthorID, userID)
+			var likerName string
+			h.db.QueryRow("SELECT name FROM users WHERE id = $1", userID).Scan(&likerName)
+			postIDInt, _ := strconv.Atoi(postID)
+			_ = h.notificationSvc.NotifyNewLike(c.Request.Context(), postAuthorID, userID, likerName, "post", postIDInt)
 		}
 	}
 
