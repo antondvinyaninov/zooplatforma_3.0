@@ -71,8 +71,8 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		authGroup.POST("/impersonate/:id", authHandler.ImpersonateUser)
 		authGroup.GET("/me", authHandler.Me)
 
-		// Тестовый роут для отправки уведомления
-		authGroup.POST("/test-notification", func(c *gin.Context) {
+		// Тестовый роут для отправки уведомления (GET чтобы можно было дернуть из браузера)
+		authGroup.GET("/test-notification", func(c *gin.Context) {
 			userIDInterface, exists := c.Get("user_id")
 			if !exists {
 				c.JSON(401, gin.H{"error": "Unauthorized"})

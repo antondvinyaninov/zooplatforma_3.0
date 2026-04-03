@@ -171,6 +171,16 @@ export default function NotificationsDropdown() {
     }
   };
 
+  // Метод для вызова тестового уведомления:
+  const triggerTestNotification = async () => {
+    try {
+      await fetch('/api/auth/test-notification');
+      console.log('Тестовое уведомление запрошено у сервера');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleNotificationClick = (notification: Notification) => {
     // Отмечаем как прочитанное
     if (!notification.is_read) {
@@ -245,14 +255,23 @@ export default function NotificationsDropdown() {
           {/* Header */}
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">Уведомления</h3>
-            {unreadCount > 0 && (
+            <div className="flex gap-3">
               <button
-                onClick={handleMarkAllAsRead}
-                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                onClick={triggerTestNotification}
+                className="text-xs text-green-600 hover:text-green-700 font-medium border border-green-200 rounded px-2 py-1"
+                title="Отправить тестовое уведомление самому себе"
               >
-                Прочитать все
+                Тест пуша
               </button>
-            )}
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium self-center"
+                >
+                  Прочитать все
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Content */}
