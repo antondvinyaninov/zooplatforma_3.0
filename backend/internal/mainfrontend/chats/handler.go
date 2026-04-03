@@ -2,11 +2,14 @@ package chats
 
 import (
 	"bytes"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -42,31 +45,32 @@ func (h *Handler) GetChats(c *gin.Context) {
 
 	query := `
 		SELECT 
-			c.id,
+			c.id, c.type, c.name as group_name, c.avatar_url as group_avatar,
 			c.last_message_at,
-			c.user1_id,
-			c.user2_id,
+			cp.last_read_message_id,
 			COALESCE(um.unread_count, 0) as unread_count,
+			(SELECT COUNT(*) FROM chat_participants WHERE chat_id = c.id) as participants_count,
 			u.id as other_user_id,
 			u.name as other_user_name,
 			u.last_name as other_user_last_name,
 			u.avatar as other_user_avatar,
 			u.verified as other_user_verified,
 			u.last_seen as other_user_last_seen
-		FROM chats c
-		LEFT JOIN users u ON (
-			CASE 
-				WHEN c.user1_id = $1 THEN c.user2_id
-				ELSE c.user1_id
-			END = u.id
-		)
+		FROM chat_participants cp
+		JOIN chats c ON cp.chat_id = c.id
+		LEFT JOIN chat_participants cp_other ON cp_other.chat_id = c.id AND cp_other.user_id != cp.user_id AND c.type = 'direct'
+		LEFT JOIN users u ON cp_other.user_id = u.id
 		LEFT JOIN (
-			SELECT chat_id, COUNT(*) as unread_count 
-			FROM messages 
-			WHERE receiver_id = $1 AND is_read = false 
-			GROUP BY chat_id
-		) um ON um.chat_id = c.id
-		WHERE c.user1_id = $1 OR c.user2_id = $1
+			SELECT m.chat_id, cp_inner.user_id, COUNT(*) as unread_count 
+			FROM messages m
+			JOIN chat_participants cp_inner ON m.chat_id = cp_inner.chat_id
+			WHERE m.id > cp_inner.last_read_message_id
+			GROUP BY m.chat_id, cp_inner.user_id
+		) um ON um.chat_id = c.id AND um.user_id = cp.user_id
+		WHERE cp.user_id = $1 AND (
+			(c.last_message_id IS NULL AND COALESCE(cp.hidden_until_msg_id, 0) = 0) OR
+			(c.last_message_id > COALESCE(cp.hidden_until_msg_id, 0))
+		)
 		ORDER BY c.last_message_at DESC NULLS LAST
 	`
 
@@ -81,17 +85,20 @@ func (h *Handler) GetChats(c *gin.Context) {
 
 	for rows.Next() {
 		var (
-			chatID, user1ID, user2ID, unreadCount int
-			otherUserID                           int
-			otherUserName                         string
-			otherUserLastName                     sql.NullString
-			otherUserAvatar, otherUserLastSeen    sql.NullString
-			otherUserVerified                     bool
-			lastMessageAt                         sql.NullString
+			chatID, lastReadMessageID, unreadCount, participantsCount int
+			chatType                                                  string
+			groupName, groupAvatar                                    sql.NullString
+			otherUserID                                               sql.NullInt64
+			otherUserName                                             sql.NullString
+			otherUserLastName                                         sql.NullString
+			otherUserAvatar, otherUserLastSeen                        sql.NullString
+			otherUserVerified                                         sql.NullBool
+			lastMessageAt                                             sql.NullString
 		)
 
 		err := rows.Scan(
-			&chatID, &lastMessageAt, &user1ID, &user2ID, &unreadCount,
+			&chatID, &chatType, &groupName, &groupAvatar,
+			&lastMessageAt, &lastReadMessageID, &unreadCount, &participantsCount,
 			&otherUserID, &otherUserName, &otherUserLastName,
 			&otherUserAvatar, &otherUserVerified, &otherUserLastSeen,
 		)
@@ -101,20 +108,25 @@ func (h *Handler) GetChats(c *gin.Context) {
 		}
 
 		chat := map[string]interface{}{
-			"id":              chatID,
-			"user1_id":        user1ID,
-			"user2_id":        user2ID,
-			"last_message_at": lastMessageAt.String,
-			"unread_count":    unreadCount,
-			"other_user": map[string]interface{}{
-				"id":         otherUserID,
-				"name":       otherUserName,
+			"id":                 chatID,
+			"type":               chatType,
+			"name":               groupName.String,
+			"avatar_url":         groupAvatar.String,
+			"last_message_at":    lastMessageAt.String,
+			"unread_count":       unreadCount,
+			"participants_count": participantsCount,
+		}
+
+		if chatType == "direct" && otherUserID.Valid {
+			chat["other_user"] = map[string]interface{}{
+				"id":         otherUserID.Int64,
+				"name":       otherUserName.String,
 				"last_name":  otherUserLastName.String,
 				"avatar":     otherUserAvatar.String,
 				"avatar_url": otherUserAvatar.String,
-				"verified":   otherUserVerified,
+				"verified":   otherUserVerified.Bool,
 				"last_seen":  otherUserLastSeen.String,
-			},
+			}
 		}
 
 		chats = append(chats, chat)
@@ -126,21 +138,27 @@ func (h *Handler) GetChats(c *gin.Context) {
 // GetMessages - получить сообщения чата
 func (h *Handler) GetMessages(c *gin.Context) {
 	chatID := c.Param("id")
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
 
 	query := `
 		SELECT 
-			m.id, m.chat_id, m.sender_id, m.receiver_id,
-			m.content, m.is_read, m.read_at, m.created_at,
+			m.id, m.chat_id, m.sender_id,
+			m.content, m.created_at,
 			u.name as sender_name,
 			u.last_name as sender_last_name,
 			u.avatar as sender_avatar
 		FROM messages m
 		JOIN users u ON m.sender_id = u.id
-		WHERE m.chat_id = $1
+		WHERE m.chat_id = $1 AND m.id > COALESCE((SELECT hidden_until_msg_id FROM chat_participants WHERE chat_id = $1 AND user_id = $2), 0)
 		ORDER BY m.created_at ASC
 	`
 
-	rows, err := h.db.Query(query, chatID)
+	rows, err := h.db.Query(query, chatID, userID)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "error": err.Error()})
 		return
@@ -185,17 +203,15 @@ func (h *Handler) GetMessages(c *gin.Context) {
 
 	for rows.Next() {
 		var (
-			id, chatIDInt, senderID, receiverID int
-			content, createdAt                  string
-			isRead                              bool
-			readAt                              sql.NullString
-			senderName                          string
-			senderLastName, senderAvatar        sql.NullString
+			id, chatIDInt, senderID       int
+			content, createdAt            string
+			senderName                    string
+			senderLastName, senderAvatar  sql.NullString
 		)
 
 		err := rows.Scan(
-			&id, &chatIDInt, &senderID, &receiverID,
-			&content, &isRead, &readAt, &createdAt,
+			&id, &chatIDInt, &senderID,
+			&content, &createdAt,
 			&senderName, &senderLastName, &senderAvatar,
 		)
 		if err != nil {
@@ -212,10 +228,7 @@ func (h *Handler) GetMessages(c *gin.Context) {
 			"id":          id,
 			"chat_id":     chatIDInt,
 			"sender_id":   senderID,
-			"receiver_id": receiverID,
 			"content":     content,
-			"is_read":     isRead,
-			"read_at":     readAt.String,
 			"created_at":  createdAt,
 			"attachments": attachments,
 			"sender": map[string]interface{}{
@@ -243,7 +256,8 @@ func (h *Handler) SendMessage(c *gin.Context) {
 	userID := userIDInterface.(int)
 
 	var req struct {
-		ReceiverID int    `json:"receiver_id" binding:"required"`
+		ReceiverID int    `json:"receiver_id"`
+		ChatID     int    `json:"chat_id"`
 		Content    string `json:"content" binding:"required"`
 	}
 
@@ -252,41 +266,43 @@ func (h *Handler) SendMessage(c *gin.Context) {
 		return
 	}
 
-	// Проверяем, существует ли чат между пользователями
-	var chatID int
-	checkChatQuery := `
-		SELECT id FROM chats 
-		WHERE (user1_id = $1 AND user2_id = $2) 
-		   OR (user1_id = $2 AND user2_id = $1)
-		LIMIT 1
-	`
-	err := h.db.QueryRow(checkChatQuery, userID, req.ReceiverID).Scan(&chatID)
+	var chatID = req.ChatID
 
-	if err == sql.ErrNoRows {
-		// Создаем новый чат
-		createChatQuery := `
-			INSERT INTO chats (user1_id, user2_id, created_at)
-			VALUES ($1, $2, NOW())
-			RETURNING id
+	if chatID == 0 && req.ReceiverID > 0 {
+		// Поиск P2P чата
+		checkChatQuery := `
+			SELECT c.id FROM chats c
+			JOIN chat_participants cp1 ON c.id = cp1.chat_id AND cp1.user_id = $1
+			JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id = $2
+			WHERE c.type = 'direct'
+			LIMIT 1
 		`
-		err = h.db.QueryRow(createChatQuery, userID, req.ReceiverID).Scan(&chatID)
-		if err != nil {
-			c.JSON(500, gin.H{"success": false, "error": "Failed to create chat"})
+		err := h.db.QueryRow(checkChatQuery, userID, req.ReceiverID).Scan(&chatID)
+		if err == sql.ErrNoRows {
+			// Создаем новый P2P чат
+			err = h.db.QueryRow(`INSERT INTO chats (type, created_at) VALUES ('direct', NOW()) RETURNING id`).Scan(&chatID)
+			if err != nil {
+				c.JSON(500, gin.H{"success": false, "error": "Failed to create chat"})
+				return
+			}
+			h.db.Exec(`INSERT INTO chat_participants (chat_id, user_id) VALUES ($1, $2), ($1, $3)`, chatID, userID, req.ReceiverID)
+		} else if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": err.Error()})
 			return
 		}
-	} else if err != nil {
-		c.JSON(500, gin.H{"success": false, "error": err.Error()})
+	} else if chatID == 0 {
+		c.JSON(400, gin.H{"success": false, "error": "Either chat_id or receiver_id is required"})
 		return
 	}
 
 	// Создаем сообщение
 	var messageID int
 	insertMessageQuery := `
-		INSERT INTO messages (chat_id, sender_id, receiver_id, content, created_at)
-		VALUES ($1, $2, $3, $4, NOW())
+		INSERT INTO messages (chat_id, sender_id, content, created_at)
+		VALUES ($1, $2, $3, NOW())
 		RETURNING id
 	`
-	err = h.db.QueryRow(insertMessageQuery, chatID, userID, req.ReceiverID, req.Content).Scan(&messageID)
+	err := h.db.QueryRow(insertMessageQuery, chatID, userID, req.Content).Scan(&messageID)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "error": "Failed to send message"})
 		return
@@ -316,10 +332,8 @@ func (h *Handler) SendMessage(c *gin.Context) {
 				"id":          messageID,
 				"chat_id":     chatID,
 				"sender_id":   userID,
-				"receiver_id": req.ReceiverID,
 				"content":     req.Content,
 				"created_at":  time.Now().Format(time.RFC3339),
-				"is_read":     false,
 				"attachments": []map[string]interface{}{},
 				"sender": map[string]interface{}{
 					"id":         userID,
@@ -331,17 +345,36 @@ func (h *Handler) SendMessage(c *gin.Context) {
 			},
 		}
 		msgBytes, _ := json.Marshal(msgPayload)
-		h.hub.SendToUser(req.ReceiverID, msgBytes)
-		h.hub.SendToUser(userID, msgBytes)
 
-		var unreadCount int
-		h.db.QueryRow(`SELECT COUNT(*) FROM messages WHERE receiver_id = $1 AND is_read = false`, req.ReceiverID).Scan(&unreadCount)
-		unreadPayload := map[string]interface{}{
-			"type": "unread_count",
-			"data": map[string]interface{}{"count": unreadCount},
+		// Получаем всех участников чата
+		rows, _ := h.db.Query(`SELECT user_id FROM chat_participants WHERE chat_id = $1`, chatID)
+		defer rows.Close()
+		var pIDs []int
+		for rows.Next() {
+			var pID int
+			if rows.Scan(&pID) == nil {
+				pIDs = append(pIDs, pID)
+			}
 		}
-		unreadBytes, _ := json.Marshal(unreadPayload)
-		h.hub.SendToUser(req.ReceiverID, unreadBytes)
+		h.hub.BroadcastToUsers(pIDs, msgBytes)
+
+		// Отправляем счетчик непрочитанных всем КРОМЕ отправителя (грубая оценка)
+		for _, pID := range pIDs {
+			if pID != userID {
+				var unreadCount int
+				h.db.QueryRow(`
+					SELECT COUNT(*) FROM messages m
+					JOIN chat_participants cp ON m.chat_id = cp.chat_id AND cp.user_id = $1
+					WHERE m.id > cp.last_read_message_id
+				`, pID).Scan(&unreadCount)
+				unreadPayload := map[string]interface{}{
+					"type": "unread_count",
+					"data": map[string]interface{}{"count": unreadCount},
+				}
+				unreadBytes, _ := json.Marshal(unreadPayload)
+				h.hub.SendToUser(pID, unreadBytes)
+			}
+		}
 	}
 }
 
@@ -356,11 +389,9 @@ func (h *Handler) MarkAsRead(c *gin.Context) {
 	chatID := c.Param("id")
 
 	query := `
-		UPDATE messages 
-		SET is_read = true, read_at = NOW()
-		WHERE chat_id = $1 
-		  AND receiver_id = $2 
-		  AND is_read = false
+		UPDATE chat_participants 
+		SET last_read_message_id = COALESCE((SELECT MAX(id) FROM messages WHERE chat_id = $1), 0)
+		WHERE chat_id = $1 AND user_id = $2
 	`
 
 	_, err := h.db.Exec(query, chatID, userID)
@@ -369,10 +400,13 @@ func (h *Handler) MarkAsRead(c *gin.Context) {
 		return
 	}
 
-	// Отправляем обновленный счетчик по вебсокету
 	if h.hub != nil {
 		var unreadCount int
-		h.db.QueryRow(`SELECT COUNT(*) FROM messages WHERE receiver_id = $1 AND is_read = false`, userID).Scan(&unreadCount)
+		h.db.QueryRow(`
+			SELECT COUNT(*) FROM messages m
+			JOIN chat_participants cp ON m.chat_id = cp.chat_id AND cp.user_id = $1
+			WHERE m.id > cp.last_read_message_id
+		`, userID).Scan(&unreadCount)
 		
 		unreadPayload := map[string]interface{}{
 			"type": "unread_count",
@@ -396,9 +430,9 @@ func (h *Handler) GetUnreadCount(c *gin.Context) {
 
 	var count int
 	query := `
-		SELECT COUNT(*) 
-		FROM messages 
-		WHERE receiver_id = $1 AND is_read = false
+		SELECT COUNT(*) FROM messages m
+		JOIN chat_participants cp ON m.chat_id = cp.chat_id AND cp.user_id = $1
+		WHERE m.id > cp.last_read_message_id
 	`
 
 	err := h.db.QueryRow(query, userID).Scan(&count)
@@ -425,17 +459,21 @@ func (h *Handler) SendMessageWithMedia(c *gin.Context) {
 	userID := userIDInterface.(int)
 
 	receiverIDStr := c.PostForm("receiver_id")
+	chatIDStr := c.PostForm("chat_id")
 	content := c.PostForm("content")
 
-	if receiverIDStr == "" {
-		c.JSON(400, gin.H{"success": false, "error": "receiver_id is required"})
-		return
+	var receiverID int
+	var chatID int
+
+	if receiverIDStr != "" {
+		fmt.Sscanf(receiverIDStr, "%d", &receiverID)
+	}
+	if chatIDStr != "" {
+		fmt.Sscanf(chatIDStr, "%d", &chatID)
 	}
 
-	receiverID := 0
-	_, err := fmt.Sscanf(receiverIDStr, "%d", &receiverID)
-	if err != nil {
-		c.JSON(400, gin.H{"success": false, "error": "Invalid receiver_id"})
+	if chatID == 0 && receiverID == 0 {
+		c.JSON(400, gin.H{"success": false, "error": "Either chat_id or receiver_id is required"})
 		return
 	}
 
@@ -452,31 +490,28 @@ func (h *Handler) SendMessageWithMedia(c *gin.Context) {
 		return
 	}
 
-	// Проверяем, существует ли чат между пользователями
-	var chatID int
-	checkChatQuery := `
-		SELECT id FROM chats 
-		WHERE (user1_id = $1 AND user2_id = $2) 
-		   OR (user1_id = $2 AND user2_id = $1)
-		LIMIT 1
-	`
-	err = h.db.QueryRow(checkChatQuery, userID, receiverID).Scan(&chatID)
-
-	if err == sql.ErrNoRows {
-		// Создаем новый чат
-		createChatQuery := `
-			INSERT INTO chats (user1_id, user2_id, created_at)
-			VALUES ($1, $2, NOW())
-			RETURNING id
+	if chatID == 0 && receiverID > 0 {
+		// Поиск P2P чата
+		checkChatQuery := `
+			SELECT c.id FROM chats c
+			JOIN chat_participants cp1 ON c.id = cp1.chat_id AND cp1.user_id = $1
+			JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id = $2
+			WHERE c.type = 'direct'
+			LIMIT 1
 		`
-		err = h.db.QueryRow(createChatQuery, userID, receiverID).Scan(&chatID)
-		if err != nil {
-			c.JSON(500, gin.H{"success": false, "error": "Failed to create chat"})
+		err := h.db.QueryRow(checkChatQuery, userID, receiverID).Scan(&chatID)
+		if err == sql.ErrNoRows {
+			// Создаем новый P2P чат
+			err = h.db.QueryRow(`INSERT INTO chats (type, created_at) VALUES ('direct', NOW()) RETURNING id`).Scan(&chatID)
+			if err != nil {
+				c.JSON(500, gin.H{"success": false, "error": "Failed to create chat"})
+				return
+			}
+			h.db.Exec(`INSERT INTO chat_participants (chat_id, user_id) VALUES ($1, $2), ($1, $3)`, chatID, userID, receiverID)
+		} else if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": err.Error()})
 			return
 		}
-	} else if err != nil {
-		c.JSON(500, gin.H{"success": false, "error": err.Error()})
-		return
 	}
 
 	// Загружаем файлы в S3 и сохраняем в user_media
@@ -552,11 +587,11 @@ func (h *Handler) SendMessageWithMedia(c *gin.Context) {
 
 	var messageID int
 	insertMessageQuery := `
-		INSERT INTO messages (chat_id, sender_id, receiver_id, content, created_at)
-		VALUES ($1, $2, $3, $4, NOW())
+		INSERT INTO messages (chat_id, sender_id, content, created_at)
+		VALUES ($1, $2, $3, NOW())
 		RETURNING id
 	`
-	err = h.db.QueryRow(insertMessageQuery, chatID, userID, receiverID, content).Scan(&messageID)
+	err = h.db.QueryRow(insertMessageQuery, chatID, userID, content).Scan(&messageID)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "error": "Failed to send message"})
 		return
@@ -596,10 +631,8 @@ func (h *Handler) SendMessageWithMedia(c *gin.Context) {
 				"id":          messageID,
 				"chat_id":     chatID,
 				"sender_id":   userID,
-				"receiver_id": receiverID,
 				"content":     content,
 				"created_at":  time.Now().Format(time.RFC3339),
-				"is_read":     false,
 				"attachments": uploadedFiles,
 				"sender": map[string]interface{}{
 					"id":         userID,
@@ -611,16 +644,412 @@ func (h *Handler) SendMessageWithMedia(c *gin.Context) {
 			},
 		}
 		msgBytes, _ := json.Marshal(msgPayload)
-		h.hub.SendToUser(receiverID, msgBytes)
-		h.hub.SendToUser(userID, msgBytes)
 
-		var unreadCount int
-		h.db.QueryRow(`SELECT COUNT(*) FROM messages WHERE receiver_id = $1 AND is_read = false`, receiverID).Scan(&unreadCount)
-		unreadPayload := map[string]interface{}{
-			"type": "unread_count",
-			"data": map[string]interface{}{"count": unreadCount},
+		// Получаем всех участников чата
+		rows, _ := h.db.Query(`SELECT user_id FROM chat_participants WHERE chat_id = $1`, chatID)
+		defer rows.Close()
+		var pIDs []int
+		for rows.Next() {
+			var pID int
+			if rows.Scan(&pID) == nil {
+				pIDs = append(pIDs, pID)
+			}
 		}
-		unreadBytes, _ := json.Marshal(unreadPayload)
-		h.hub.SendToUser(receiverID, unreadBytes)
+		h.hub.BroadcastToUsers(pIDs, msgBytes)
+
+		// Отправляем счетчик непрочитанных всем КРОМЕ отправителя (грубая оценка)
+		for _, pID := range pIDs {
+			if pID != userID {
+				var unreadCount int
+				h.db.QueryRow(`
+					SELECT COUNT(*) FROM messages m
+					JOIN chat_participants cp ON m.chat_id = cp.chat_id AND cp.user_id = $1
+					WHERE m.id > cp.last_read_message_id
+				`, pID).Scan(&unreadCount)
+				unreadPayload := map[string]interface{}{
+					"type": "unread_count",
+					"data": map[string]interface{}{"count": unreadCount},
+				}
+				unreadBytes, _ := json.Marshal(unreadPayload)
+				h.hub.SendToUser(pID, unreadBytes)
+			}
+		}
 	}
+}
+
+// CreateGroupChat - создать групповой чат
+func (h *Handler) CreateGroupChat(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
+
+	var req struct {
+		Name         string `json:"name" binding:"required"`
+		Participants []int  `json:"participants" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	// Добавляем создателя в список участников, если его там нет
+	hasCreator := false
+	for _, p := range req.Participants {
+		if p == userID {
+			hasCreator = true
+			break
+		}
+	}
+	if !hasCreator {
+		req.Participants = append(req.Participants, userID)
+	}
+
+	// Начинаем транзакцию? Можно и без нее для упрощения
+	var chatID int
+	err := h.db.QueryRow(`
+		INSERT INTO chats (type, name, creator_id, created_at)
+		VALUES ('group', $1, $2, NOW())
+		RETURNING id
+	`, req.Name, userID).Scan(&chatID)
+
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to create group chat"})
+		return
+	}
+
+	for _, pID := range req.Participants {
+		role := "member"
+		if pID == userID {
+			role = "admin"
+		}
+		h.db.Exec(`INSERT INTO chat_participants (chat_id, user_id, role) VALUES ($1, $2, $3)`, chatID, pID, role)
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": map[string]interface{}{"id": chatID}})
+}
+
+// GetParticipants returns all participants in a specific chat
+func (h *Handler) GetParticipants(c *gin.Context) {
+	chatID := c.Param("id")
+
+	query := `
+		SELECT 
+			u.id, u.name, u.last_name, u.avatar, u.verified, u.last_seen,
+			cp.role, cp.joined_at,
+			CASE WHEN ua.last_seen > NOW() - INTERVAL '5 minutes' THEN true ELSE false END as is_online
+		FROM chat_participants cp
+		JOIN users u ON cp.user_id = u.id
+		LEFT JOIN user_activity ua ON u.id = ua.user_id
+		WHERE cp.chat_id = $1
+		ORDER BY cp.joined_at ASC
+	`
+	rows, err := h.db.Query(query, chatID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var participants []map[string]interface{}
+	for rows.Next() {
+		var id int
+		var name, role string
+		var lastName, avatar sql.NullString
+		var verified sql.NullBool
+		var lastSeen sql.NullTime
+		var joinedAt sql.NullTime
+		var isOnline bool
+
+		if err := rows.Scan(&id, &name, &lastName, &avatar, &verified, &lastSeen, &role, &joinedAt, &isOnline); err != nil {
+			continue
+		}
+
+		lastSeenStr := ""
+		if lastSeen.Valid {
+			lastSeenStr = lastSeen.Time.Format(time.RFC3339)
+		}
+
+		participants = append(participants, map[string]interface{}{
+			"id":        id,
+			"name":      name,
+			"last_name": lastName.String,
+			"avatar":    avatar.String,
+			"verified":  verified.Bool,
+			"last_seen": lastSeenStr,
+			"is_online": isOnline,
+			"role":      role,
+			"joined_at": joinedAt.Time,
+		})
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": participants})
+}
+
+// AddParticipant adds a user to a group chat
+func (h *Handler) AddParticipant(c *gin.Context) {
+	chatID := c.Param("id")
+	var req struct {
+		UserID int `json:"user_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": "Invalid request"})
+		return
+	}
+
+	_, err := h.db.Exec(`INSERT INTO chat_participants (chat_id, user_id, role) VALUES ($1, $2, 'member') ON CONFLICT DO NOTHING`, chatID, req.UserID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to add participant"})
+		return
+	}
+	c.JSON(200, gin.H{"success": true})
+}
+
+// RemoveParticipant removes a user from a group chat (or self leave)
+func (h *Handler) RemoveParticipant(c *gin.Context) {
+	chatID := c.Param("id")
+	userID := c.Param("user_id")
+
+	_, err := h.db.Exec(`DELETE FROM chat_participants WHERE chat_id = $1 AND user_id = $2`, chatID, userID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to remove participant"})
+		return
+	}
+	c.JSON(200, gin.H{"success": true})
+}
+
+// UpdateChat updates group chat details like name
+func (h *Handler) UpdateChat(c *gin.Context) {
+	chatID := c.Param("id")
+	var req struct {
+		Name      string `json:"name"`
+		AvatarUrl string `json:"avatar_url"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": "Invalid request"})
+		return
+	}
+
+	query := "UPDATE chats SET "
+	args := []interface{}{}
+	argIdx := 1
+	updates := []string{}
+
+	if req.Name != "" {
+		updates = append(updates, fmt.Sprintf("name = $%d", argIdx))
+		args = append(args, req.Name)
+		argIdx++
+	}
+	if req.AvatarUrl != "" {
+		updates = append(updates, fmt.Sprintf("avatar_url = $%d", argIdx))
+		args = append(args, req.AvatarUrl)
+		argIdx++
+	}
+
+	if len(updates) == 0 {
+		c.JSON(200, gin.H{"success": true})
+		return
+	}
+
+	query += strings.Join(updates, ", ") + fmt.Sprintf(" WHERE id = $%d", argIdx)
+	args = append(args, chatID)
+
+	_, err := h.db.Exec(query, args...)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to update chat details"})
+		return
+	}
+	// We might need to broadcast a chat update event later?
+	c.JSON(200, gin.H{"success": true})
+}
+
+func (h *Handler) GetInviteLink(c *gin.Context) {
+	chatID := c.Param("id")
+
+	var inviteToken sql.NullString
+	err := h.db.QueryRow(`SELECT invite_token FROM chats WHERE id = $1`, chatID).Scan(&inviteToken)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Chat not found"})
+		return
+	}
+
+	token := inviteToken.String
+	if token == "" {
+		b := make([]byte, 16)
+		rand.Read(b)
+		token = hex.EncodeToString(b)
+		_, err = h.db.Exec(`UPDATE chats SET invite_token = $1 WHERE id = $2`, token, chatID)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Failed to generate token"})
+			return
+		}
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": map[string]string{"token": token}})
+}
+
+func (h *Handler) PreviewInvite(c *gin.Context) {
+	token := c.Param("token")
+	var id int
+	var name sql.NullString
+	var avatarUrl sql.NullString
+	var count int
+
+	query := `
+		SELECT c.id, c.name, c.avatar_url, (SELECT COUNT(*) FROM chat_participants WHERE chat_id = c.id) 
+		FROM chats c WHERE invite_token = $1
+	`
+	err := h.db.QueryRow(query, token).Scan(&id, &name, &avatarUrl, &count)
+	if err != nil {
+		c.JSON(404, gin.H{"success": false, "error": "Invite not found"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"data": map[string]interface{}{
+			"id":                 id,
+			"name":               name.String,
+			"avatar_url":         avatarUrl.String,
+			"participants_count": count,
+		},
+	})
+}
+
+func (h *Handler) JoinByInvite(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
+	token := c.Param("token")
+
+	var chatID int
+	err := h.db.QueryRow(`SELECT id FROM chats WHERE invite_token = $1`, token).Scan(&chatID)
+	if err != nil {
+		c.JSON(404, gin.H{"success": false, "error": "Invite not found"})
+		return
+	}
+
+	_, err = h.db.Exec(`INSERT INTO chat_participants (chat_id, user_id, role) VALUES ($1, $2, 'member') ON CONFLICT DO NOTHING`, chatID, userID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to join chat"})
+		return
+	}
+	c.JSON(200, gin.H{"success": true, "data": map[string]int{"chat_id": chatID}})
+}
+
+func (h *Handler) GetOrCreateDirectChat(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
+
+	var req struct {
+		UserID int `json:"user_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	if userID == req.UserID {
+		c.JSON(400, gin.H{"success": false, "error": "Cannot chat with yourself"})
+		return
+	}
+
+	var chatID int
+	checkChatQuery := `
+		SELECT c.id FROM chats c
+		JOIN chat_participants cp1 ON c.id = cp1.chat_id AND cp1.user_id = $1
+		JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id = $2
+		WHERE c.type = 'direct'
+		LIMIT 1
+	`
+	err := h.db.QueryRow(checkChatQuery, userID, req.UserID).Scan(&chatID)
+	if err == sql.ErrNoRows {
+		// Создаем новый P2P чат
+		err = h.db.QueryRow(`INSERT INTO chats (type, created_at, last_message_at) VALUES ('direct', NOW(), NOW()) RETURNING id`).Scan(&chatID)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Failed to create chat"})
+			return
+		}
+		// Добавляем участников
+		_, err = h.db.Exec(`INSERT INTO chat_participants (chat_id, user_id, role) VALUES ($1, $2, 'member'), ($1, $3, 'member')`, chatID, userID, req.UserID)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Failed to add participants"})
+			return
+		}
+	} else if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "data": map[string]int{"chat_id": chatID}})
+}
+
+// DeleteChat - мягкое удаление чата для юзера, либо жесткое удаление для админа группы
+func (h *Handler) DeleteChat(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	userID := userIDInterface.(int)
+	chatID := c.Param("id")
+
+	// Проверяем тип чата и права
+	var chatType string
+	var creatorID sql.NullInt64
+	var lastMessageID sql.NullInt64
+	err := h.db.QueryRow(`SELECT type, creator_id, last_message_id FROM chats WHERE id = $1`, chatID).Scan(&chatType, &creatorID, &lastMessageID)
+	if err == sql.ErrNoRows {
+		c.JSON(404, gin.H{"success": false, "error": "Chat not found"})
+		return
+	} else if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	if chatType == "group" && creatorID.Valid && int(creatorID.Int64) == userID {
+		// Админ удаляет групповой чат целиком
+		_, err := h.db.Exec(`DELETE FROM chats WHERE id = $1`, chatID)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Failed to delete group chat"})
+			return
+		}
+	} else {
+		// Участник удаляет личный чат или группу у себя (Soft delete)
+		hiddenMsgID := 0
+		if lastMessageID.Valid {
+			hiddenMsgID = int(lastMessageID.Int64)
+		} else {
+			// Чат пустой. Прячем полностью
+			hiddenMsgID = 2147483647
+		}
+
+		forAll := c.Query("for_all") == "true"
+
+		if forAll && chatType == "direct" {
+			// Удаляем у обоих (soft delete for all)
+			_, err = h.db.Exec(`UPDATE chat_participants SET hidden_until_msg_id = $1, last_read_message_id = $1 WHERE chat_id = $2`, hiddenMsgID, chatID)
+		} else {
+			// Удаляем только у себя
+			_, err = h.db.Exec(`UPDATE chat_participants SET hidden_until_msg_id = $1, last_read_message_id = $1 WHERE chat_id = $2 AND user_id = $3`, hiddenMsgID, chatID, userID)
+		}
+		
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "error": "Failed to hide chat"})
+			return
+		}
+	}
+
+	c.JSON(200, gin.H{"success": true})
 }

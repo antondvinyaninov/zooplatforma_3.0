@@ -10,7 +10,10 @@ import ChatList from './components/ChatList';
 import ChatHeader from './components/ChatHeader';
 import MessageList from './components/MessageList';
 import MessageInput from './components/MessageInput';
-import { Chat, Message } from './types';
+import CreateGroupModal from './components/CreateGroupModal';
+import GroupSettingsModal from './components/GroupSettingsModal';
+import DeleteChatModal from './components/DeleteChatModal';
+import { Chat, Message, User } from './types';
 
 export default function MessengerPage() {
   const router = useRouter();
@@ -20,6 +23,9 @@ export default function MessengerPage() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+  const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
   // Временные чаты до сих пор нужны для "открыть чат с пользователем Х" до того, как он появится на сервере
   const [tempChats, setTempChats] = useState<Chat[]>([]);
@@ -65,10 +71,8 @@ export default function MessengerPage() {
       
       const data = response.data || [];
       // Авто-пометка как прочитанное при загрузке
-      const hasUnread = data.some((msg: Message) => !msg.is_read && msg.sender_id !== user?.id);
-      if (hasUnread) {
-        apiClient.post(`/api/chats/${selectedChatId}/mark-read`, {}).catch(() => {});
-      }
+      // Вызываем mark-read если клиент загружает сообщения
+      apiClient.post(`/api/chats/${selectedChatId}/mark-read`, {}).catch(() => {});
       return data;
     },
     enabled: !!selectedChatId && selectedChatId > 0,
@@ -181,11 +185,15 @@ export default function MessengerPage() {
 
   // Отправка сообщений с Optimistic UI
   const sendMessageMutation = useMutation({
-    mutationFn: async ({ text, receiverId }: { text: string; receiverId: number }) => {
-      const response = await apiClient.post('/api/messages/send', {
-        receiver_id: receiverId,
-        content: text,
-      });
+    mutationFn: async ({ text, receiverId, chatId }: { text: string; receiverId?: number; chatId?: number }) => {
+      const payload: any = { content: text };
+      if (chatId && chatId > 0) {
+        payload.chat_id = chatId;
+      } else if (receiverId) {
+        payload.receiver_id = receiverId;
+      }
+      
+      const response = await apiClient.post('/api/messages/send', payload);
       if (!response.success) throw new Error('Send failed');
       return response.data; // Возвращаем реальное сообщение в ответе API
     },
@@ -202,7 +210,6 @@ export default function MessengerPage() {
         sender_id: user?.id || 0,
         content: text,
         created_at: new Date().toISOString(),
-        is_read: false,
       };
 
       // Мгновенно обновляем кэш
@@ -240,10 +247,14 @@ export default function MessengerPage() {
     if (!messageText.trim() || !selectedChatId) return;
 
     const selectedChat = chats.find((c) => c.id === selectedChatId);
-    if (!selectedChat?.other_user?.id) return;
+    if (!selectedChat) return;
 
     // Сразу кидаем мутацию и очищаем инпут (оптимистичный UI)
-    sendMessageMutation.mutate({ text: messageText.trim(), receiverId: selectedChat.other_user.id });
+    sendMessageMutation.mutate({ 
+      text: messageText.trim(), 
+      receiverId: selectedChat.other_user?.id, 
+      chatId: selectedChatId 
+    });
     setMessageText('');
   };
 
@@ -255,13 +266,18 @@ export default function MessengerPage() {
     if (!files || files.length === 0 || !selectedChatId) return;
 
     const selectedChat = chats.find((c) => c.id === selectedChatId);
-    if (!selectedChat?.other_user?.id) return;
+    if (!selectedChat) return;
 
     setSendingMedia(true);
 
     try {
       const formData = new FormData();
-      formData.append('receiver_id', selectedChat.other_user.id.toString());
+      if (selectedChatId > 0) {
+        formData.append('chat_id', selectedChatId.toString());
+      } else if (selectedChat.other_user?.id) {
+        formData.append('receiver_id', selectedChat.other_user.id.toString());
+      }
+      
       if (messageText.trim()) formData.append('content', messageText.trim());
 
       Array.from(files).forEach((file) => formData.append('media', file));
@@ -296,8 +312,21 @@ export default function MessengerPage() {
     setSelectedChatId(null);
   };
 
-  const handleSelectChat = (chatId: number) => {
+  const handleSelectChat = (chatId: number, otherUser?: User) => {
     setSelectedChatId(chatId);
+    
+    // Если чат заархивирован (прячется), но юзер инициализировал его снова — создаем временный кэш
+    if (otherUser && chatId > 0) {
+      setTempChats((prev) => {
+         const existsInServer = serverChats.some(c => c.id === chatId);
+         const existsInTemp = prev.some(c => c.id === chatId);
+         // Если чата нет нигде (скрыт), но мы его открываем — добавляем как фантомный в левое меню
+         if (!existsInServer && !existsInTemp) {
+            return [{ id: chatId, type: 'direct', other_user: otherUser, unread_count: 0 } as Chat, ...prev];
+         }
+         return prev;
+      });
+    }
     
     // Explicitly mark chat as read to clear the global badge immediately
     if (chatId > 0) {
@@ -307,6 +336,31 @@ export default function MessengerPage() {
           return oldChats.map(c => c.id === chatId ? { ...c, unread_count: 0 } : c);
         });
       }).catch(() => {});
+    }
+  };
+
+  const handleDeleteChat = async (chatId: number, forAll: boolean = false) => {
+    if (chatId < 0) {
+      // Это временный чат, который еще не создан на сервере
+      setTempChats(prev => prev.filter(tc => tc.id !== chatId));
+      setSelectedChatId(null);
+      setIsDeleteModalOpen(false);
+      return;
+    }
+
+    try {
+      const res = await apiClient.delete(`/api/chats/${chatId}${forAll ? '?for_all=true' : ''}`);
+      if (res.success) {
+        setSelectedChatId(null);
+        setIsDeleteModalOpen(false);
+        queryClient.invalidateQueries({ queryKey: ['chats'] });
+      } else {
+        alert('Не удалось удалить чат');
+        setIsDeleteModalOpen(false);
+      }
+    } catch (e) {
+      alert('Ошибка при удалении чата');
+      setIsDeleteModalOpen(false);
     }
   };
 
@@ -323,6 +377,7 @@ export default function MessengerPage() {
         currentUserId={user?.id}
         onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
         onSelectChat={handleSelectChat}
+        onCreateGroup={() => setIsCreateGroupModalOpen(true)}
       />
 
       {/* Правая часть - окно чата */}
@@ -330,7 +385,12 @@ export default function MessengerPage() {
         {selectedChatId ? (
           <>
             {/* Шапка чата */}
-            <ChatHeader user={selectedChat?.other_user || null} onClose={handleCloseChat} />
+            <ChatHeader 
+              chat={selectedChat || null} 
+              onClose={handleCloseChat} 
+              onOpenSettings={selectedChat?.type === 'group' ? () => setIsGroupSettingsOpen(true) : undefined}
+              onDelete={selectedChat?.type === 'direct' ? () => setIsDeleteModalOpen(true) : undefined}
+            />
 
             {/* Область сообщений */}
             <MessageList 
@@ -376,6 +436,41 @@ export default function MessengerPage() {
           </div>
         )}
       </div>
+
+      {isCreateGroupModalOpen && (
+        <CreateGroupModal
+          onClose={() => setIsCreateGroupModalOpen(false)}
+          onSuccess={(chatId) => {
+            setIsCreateGroupModalOpen(false);
+            queryClient.invalidateQueries({ queryKey: ['chats'] });
+            setSelectedChatId(chatId);
+          }}
+        />
+      )}
+
+      {isGroupSettingsOpen && selectedChat && user && (
+        <GroupSettingsModal
+          chat={selectedChat}
+          currentUserId={user.id}
+          onClose={() => setIsGroupSettingsOpen(false)}
+          onUpdate={() => {
+            queryClient.invalidateQueries({ queryKey: ['chats'] });
+            // Close settings if user left the chat
+            const chatExists = chats.find(c => c.id === selectedChat.id);
+            if (!chatExists) {
+              setSelectedChatId(null);
+            }
+          }}
+        />
+      )}
+
+      {isDeleteModalOpen && selectedChat && selectedChat.type === 'direct' && (
+        <DeleteChatModal
+          chatName={selectedChat.other_user?.name || 'пользователем'}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={(forAll) => handleDeleteChat(selectedChat.id, forAll)}
+        />
+      )}
     </div>
   );
 }

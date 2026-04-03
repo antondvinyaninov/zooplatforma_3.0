@@ -1,0 +1,14 @@
+--- backend/internal/mainfrontend/media/handler.go 2026-04-03 06:17:00.000000000 +0400
++++ backend/internal/mainfrontend/media/handler.go 2026-04-03 06:17:00.000000000 +0400
+@@ -62,6 +62,12 @@
+ 
+ // Upload - простая загрузка файла (для файлов <500MB)
+ func (h *Handler) Upload(c *gin.Context) {
++        defer func() {
++                if r := recover(); r != nil {
++                        c.JSON(500, gin.H{"success": false, "error": fmt.Sprintf("PANIC: %v", r)})
++                }
++        }()
++
+         // Получаем user_id из токена
+         userIDRaw, exists := c.Get("user_id")

@@ -197,8 +197,19 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 	chatsGroup := r.Group("/chats")
 	{
 		chatsGroup.GET("", chatsHandler.GetChats)
+		chatsGroup.POST("/group", chatsHandler.CreateGroupChat)
 		chatsGroup.GET("/:id/messages", chatsHandler.GetMessages)
 		chatsGroup.POST("/:id/mark-read", chatsHandler.MarkAsRead)
+		chatsGroup.GET("/:id/participants", chatsHandler.GetParticipants)
+		chatsGroup.POST("/:id/participants", chatsHandler.AddParticipant)
+		chatsGroup.DELETE("/:id/participants/:user_id", chatsHandler.RemoveParticipant)
+		chatsGroup.PUT("/:id", chatsHandler.UpdateChat)
+		
+		chatsGroup.GET("/:id/invite", chatsHandler.GetInviteLink)
+		chatsGroup.GET("/invite/:token/preview", chatsHandler.PreviewInvite)
+		chatsGroup.POST("/invite/:token/join", chatsHandler.JoinByInvite)
+		chatsGroup.POST("/direct", chatsHandler.GetOrCreateDirectChat)
+		chatsGroup.DELETE("/:id", chatsHandler.DeleteChat)
 	}
 
 	// Comments routes

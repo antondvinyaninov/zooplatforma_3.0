@@ -25,14 +25,18 @@ export interface Message {
   sender_id: number;
   content: string;
   created_at: string;
-  is_read?: boolean;
   attachments?: MessageAttachment[];
+  sender?: User;
 }
 
 export interface Chat {
   id: number;
-  other_user?: User;
+  type?: string; 
+  name?: string;
+  avatar_url?: string;
+  other_user?: User; // fallback for direct chats
   last_message?: Message;
   last_message_at?: string;
   unread_count: number;
+  participants_count?: number;
 }

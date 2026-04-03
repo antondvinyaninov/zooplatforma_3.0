@@ -206,16 +206,9 @@ export default function MessageList({ messages, currentUserId, isLoading }: Mess
                       </span>
                       {isMyMessage && (
                         <div className="flex items-center -ml-0.5">
-                          {message.is_read ? (
-                            <svg className={`w-[16px] h-[16px] shrink-0 ${isMediaOnly ? 'text-white' : 'text-white/90'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M18 6L7 17l-5-5"></path>
-                              <path d="M22 10l-7.5 7.5L13 16"></path>
-                            </svg>
-                          ) : (
-                            <svg className={`w-[16px] h-[16px] shrink-0 ${isMediaOnly ? 'text-white' : 'text-white/60'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M20 6L9 17l-5-5"></path>
-                            </svg>
-                          )}
+                          <svg className={`w-[16px] h-[16px] shrink-0 ${isMediaOnly ? 'text-white' : 'text-white/60'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 6L9 17l-5-5"></path>
+                          </svg>
                         </div>
                       )}
                     </div>

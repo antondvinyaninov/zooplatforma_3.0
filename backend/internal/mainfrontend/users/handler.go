@@ -31,6 +31,8 @@ func NewHandler(db *sql.DB, s3Client S3Client) *Handler {
 
 // GetAll - получить всех пользователей (админский функционал, но перенесен в монолит)
 func (h *Handler) GetAll(c *gin.Context) {
+	searchQuery := c.Query("q")
+	
 	query := `
 		SELECT 
 			u.id, u.name, u.email, u.last_name, 
@@ -38,10 +40,21 @@ func (h *Handler) GetAll(c *gin.Context) {
 			ua.last_seen
 		FROM users u
 		LEFT JOIN user_activity ua ON u.id = ua.user_id
-		ORDER BY u.created_at DESC
 	`
+	
+	args := []interface{}{}
+	if searchQuery != "" {
+		query += ` WHERE u.name ILIKE $1 OR u.last_name ILIKE $1 OR u.email ILIKE $1 OR CAST(u.id AS TEXT) ILIKE $1`
+		args = append(args, "%"+searchQuery+"%")
+	}
+	
+	query += ` ORDER BY u.created_at DESC`
 
-	rows, err := h.db.Query(query)
+	if searchQuery != "" {
+		query += ` LIMIT 100` // Limit if searching for performance
+	}
+
+	rows, err := h.db.Query(query, args...)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "error": err.Error()})
 		return

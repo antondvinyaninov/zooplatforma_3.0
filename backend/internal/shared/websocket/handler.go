@@ -30,22 +30,29 @@ type UserPayload struct {
 	Message []byte
 }
 
+type UsersPayload struct {
+	UserIDs []int
+	Message []byte
+}
+
 type Hub struct {
 	clients    map[*Client]bool
 	broadcast  chan []byte
-	sendToUser chan UserPayload
-	register   chan *Client
-	unregister chan *Client
-	mu         sync.RWMutex
+	sendToUser  chan UserPayload
+	sendToUsers chan UsersPayload
+	register    chan *Client
+	unregister  chan *Client
+	mu          sync.RWMutex
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		clients:    make(map[*Client]bool),
-		broadcast:  make(chan []byte),
-		sendToUser: make(chan UserPayload),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
+		clients:     make(map[*Client]bool),
+		broadcast:   make(chan []byte),
+		sendToUser:  make(chan UserPayload),
+		sendToUsers: make(chan UsersPayload),
+		register:    make(chan *Client),
+		unregister:  make(chan *Client),
 	}
 }
 
@@ -92,6 +99,25 @@ func (h *Hub) Run() {
 				}
 			}
 			h.mu.Unlock()
+
+		case payload := <-h.sendToUsers:
+			h.mu.Lock()
+			// Create a fast lookup map for target IDs
+			targetMap := make(map[int]bool)
+			for _, id := range payload.UserIDs {
+				targetMap[id] = true
+			}
+			for client := range h.clients {
+				if targetMap[client.userID] {
+					select {
+					case client.send <- payload.Message:
+					default:
+						close(client.send)
+						delete(h.clients, client)
+					}
+				}
+			}
+			h.mu.Unlock()
 		}
 	}
 }
@@ -116,6 +142,10 @@ func (h *Handler) GetHub() *Hub {
 
 func (h *Hub) SendToUser(userID int, message []byte) {
 	h.sendToUser <- UserPayload{UserID: userID, Message: message}
+}
+
+func (h *Hub) BroadcastToUsers(userIDs []int, message []byte) {
+	h.sendToUsers <- UsersPayload{UserIDs: userIDs, Message: message}
 }
 
 func (h *Handler) HandleWebSocket(c *gin.Context) {
