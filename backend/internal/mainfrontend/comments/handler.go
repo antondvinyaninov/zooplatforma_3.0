@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zooplatforma/backend/internal/shared/notificationservice"
 )
 
 type S3Client interface {
@@ -18,12 +19,17 @@ type S3Client interface {
 }
 
 type Handler struct {
-	db       *sql.DB
-	s3Client S3Client
+	db              *sql.DB
+	s3Client        S3Client
+	notificationSvc *notificationservice.Service
 }
 
-func NewHandler(db *sql.DB, s3Client S3Client) *Handler {
-	h := &Handler{db: db, s3Client: s3Client}
+func NewHandler(db *sql.DB, s3Client S3Client, notifSvc *notificationservice.Service) *Handler {
+	h := &Handler{
+		db:              db,
+		s3Client:        s3Client,
+		notificationSvc: notifSvc,
+	}
 	h.ensurePostsReplyColumns()
 	return h
 }
@@ -314,20 +320,18 @@ func (h *Handler) CreateComment(c *gin.Context) {
 
 	// Отправляем уведомления (вне транзакции, чтобы не откатывать коммент при ошибке уведомлений)
 	if commentStatus == "published" {
+		var commenterName string
+		h.db.QueryRow("SELECT name FROM users WHERE id = $1", userID).Scan(&commenterName)
+		postIDInt, _ := strconv.Atoi(postID)
+
 		// Уведомление автору поста (если это не его собственный коммент)
 		if userID != postAuthorID {
-			_, _ = h.db.Exec(`
-				INSERT INTO notifications (user_id, actor_id, type, message, is_read, created_at, updated_at)
-				VALUES ($1, $2, 'comment', 'прокомментировал(а) вашу запись', false, NOW(), NOW())
-			`, postAuthorID, userID)
+			_ = h.notificationSvc.NotifyNewComment(c.Request.Context(), postAuthorID, userID, commenterName, "post", postIDInt)
 		}
 
 		// Уведомление пользователю, которому ответили (если это ответ, и он не автор поста, чтобы не спамить дважды)
 		if replyToUserID != nil && *replyToUserID != userID && *replyToUserID != postAuthorID {
-			_, _ = h.db.Exec(`
-				INSERT INTO notifications (user_id, actor_id, type, message, is_read, created_at, updated_at)
-				VALUES ($1, $2, 'reply', 'ответил(а) на ваш комментарий', false, NOW(), NOW())
-			`, *replyToUserID, userID)
+			_ = h.notificationSvc.Notify(c.Request.Context(), *replyToUserID, "reply", &userID, "post", &postIDInt, fmt.Sprintf("%s ответил(а) на ваш комментарий", commenterName))
 		}
 	}
 

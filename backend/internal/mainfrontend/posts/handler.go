@@ -8,14 +8,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
+	"github.com/zooplatforma/backend/internal/shared/notificationservice"
 )
 
 type Handler struct {
-	db *sql.DB
+	db              *sql.DB
+	notificationSvc *notificationservice.Service
 }
 
-func NewHandler(db *sql.DB) *Handler {
-	h := &Handler{db: db}
+func NewHandler(db *sql.DB, notifSvc *notificationservice.Service) *Handler {
+	h := &Handler{
+		db:              db,
+		notificationSvc: notifSvc,
+	}
 	h.ensurePostsReplyColumns()
 	return h
 }

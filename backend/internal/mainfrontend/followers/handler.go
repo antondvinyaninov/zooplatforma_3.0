@@ -5,14 +5,19 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zooplatforma/backend/internal/shared/notificationservice"
 )
 
 type Handler struct {
-	db *sql.DB
+	db              *sql.DB
+	notificationSvc *notificationservice.Service
 }
 
-func NewHandler(db *sql.DB) *Handler {
-	return &Handler{db: db}
+func NewHandler(db *sql.DB, notifSvc *notificationservice.Service) *Handler {
+	return &Handler{
+		db:              db,
+		notificationSvc: notifSvc,
+	}
 }
 
 // Follow - подписаться на пользователя
@@ -60,10 +65,9 @@ func (h *Handler) Follow(c *gin.Context) {
 
 	if rowsAffected > 0 {
 		// Отправляем уведомление только если это новая подписка
-		_, _ = h.db.Exec(`
-			INSERT INTO notifications (user_id, actor_id, type, message, is_read, created_at, updated_at)
-			VALUES ($1, $2, 'follow', 'подписался(лась) на ваши обновления', false, NOW(), NOW())
-		`, targetID, currentUserID)
+		var followerName string
+		h.db.QueryRow("SELECT name FROM users WHERE id = $1", currentUserID).Scan(&followerName)
+		_ = h.notificationSvc.NotifyNewFollower(c.Request.Context(), targetID, currentUserID, followerName)
 	}
 
 	c.JSON(200, gin.H{"success": true, "message": "Successfully followed"})
