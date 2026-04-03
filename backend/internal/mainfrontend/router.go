@@ -79,7 +79,8 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 				return
 			}
 			userID := userIDInterface.(int)
-			err := notificationSvc.NotifyNewLike(c.Request.Context(), userID, 1, "Тестовый Бот", "post", 1)
+			// Используем ID 9999, чтобы система не подумала, что пользователь лайкает сам себя (в этом случае пуш отменяется)
+			err := notificationSvc.NotifyNewLike(c.Request.Context(), userID, 9999, "Системный Кот", "post", 1)
 			if err != nil {
 				c.JSON(500, gin.H{"error": err.Error()})
 				return

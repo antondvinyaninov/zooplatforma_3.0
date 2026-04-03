@@ -19,6 +19,11 @@ export const getApiUrl = (): string => {
 // WebSocket URL
 export const getWebSocketUrl = (): string => {
   if (typeof window !== 'undefined') {
+    // В dev среде коннектимся напрямую к бэкенду, так как Next.js прокси
+    // часто обрывает WebSocket connection во время установления (Upgrade).
+    if (process.env.NODE_ENV === 'development') {
+      return 'ws://127.0.0.1:8000/ws';
+    }
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${window.location.host}/ws`;
   }
