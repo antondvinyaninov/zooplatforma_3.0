@@ -127,7 +127,7 @@ func (h *Handler) MarkAsRead(c *gin.Context) {
 
 	result, err := h.db.Exec(`
 		UPDATE notifications 
-		SET is_read = true, updated_at = NOW()
+		SET is_read = true
 		WHERE id = $1 AND user_id = $2
 	`, notificationID, currentUserID)
 
@@ -156,7 +156,7 @@ func (h *Handler) MarkAllAsRead(c *gin.Context) {
 
 	_, err := h.db.Exec(`
 		UPDATE notifications 
-		SET is_read = true, updated_at = NOW()
+		SET is_read = true
 		WHERE user_id = $1 AND is_read = false
 	`, currentUserID)
 

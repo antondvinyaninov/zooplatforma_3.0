@@ -27,7 +27,7 @@ func (m *Mailer) SendPasswordResetEmail(toEmail, firstName, token string) error 
 	resetLink := "https://zooplatforma.ru/main/reset-password?token=" + token
 
 	subject := "Восстановление пароля - ЗооПлатформа"
-	
+
 	htmlBody := `
 	<!DOCTYPE html>
 	<html>
@@ -60,7 +60,7 @@ func (m *Mailer) SendVerificationCodeEmail(toEmail, firstName, code string) erro
 	}
 
 	subject := "Код подтверждения - ЗооПлатформа"
-	
+
 	htmlBody := `
 	<!DOCTYPE html>
 	<html>
@@ -93,7 +93,7 @@ func (m *Mailer) SendSupportReplyEmail(toEmail, userName, topic, replyText strin
 	}
 
 	subject := fmt.Sprintf("Ответ на обращение #%d - ЗооПлатформа", ticketID)
-	
+
 	htmlBody := `
 	<!DOCTYPE html>
 	<html>
@@ -171,7 +171,7 @@ func (m *Mailer) sendHTMLMail(to, subject, htmlBody string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	err = w.Close()
 	return err
 }

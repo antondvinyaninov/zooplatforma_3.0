@@ -8,14 +8,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
+	"github.com/zooplatforma/backend/internal/shared/notificationservice"
 )
 
 type Handler struct {
-	db *sql.DB
+	db              *sql.DB
+	notificationSvc *notificationservice.Service
 }
 
-func NewHandler(db *sql.DB) *Handler {
-	h := &Handler{db: db}
+func NewHandler(db *sql.DB, notifSvc *notificationservice.Service) *Handler {
+	h := &Handler{
+		db:              db,
+		notificationSvc: notifSvc,
+	}
 	h.ensurePostsReplyColumns()
 	return h
 }
@@ -117,22 +122,22 @@ func (h *Handler) GetPosts(c *gin.Context) {
 
 	for rows.Next() {
 		var (
-			id                                            int
-			userID                                        int
-			likesCount, commentsCount, sharesCount        sql.NullInt64
-			content, createdAt, updatedAt                 sql.NullString
-			firstName                                     sql.NullString
-			lastName                                      sql.NullString
-			avatarURL                                     sql.NullString
-			isVerified                                    sql.NullBool
-			orgName                                       sql.NullString
-			orgLogo                                       sql.NullString
-			orgVerified                                   sql.NullBool
+			id                                             int
+			userID                                         int
+			likesCount, commentsCount, sharesCount         sql.NullInt64
+			content, createdAt, updatedAt                  sql.NullString
+			firstName                                      sql.NullString
+			lastName                                       sql.NullString
+			avatarURL                                      sql.NullString
+			isVerified                                     sql.NullBool
+			orgName                                        sql.NullString
+			orgLogo                                        sql.NullString
+			orgVerified                                    sql.NullBool
 			mediaJSON, tagsJSON, attachmentsJSON, petsJSON sql.NullString
-			authorType                                    string
-			replySetting                                  string
-			verifyReplies                                 bool
-			hasPoll                                       bool
+			authorType                                     string
+			replySetting                                   string
+			verifyReplies                                  bool
+			hasPoll                                        bool
 		)
 
 		err := rows.Scan(
@@ -307,22 +312,22 @@ func (h *Handler) GetPostByID(c *gin.Context) {
 	`
 
 	var (
-		id                                            int
-		userID                                        int
-		likesCount, commentsCount, sharesCount        sql.NullInt64
-		content, createdAt, updatedAt                 sql.NullString
-		firstName                                     sql.NullString
-		lastName                                      sql.NullString
-		avatarURL                                     sql.NullString
-		isVerified                                    sql.NullBool
-		orgName                                       sql.NullString
-		orgLogo                                       sql.NullString
-		orgVerified                                   sql.NullBool
+		id                                             int
+		userID                                         int
+		likesCount, commentsCount, sharesCount         sql.NullInt64
+		content, createdAt, updatedAt                  sql.NullString
+		firstName                                      sql.NullString
+		lastName                                       sql.NullString
+		avatarURL                                      sql.NullString
+		isVerified                                     sql.NullBool
+		orgName                                        sql.NullString
+		orgLogo                                        sql.NullString
+		orgVerified                                    sql.NullBool
 		mediaJSON, tagsJSON, attachmentsJSON, petsJSON sql.NullString
-		authorType                                    string
-		replySetting                                  string
-		verifyReplies                                 bool
-		hasPoll                                       bool
+		authorType                                     string
+		replySetting                                   string
+		verifyReplies                                  bool
+		hasPoll                                        bool
 	)
 
 	err := h.db.QueryRow(query, postID).Scan(
@@ -939,10 +944,10 @@ func (h *Handler) ToggleLike(c *gin.Context) {
 		var postAuthorID int
 		err := h.db.QueryRow(`SELECT author_id FROM posts WHERE id = $1 AND author_type = 'user'`, postID).Scan(&postAuthorID)
 		if err == nil && postAuthorID != userID {
-			_, _ = h.db.Exec(`
-				INSERT INTO notifications (user_id, actor_id, type, message, is_read, created_at, updated_at)
-				VALUES ($1, $2, 'like', 'оценил(а) вашу запись', false, NOW(), NOW())
-			`, postAuthorID, userID)
+			var likerName string
+			h.db.QueryRow("SELECT name FROM users WHERE id = $1", userID).Scan(&likerName)
+			postIDInt, _ := strconv.Atoi(postID)
+			_ = h.notificationSvc.NotifyNewLike(c.Request.Context(), postAuthorID, userID, likerName, "post", postIDInt)
 		}
 	}
 

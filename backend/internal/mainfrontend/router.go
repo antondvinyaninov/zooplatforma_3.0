@@ -22,6 +22,7 @@ import (
 	"github.com/zooplatforma/backend/internal/mainfrontend/users"
 	"github.com/zooplatforma/backend/internal/shared/auth"
 	"github.com/zooplatforma/backend/internal/shared/config"
+	"github.com/zooplatforma/backend/internal/shared/notificationservice"
 	"github.com/zooplatforma/backend/internal/shared/s3"
 	"github.com/zooplatforma/backend/internal/shared/websocket"
 )
@@ -33,17 +34,20 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		panic(fmt.Sprintf("Failed to initialize S3 client: %v", err))
 	}
 
+	// Инициализируем сервис уведомлений
+	notificationSvc := notificationservice.New(db, hub)
+
 	authHandler := auth.NewHandler(db, cfg)
-	postsHandler := posts.NewHandler(db)
+	postsHandler := posts.NewHandler(db, notificationSvc)
 	usersHandler := users.NewHandler(db, s3Client)
 	petsHandler := pets.NewHandler(db)
 	mediaHandler := media.NewHandler(db, s3Client)
 	chatsHandler := chats.NewHandler(db, s3Client, hub)
 	organizationsHandler := organizations.NewHandler(db)
-	commentsHandler := comments.NewHandler(db, s3Client)
+	commentsHandler := comments.NewHandler(db, s3Client, notificationSvc)
 	pollsHandler := polls.NewHandler(db)
-	friendsHandler := friends.NewHandler(db)
-	followersHandler := followers.NewHandler(db)
+	friendsHandler := friends.NewHandler(db, notificationSvc)
+	followersHandler := followers.NewHandler(db, notificationSvc)
 	notificationsHandler := notifications.NewHandler(db)
 	sitemapHandler := sitemap.NewHandler(db)
 	// announcementsHandler := announcements.NewHandler(db) // Таблица не существует
@@ -66,6 +70,28 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		authGroup.POST("/merge-confirm", authHandler.MergeConfirm)
 		authGroup.POST("/impersonate/:id", authHandler.ImpersonateUser)
 		authGroup.GET("/me", authHandler.Me)
+
+		// Тестовый роут для отправки уведомления (GET чтобы можно было дернуть из браузера)
+		authGroup.GET("/test-notification", func(c *gin.Context) {
+			userIDInterface, exists := c.Get("user_id")
+			if !exists {
+				c.JSON(401, gin.H{"error": "Unauthorized"})
+				return
+			}
+			userID := userIDInterface.(int)
+			// Находим любого другого пользователя для симуляции лайка (чтобы не сработал Foreign Key constraint и защита от самолайков)
+			var botID int
+			err := db.QueryRow("SELECT id FROM users WHERE id != $1 LIMIT 1", userID).Scan(&botID)
+			if err != nil {
+				botID = userID // fallback (но тогда защита срежет пуш)
+			}
+			err = notificationSvc.NotifyNewLike(c.Request.Context(), userID, botID, "Тестировщик Системы", "post", 1)
+			if err != nil {
+				c.JSON(500, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(200, gin.H{"success": true, "message": "Test notification sent"})
+		})
 	}
 
 	// Users routes
@@ -168,9 +194,12 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		organizationsGroup.GET("/check-inn/:inn", organizationsHandler.CheckByInn)
 		organizationsGroup.GET("/:id", organizationsHandler.GetByID)
 		organizationsGroup.GET("/members/:id", organizationsHandler.GetMembers)
+		organizationsGroup.POST("/:id/members", organizationsHandler.AddMember)
+		organizationsGroup.PUT("/members/:memberId", organizationsHandler.UpdateMember)
+		organizationsGroup.DELETE("/members/:memberId", organizationsHandler.RemoveMember)
 		organizationsGroup.POST("", organizationsHandler.Create)
 		organizationsGroup.POST("/claim-ownership/:id", organizationsHandler.ClaimOwnership)
-	organizationsGroup.POST("/:id/transfer", organizationsHandler.TransferOwnership)
+		organizationsGroup.POST("/:id/transfer", organizationsHandler.TransferOwnership)
 		organizationsGroup.PUT("/:id", organizationsHandler.Update)
 	}
 
@@ -204,7 +233,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		chatsGroup.POST("/:id/participants", chatsHandler.AddParticipant)
 		chatsGroup.DELETE("/:id/participants/:user_id", chatsHandler.RemoveParticipant)
 		chatsGroup.PUT("/:id", chatsHandler.UpdateChat)
-		
+
 		chatsGroup.GET("/:id/invite", chatsHandler.GetInviteLink)
 		chatsGroup.GET("/invite/:token/preview", chatsHandler.PreviewInvite)
 		chatsGroup.POST("/invite/:token/join", chatsHandler.JoinByInvite)

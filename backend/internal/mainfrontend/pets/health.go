@@ -33,10 +33,10 @@ func (h *Handler) GetVaccinations(c *gin.Context) {
 	var vaccinations []map[string]interface{}
 	for rows.Next() {
 		var (
-			id                                                         int
-			date                                                       string
-			vaccineName, vaccineType                                   string
-			nextDate, veterinarian, clinic, notes                      sql.NullString
+			id                                    int
+			date                                  string
+			vaccineName, vaccineType              string
+			nextDate, veterinarian, clinic, notes sql.NullString
 		)
 
 		if err := rows.Scan(&id, &date, &vaccineName, &vaccineType, &nextDate, &veterinarian, &clinic, &notes); err != nil {
@@ -114,7 +114,7 @@ func (h *Handler) CreateVaccination(c *gin.Context) {
 	if input.NextDate != "" {
 		nextDate = input.NextDate
 	}
-	
+
 	err = h.db.QueryRow(`
 		INSERT INTO pet_vaccinations 
 		(pet_id, date, vaccine_name, vaccine_type, next_date, veterinarian, clinic, notes)
@@ -264,10 +264,10 @@ func (h *Handler) GetTreatments(c *gin.Context) {
 	var treatments []map[string]interface{}
 	for rows.Next() {
 		var (
-			id                                       int
-			date                                     string
-			treatmentType, productName               string
-			nextDate, dosage, notes                  sql.NullString
+			id                         int
+			date                       string
+			treatmentType, productName string
+			nextDate, dosage, notes    sql.NullString
 		)
 
 		if err := rows.Scan(&id, &date, &treatmentType, &productName, &nextDate, &dosage, &notes); err != nil {
@@ -333,7 +333,7 @@ func (h *Handler) CreateTreatment(c *gin.Context) {
 	if input.NextDate != "" {
 		nextDate = input.NextDate
 	}
-	
+
 	err = h.db.QueryRow(`
 		INSERT INTO pet_treatments 
 		(pet_id, date, treatment_type, product_name, next_date, dosage, notes)
@@ -461,11 +461,11 @@ func (h *Handler) GetMedicalRecords(c *gin.Context) {
 	var records []map[string]interface{}
 	for rows.Next() {
 		var (
-			id                                                                             int
-			date                                                                           string
-			recordType, title                                                              string
-			description, veterinarian, clinic, diagnosis, treatment, medications   sql.NullString
-			cost                                                                           sql.NullFloat64
+			id                                                                   int
+			date                                                                 string
+			recordType, title                                                    string
+			description, veterinarian, clinic, diagnosis, treatment, medications sql.NullString
+			cost                                                                 sql.NullFloat64
 		)
 
 		if err := rows.Scan(&id, &date, &recordType, &title, &description, &veterinarian, &clinic, &diagnosis, &treatment, &medications, &cost); err != nil {

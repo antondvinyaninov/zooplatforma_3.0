@@ -175,7 +175,7 @@ func (h *Handler) GetMessages(c *gin.Context) {
 		)
 	`
 	attachmentRows, err := h.db.Query(attachmentsQuery, chatID)
-	
+
 	attachmentMap := make(map[int][]map[string]interface{})
 	if err == nil {
 		defer attachmentRows.Close()
@@ -203,10 +203,10 @@ func (h *Handler) GetMessages(c *gin.Context) {
 
 	for rows.Next() {
 		var (
-			id, chatIDInt, senderID       int
-			content, createdAt            string
-			senderName                    string
-			senderLastName, senderAvatar  sql.NullString
+			id, chatIDInt, senderID      int
+			content, createdAt           string
+			senderName                   string
+			senderLastName, senderAvatar sql.NullString
 		)
 
 		err := rows.Scan(
@@ -407,7 +407,7 @@ func (h *Handler) MarkAsRead(c *gin.Context) {
 			JOIN chat_participants cp ON m.chat_id = cp.chat_id AND cp.user_id = $1
 			WHERE m.id > cp.last_read_message_id
 		`, userID).Scan(&unreadCount)
-		
+
 		unreadPayload := map[string]interface{}{
 			"type": "unread_count",
 			"data": map[string]interface{}{"count": unreadCount},
@@ -1044,7 +1044,7 @@ func (h *Handler) DeleteChat(c *gin.Context) {
 			// Удаляем только у себя
 			_, err = h.db.Exec(`UPDATE chat_participants SET hidden_until_msg_id = $1, last_read_message_id = $1 WHERE chat_id = $2 AND user_id = $3`, hiddenMsgID, chatID, userID)
 		}
-		
+
 		if err != nil {
 			c.JSON(500, gin.H{"success": false, "error": "Failed to hide chat"})
 			return

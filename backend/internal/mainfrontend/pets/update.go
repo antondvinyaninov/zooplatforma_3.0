@@ -16,31 +16,31 @@ func (h *Handler) UpdatePetCore(petIDStr string, input map[string]interface{}) e
 	}
 
 	allowedFields := map[string]string{
-		"name":               "name",
-		"species_id":         "species_id",
-		"breed_id":           "breed_id",
-		"birth_date":         "birth_date",
-		"gender":             "gender",
-		"description":        "description",
-		"relationship":       "relationship",
-		"color":              "color",
-		"size":               "size",
-		"location_type":      "location_type",
-		"sterilization_date": "sterilization_date",
+		"name":                     "name",
+		"species_id":               "species_id",
+		"breed_id":                 "breed_id",
+		"birth_date":               "birth_date",
+		"gender":                   "gender",
+		"description":              "description",
+		"relationship":             "relationship",
+		"color":                    "color",
+		"size":                     "size",
+		"location_type":            "location_type",
+		"sterilization_date":       "sterilization_date",
 		"sterilization_specialist": "sterilization_specialist",
-		"sterilization_org":  "sterilization_org",
-		"sterilization_type": "sterilization_type",
-		"is_sterilized":      "is_sterilized",
-		"photo_url":          "photo_url",
-		"face_photo_url":     "face_photo_url",
-		"body_photo_url":     "body_photo_url",
-		"chip_number":        "microchip", // frontend - chip_number, db - microchip
-		"media_urls":         "media_urls",
-		"age_type":           "age_type",
-		"approximate_years":  "approximate_years",
-		"approximate_months": "approximate_months",
-		"catalog_status":     "catalog_status",
-		"catalog_data":       "catalog_data",
+		"sterilization_org":        "sterilization_org",
+		"sterilization_type":       "sterilization_type",
+		"is_sterilized":            "is_sterilized",
+		"photo_url":                "photo_url",
+		"face_photo_url":           "face_photo_url",
+		"body_photo_url":           "body_photo_url",
+		"chip_number":              "microchip", // frontend - chip_number, db - microchip
+		"media_urls":               "media_urls",
+		"age_type":                 "age_type",
+		"approximate_years":        "approximate_years",
+		"approximate_months":       "approximate_months",
+		"catalog_status":           "catalog_status",
+		"catalog_data":             "catalog_data",
 
 		"fur":              "fur",
 		"ears":             "ears",
@@ -80,7 +80,7 @@ func (h *Handler) UpdatePetCore(petIDStr string, input map[string]interface{}) e
 			query += ", "
 		}
 		query += dbCol + " = $" + fmt.Sprint(argCount)
-		
+
 		if dbCol == "media_urls" || dbCol == "catalog_data" {
 			jsonBytes, jsonErr := json.Marshal(value)
 			if jsonErr != nil {
@@ -128,7 +128,7 @@ func (h *Handler) UpdatePetCore(petIDStr string, input map[string]interface{}) e
 		case string:
 			newWeight, _ = strconv.ParseFloat(v, 64)
 		}
-		
+
 		if newWeight > 0 && newWeight != oldWeight {
 			desc := fmt.Sprintf("Зафиксирован новый вес: %.2f кг", newWeight)
 			err := h.db.QueryRow(`INSERT INTO org_pet_events (org_id, pet_id, event_type, title, description, icon, color) VALUES ($1, $2, 'weight', 'Изменен вес', $3, '⚖️', 'purple') RETURNING id`, orgIDVal, petID, desc).Scan(new(int))
@@ -141,9 +141,11 @@ func (h *Handler) UpdatePetCore(petIDStr string, input map[string]interface{}) e
 	// Catalog Status logging
 	if newStatusIf, ok := input["catalog_status"]; ok && newStatusIf != nil {
 		if newStatusStr, isStr := newStatusIf.(string); isStr && newStatusStr != oldCatalogStatus {
-			statusLabels := map[string]string{ "draft": "Не в каталоге", "looking_for_home": "Ищет дом", "needs_help": "Сбор средств", "lost": "Потерян", "found": "Найден" }
+			statusLabels := map[string]string{"draft": "Не в каталоге", "looking_for_home": "Ищет дом", "needs_help": "Сбор средств", "lost": "Потерян", "found": "Найден"}
 			newLabel, found := statusLabels[newStatusStr]
-			if !found { newLabel = newStatusStr }
+			if !found {
+				newLabel = newStatusStr
+			}
 			desc := "Статус изменен на: " + newLabel
 
 			err := h.db.QueryRow(`INSERT INTO org_pet_events (org_id, pet_id, event_type, title, description, icon, color) VALUES ($1, $2, 'catalog', 'Изменение в каталоге', $3, '📋', 'blue') RETURNING id`, orgIDVal, petID, desc).Scan(new(int))

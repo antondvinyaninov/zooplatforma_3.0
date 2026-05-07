@@ -3,6 +3,7 @@ package users
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -57,7 +58,7 @@ func (h *Handler) GetOnboardingProgress(c *gin.Context) {
 		SELECT avatar, bio, phone, last_name, vk_id::text, ok_id, mailru_id
 		FROM users WHERE id = $1
 	`, userID).Scan(&avatar, &bio, &phone, &lastName, &vkID, &okID, &mailruID)
-	
+
 	hasAvatar := err == nil && avatar.Valid && avatar.String != ""
 	hasBio := err == nil && bio.Valid && bio.String != ""
 	hasPhone := err == nil && phone.Valid && phone.String != ""
@@ -139,7 +140,7 @@ func (h *Handler) GetOnboardingProgress(c *gin.Context) {
 	}
 
 	// ----------------------------------------------------
-	// ХАК напрямую для ТЕСТИРОВАНИЯ (ID 58) 
+	// ХАК напрямую для ТЕСТИРОВАНИЯ (ID 58)
 	// ----------------------------------------------------
 	var isShareCompleted = false
 	if userID_str, _ := c.Get("user_id"); userID_str == 58 || userID_str == "58" || userID_str == float64(58) || fmt.Sprint(userID_str) == "58" {
@@ -289,16 +290,16 @@ func (h *Handler) SubmitOnboardingReview(c *gin.Context) {
 }
 
 type AdminReviewResponse struct {
-	ID               int       `json:"id"`
-	UserID           int       `json:"user_id"`
-	UserFirstName    string    `json:"user_first_name"`
-	UserLastName     string    `json:"user_last_name"`
-	UserAvatar       string    `json:"user_avatar"`
-	Rating           int       `json:"rating"`
-	LikedText        string    `json:"liked_text"`
-	DislikedText     string    `json:"disliked_text"`
-	ImprovementsText string    `json:"improvements_text"`
-	CreatedAt        string    `json:"created_at"`
+	ID               int    `json:"id"`
+	UserID           int    `json:"user_id"`
+	UserFirstName    string `json:"user_first_name"`
+	UserLastName     string `json:"user_last_name"`
+	UserAvatar       string `json:"user_avatar"`
+	Rating           int    `json:"rating"`
+	LikedText        string `json:"liked_text"`
+	DislikedText     string `json:"disliked_text"`
+	ImprovementsText string `json:"improvements_text"`
+	CreatedAt        string `json:"created_at"`
 }
 
 type AdminReviewStats struct {
@@ -331,7 +332,7 @@ func (h *Handler) GetReviewsAdmin(c *gin.Context) {
 		LEFT JOIN users u ON u.id = r.user_id
 		ORDER BY r.created_at DESC
 	`)
-	
+
 	if err != nil {
 		fmt.Printf("[ERROR] GetReviewsAdmin query failed: %v\n", err)
 	} else {

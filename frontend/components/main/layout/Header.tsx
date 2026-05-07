@@ -5,9 +5,11 @@ import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 import CityDetector from './CityDetector';
 import UserMenu from './UserMenu';
-import NotificationsDropdown from './NotificationsDropdown';
+import NotificationsDropdown from '@/components/modules/notifications/widgets/NotificationsDropdown';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 
 function HeaderMobile() {
   const { isAuthenticated } = useAuth();
@@ -37,14 +39,15 @@ function HeaderMobile() {
         </div>
 
         <div className="ml-auto flex items-center space-x-2">
-          <button
+          <Button
             type="button"
             onClick={() => setIsSearchOpen((prev) => !prev)}
-            className="p-2 rounded-lg hover:bg-gray-100"
+            variant="ghost"
+            size="icon"
             aria-label="Открыть поиск"
           >
             <MagnifyingGlassIcon className="w-5 h-5 text-gray-600" strokeWidth={2} />
-          </button>
+          </Button>
           {isAuthenticated && <NotificationsDropdown />}
           <UserMenu variant="mobile" />
         </div>
@@ -53,18 +56,14 @@ function HeaderMobile() {
       <div className={`mt-2 items-center gap-2 ${isSearchOpen ? 'flex' : 'hidden'}`}>
         <div className="flex-1 min-w-0">
           <div className="relative w-full">
-            <MagnifyingGlassIcon
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-              strokeWidth={2}
-            />
-            <input
+            <Input
               type="text"
               placeholder="Поиск..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearch}
-              className="w-full pl-10 pr-4 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gradient-to-br from-gray-50 to-gray-100"
-              style={{ '--tw-ring-color': '#1B76FF' } as React.CSSProperties}
+              icon={<MagnifyingGlassIcon className="w-5 h-5 text-gray-400" strokeWidth={2} />}
+              className="bg-gradient-to-br from-gray-50 to-gray-100"
             />
           </div>
         </div>
@@ -110,18 +109,14 @@ function HeaderDesktop() {
 
       <div className="flex-1 min-w-0">
         <div className="relative max-w-md">
-          <MagnifyingGlassIcon
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-            strokeWidth={2}
-          />
-          <input
+          <Input
             type="text"
             placeholder="Поиск..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearch}
-            className="w-full pl-10 pr-4 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gradient-to-br from-gray-50 to-gray-100"
-            style={{ '--tw-ring-color': '#1B76FF' } as React.CSSProperties}
+            icon={<MagnifyingGlassIcon className="w-5 h-5 text-gray-400" strokeWidth={2} />}
+            className="bg-gradient-to-br from-gray-50 to-gray-100"
           />
         </div>
       </div>

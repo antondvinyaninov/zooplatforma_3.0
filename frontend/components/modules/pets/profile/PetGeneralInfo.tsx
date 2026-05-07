@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
-import s from '../shared/pet-card.module.css';
+import React, { useState, useEffect } from 'react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
+import { InlineEdit } from '@/components/ui/InlineEdit';
+import { Button } from '@/components/ui/Button';
 
-interface PetGeneralInfoProps {
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/Popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
+import { PencilIcon } from '@heroicons/react/24/outline';
+import { Calendar } from '@/components/ui/calendar';
+import { ru } from 'date-fns/locale';
+
+export interface PetGeneralInfoProps {
   pet: {
     id?: number;
     name?: string;
@@ -20,7 +28,7 @@ interface PetGeneralInfoProps {
     tail?: string;
     size?: string;
     special_marks?: string;
-    species_id?: number; 
+    species_id?: number;
     sterilization_date?: string;
     sterilization_specialist?: string;
     sterilization_org?: string;
@@ -45,7 +53,7 @@ const calculateAge = (pet: PetGeneralInfoProps['pet']) => {
     const today = new Date();
     let years = today.getFullYear() - birthDate.getFullYear();
     let months = today.getMonth() - birthDate.getMonth();
-    if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
+    if (months < 0 || months === 0 && today.getDate() < birthDate.getDate()) {
       years--;
       months += 12;
     }
@@ -57,46 +65,36 @@ const calculateAge = (pet: PetGeneralInfoProps['pet']) => {
   return 'Неизвестно';
 };
 
-export default function PetGeneralInfo({ pet, orgId, apiUrl, onUpdate }: PetGeneralInfoProps) {
+export default function PetGeneralInfo({
+  pet,
+  orgId,
+  apiUrl,
+  onUpdate
+}: PetGeneralInfoProps) {
   const ageString = calculateAge(pet);
-
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>('');
   const [saving, setSaving] = useState(false);
-  const [breeds, setBreeds] = useState<{ id: number; name: string; species_id: number }[]>([]);
+  const [breeds, setBreeds] = useState<{ id: number; name: string; species_id: number; }[]>([]);
 
-  // Загружаем список пород один раз при монтировании
-  React.useEffect(() => {
-    fetch('/api/pethelper/breeds')
-      .then(r => r.json())
-      .then(d => { if (d.success && d.breeds) setBreeds(d.breeds); })
-      .catch(() => {});
+  useEffect(() => {
+    fetch('/api/petid/breeds').then(r => r.json()).then(d => {
+      if (d.success && d.breeds) setBreeds(d.breeds);
+    }).catch(() => {});
   }, []);
 
-  const startEdit = (field: string, val: string) => {
-    setEditingField(field);
-    setEditValue(val);
-  };
-
-  const cancelEdit = () => {
-    setEditingField(null);
-    setEditValue('');
-  };
-
-  const saveEdit = async (field: string, payloadKey: string = field) => {
+  const saveField = async (payload: Record<string, any>) => {
     if (saving) return;
     setSaving(true);
     try {
-      const body = { [payloadKey]: editValue };
       const res = await fetch(apiUrl, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         credentials: 'include',
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
-        onUpdate(body);
-        setEditingField(null);
+        onUpdate(payload);
       } else {
         alert('Ошибка сохранения');
       }
@@ -107,227 +105,87 @@ export default function PetGeneralInfo({ pet, orgId, apiUrl, onUpdate }: PetGene
     }
   };
 
-  // Helper component for rows
-  const EditableRow = ({
-    label, field, payloadKey, value, displayValue, as = 'input', options = [], placeholder
-  }: {
-    label: string; field: string; payloadKey?: string; value: string; displayValue: React.ReactNode;
-    as?: 'input' | 'select' | 'date' | 'textarea'; options?: { label: string; value: string }[]; placeholder?: string
-  }) => {
-    const isEditing = editingField === field;
-    const keyToSave = payloadKey || field;
+  const breedOptions = breeds
+    .filter(b => !pet.species_id || b.species_id === Number(pet.species_id))
+    .map(b => ({ value: b.id.toString(), label: b.name }));
 
+  const renderRow = (
+    label: string, 
+    field: string, 
+    value: string | undefined, 
+    placeholder?: string, 
+    type: 'text'|'select'|'combobox'|'date'|'textarea'|'number'|'custom' = 'text', 
+    options?: {label: string, value: string}[]
+  ) => {
     return (
-      <div style={{ borderBottom: '1px solid #f3f4f6', paddingBottom: 12, position: 'relative' }}
-        onMouseLeave={() => { if (!isEditing) cancelEdit(); }} // optional: auto-cancel on leave if not interacted
-      >
-        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>{label}</div>
-        
-        {isEditing ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {as === 'select' ? (
-              <select
-                value={editValue}
-                onChange={e => setEditValue(e.target.value)}
-                style={{ flex: 1, minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
-                autoFocus
-              >
-                <option value="">Не указано</option>
-                {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            ) : as === 'date' ? (
-              <input
-                type="date"
-                value={editValue}
-                onChange={e => setEditValue(e.target.value)}
-                style={{ flex: 1, minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
-                autoFocus
-              />
-            ) : as === 'textarea' ? (
-              <textarea
-                value={editValue}
-                onChange={e => setEditValue(e.target.value)}
-                style={{ flex: 1, minWidth: 0, padding: '8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14, minHeight: '80px', resize: 'vertical' }}
-                autoFocus
-                placeholder={placeholder}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveEdit(field, keyToSave);
-                  if (e.key === 'Escape') cancelEdit();
-                }}
-              />
-            ) : (
-              <input
-                type="text"
-                value={editValue}
-                onChange={e => setEditValue(e.target.value)}
-                style={{ flex: 1, minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
-                autoFocus
-                placeholder={placeholder}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') saveEdit(field, keyToSave);
-                  if (e.key === 'Escape') cancelEdit();
-                }}
-              />
-            )}
-            
-            <button onClick={() => saveEdit(field, keyToSave)} disabled={saving}
-              style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: '#e0e7ff', color: '#4f46e5', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {saving ? '⏳' : '✅'}
-            </button>
-            <button onClick={cancelEdit} disabled={saving}
-              style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: '#f3f4f6', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              ✕
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 28 }}>
-            <button
-              onClick={() => startEdit(field, value)}
-              title="Редактировать"
-              style={{
-                width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', color: '#9ca3af',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: 0.6, transition: 'all 0.2s', flexShrink: 0
-              }}
-              onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = '#eff6ff'; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.background = 'transparent'; }}
-            >
-              ✏️
-            </button>
-            <div style={{ fontSize: 15, color: '#111827', flex: 1 }}>{displayValue}</div>
-          </div>
-        )}
+      <div className="flex flex-col justify-center py-2 border-b border-gray-100 last:border-0 relative min-h-[72px]">
+        <div className="text-[13px] text-gray-500 mb-1 leading-none">{label}</div>
+        <InlineEdit
+          value={value || ''}
+          type={type}
+          options={options}
+          placeholder={placeholder}
+          onSave={(val) => {
+            const payload: any = { [field]: val };
+            if (field === 'breed_id') {
+              payload.breed_id = Number(val);
+              payload.breed_name = breedOptions.find(o => o.value === val)?.label;
+            } else if (field === 'species_id') {
+              payload.species_id = Number(val);
+            }
+            saveField(payload);
+          }}
+          disabled={saving}
+          className="w-full"
+        />
       </div>
     );
   };
 
-  // Custom Breed Editor
-  const EditableBreedRow = () => {
-    const isEditing = editingField === 'breed';
-    const [search, setSearch] = useState('');
-    const [showDropdown, setShowDropdown] = useState(false);
-
-    // Filter breeds by species_id (if pet has species_id selected) and by search string
-    const filteredBreeds = breeds.filter(b => 
-      (!pet.species_id || b.species_id === pet.species_id) && 
-      b.name.toLowerCase().includes(search.toLowerCase())
-    );
-
-    const onSelectBreed = async (breed_id: number, breed_name: string) => {
-      if (saving) return;
-      setSaving(true);
-      try {
-        const body = { breed_id };
-        const res = await fetch(apiUrl, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-          body: JSON.stringify(body),
-        });
-        if (res.ok) {
-          onUpdate({ breed_id, breed_name });
-          setEditingField(null);
-        } else {
-          alert('Ошибка сохранения');
-        }
-      } catch (e) {
-        alert('Ошибка соединения');
-      } finally {
-        setSaving(false);
-      }
-    };
-
-    return (
-      <div style={{ borderBottom: '1px solid #f3f4f6', paddingBottom: 12, position: 'relative' }}>
-        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>Порода</div>
-        {isEditing ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
-            <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-              <input
-                type="text"
-                value={search}
-                onChange={e => { setSearch(e.target.value); setShowDropdown(true); }}
-                onFocus={() => setShowDropdown(true)}
-                placeholder="Начните вводить..."
-                style={{ width: '100%', minWidth: 0, padding: '4px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
-                autoFocus
-              />
-              {showDropdown && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, maxHeight: 200, overflowY: 'auto', zIndex: 10, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                  {filteredBreeds.length > 0 ? filteredBreeds.map(b => (
-                    <div key={b.id} onClick={() => onSelectBreed(b.id, b.name)} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', fontSize: 14 }}
-                         onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
-                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      {b.name}
-                    </div>
-                  )) : (
-                    <div style={{ padding: '8px 12px', fontSize: 14, color: '#6b7280' }}>Ничего не найдено</div>
-                  )}
-                </div>
-              )}
-            </div>
-            <button onClick={cancelEdit} disabled={saving} style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: '#f3f4f6', color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              ✕
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 28 }}>
-            <button
-              title="Редактировать"
-              onClick={() => { setEditingField('breed'); setSearch(pet.breed_name || ''); setShowDropdown(false); }}
-              style={{
-                width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', color: '#9ca3af',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: 0.6, transition: 'all 0.2s', flexShrink: 0
-              }}
-              onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = '#eff6ff'; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.background = 'transparent'; }}
-            >
-              ✏️
-            </button>
-            <div style={{ fontSize: 15, color: '#111827', flex: 1 }}>{pet.breed_name || 'Не указана'}</div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Custom Age Editor
-  const isEditingAge = editingField === 'age';
-  const startEditAge = () => {
-    setEditingField('age');
-    // We only need local state for the form during editing
-  };
-
-  const AgeEditor = () => {
+  const AgeSection = () => {
+    const [isOpen, setIsOpen] = useState(false);
     const [ageType, setAgeType] = useState(pet.age_type || 'exact');
-    const [birthDate, setBirthDate] = useState(pet.birth_date ? pet.birth_date.split('T')[0] : '');
+    
+    // Храним Date для календаря
+    const [birthDate, setBirthDate] = useState<Date | undefined>(
+      pet.birth_date ? new Date(pet.birth_date) : undefined
+    );
     const [years, setYears] = useState(pet.approximate_years || 0);
     const [months, setMonths] = useState(pet.approximate_months || 0);
 
     const saveAge = async () => {
+      let finalBirthDate = '';
+      if (ageType === 'approximate') {
+        const today = new Date();
+        const autoDate = new Date(today.getFullYear() - years, today.getMonth() - months, today.getDate());
+        finalBirthDate = autoDate.toISOString().split('T')[0];
+      } else if (birthDate) {
+        // Учитываем часовой пояс при извлечении YYYY-MM-DD
+        const year = birthDate.getFullYear();
+        const month = String(birthDate.getMonth() + 1).padStart(2, '0');
+        const day = String(birthDate.getDate()).padStart(2, '0');
+        finalBirthDate = `${year}-${month}-${day}`;
+      }
+      
+      const payload = {
+        age_type: ageType,
+        birth_date: finalBirthDate,
+        approximate_years: ageType === 'approximate' ? years : 0,
+        approximate_months: ageType === 'approximate' ? months : 0
+      };
+      
       if (saving) return;
       setSaving(true);
       try {
-        let finalBirthDate = birthDate;
-        if (ageType === 'approximate') {
-          const today = new Date();
-          const autoDate = new Date(today.getFullYear() - years, today.getMonth() - months, today.getDate());
-          finalBirthDate = autoDate.toISOString().split('T')[0];
-        }
-
-        const body = {
-          age_type: ageType,
-          birth_date: finalBirthDate,
-          approximate_years: ageType === 'approximate' ? years : 0,
-          approximate_months: ageType === 'approximate' ? months : 0,
-        };
-
         const res = await fetch(apiUrl, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-          body: JSON.stringify(body),
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload)
         });
         if (res.ok) {
-          onUpdate(body);
-          setEditingField(null);
+          onUpdate(payload);
+          setIsOpen(false);
         } else {
           alert('Ошибка сохранения');
         }
@@ -339,193 +197,138 @@ export default function PetGeneralInfo({ pet, orgId, apiUrl, onUpdate }: PetGene
     };
 
     return (
-      <div style={{ gridColumn: '1 / -1', background: '#f9fafb', padding: 16, borderRadius: 12, border: '1px solid #e5e7eb' }}>
-        <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
-            <input type="radio" value="exact" checked={ageType === 'exact'} onChange={() => setAgeType('exact')} />
-            Точная дата
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
-            <input type="radio" value="approximate" checked={ageType === 'approximate'} onChange={() => setAgeType('approximate')} />
-            Примерный
-          </label>
-        </div>
-
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 16 }}>
-          {ageType === 'exact' ? (
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Дата рождения</div>
-              <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)}
-                style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db' }} />
+      <div className="flex flex-col py-2 min-h-[72px]">
+        <div className="text-[13px] text-gray-500 mb-1 leading-none w-fit">Возраст</div>
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger 
+            className="group relative flex items-center w-full min-h-10 rounded-lg border border-transparent hover:border-gray-200 hover:bg-gray-50 px-3 py-2 -mx-3 text-[14px] text-gray-900 transition-colors cursor-pointer data-[state=open]:border-blue-600 data-[state=open]:bg-white data-[state=open]:shadow-sm outline-none"
+          >
+            <span className="truncate w-full pr-8 text-left flex items-center">
+              <span className="mr-2">🎂</span>
+              {ageString}
+              <span className="text-gray-400 text-xs ml-2">
+                ({pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('ru-RU') : 'Не указана'})
+              </span>
+            </span>
+            <span className="absolute right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center bg-gray-50/80 rounded pl-2">
+              <PencilIcon className="w-4 h-4 text-gray-400" />
+            </span>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-4" align="start" sideOffset={4}>
+            <div className="text-sm font-semibold text-gray-700 mb-4">Редактирование возраста</div>
+            
+            <Tabs value={ageType} onValueChange={setAgeType} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="exact">Точная дата</TabsTrigger>
+                <TabsTrigger value="approximate">Примерно</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="exact" className="mt-0 flex flex-col items-center justify-center border border-gray-100 rounded-md">
+                <Calendar
+                  mode="single"
+                  selected={birthDate}
+                  onSelect={setBirthDate}
+                  locale={ru}
+                  initialFocus
+                  captionLayout="dropdown"
+                  fromYear={1990}
+                  toYear={new Date().getFullYear()}
+                />
+              </TabsContent>
+              
+              <TabsContent value="approximate" className="mt-0">
+                <div className="flex gap-4 p-4 border border-gray-100 rounded-md bg-stone-50/50">
+                  <div className="flex flex-col space-y-1.5 flex-1">
+                    <label className="text-[13px] text-gray-500 font-medium">Лет</label>
+                    <input 
+                      type="number" min="0" max="30" 
+                      value={years} 
+                      onChange={e=>setYears(Number(e.target.value))} 
+                      className="flex h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:border-blue-600 focus-visible:ring-0" 
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1.5 flex-1">
+                    <label className="text-[13px] text-gray-500 font-medium">Месяцев</label>
+                    <input 
+                      type="number" min="0" max="11" 
+                      value={months} 
+                      onChange={e=>setMonths(Number(e.target.value))} 
+                      className="flex h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:border-blue-600 focus-visible:ring-0" 
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+            
+            <div className="flex gap-2 mt-6 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setIsOpen(false)} disabled={saving}>Отмена</Button>
+              <Button size="sm" onClick={saveAge} disabled={saving}>{saving ? 'Сохранение...' : 'Сохранить'}</Button>
             </div>
-          ) : (
-            <>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Лет</div>
-                <input type="number" min="0" max="30" value={years} onChange={e => setYears(Number(e.target.value))}
-                  style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db' }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Месяцев</div>
-                <input type="number" min="0" max="11" value={months} onChange={e => setMonths(Number(e.target.value))}
-                  style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db' }} />
-              </div>
-            </>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={saveAge} disabled={saving} style={{ flex: 1, padding: 8, borderRadius: 6, border: 'none', background: '#4f46e5', color: '#fff', fontWeight: 500, cursor: 'pointer' }}>
-            {saving ? 'Сохранение...' : 'Сохранить возраст'}
-          </button>
-          <button onClick={cancelEdit} disabled={saving} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#e5e7eb', color: '#374151', fontWeight: 500, cursor: 'pointer' }}>
-            Отмена
-          </button>
-        </div>
+          </PopoverContent>
+        </Popover>
       </div>
     );
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col gap-6">
       {/* Секция: Основные данные */}
-      <div>
-        <div className={s.headerCard}>
-          <div className={s.sectionTitle}>Основные данные</div>
-          <div className={s.sectionDesc}>Базовая информация о питомце. Наведите на поле, чтобы отредактировать.</div>
-        </div>
-        <div className={s.card}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-            <EditableRow field="name" label="Имя питомца" value={pet.name || ''} displayValue={pet.name || '—'} />
-            
-            {/* Вид не так просто редактировать инлайн (нужно менять species_id), пока оставим view-only или селект: */}
-            <EditableRow 
-              field="species_id" label="Вид животного" 
-              value={pet.species_id?.toString() || '1'} 
-              displayValue={pet.species_name || '—'} 
-              as="select" options={[{ value: '1', label: 'Собака' }, { value: '2', label: 'Кошка' }]}
-            />
-            
-            <EditableBreedRow />
-
-            <EditableRow 
-              field="gender" label="Пол" 
-              value={pet.gender || ''} 
-              displayValue={pet.gender === 'male' ? '♂ Самец' : pet.gender === 'female' ? '♀ Самка' : 'Не указан'} 
-              as="select" options={[{ value: 'male', label: 'Самец' }, { value: 'female', label: 'Самка' }]}
-            />
-            
-            {/* Блок возраста */}
-            {isEditingAge ? <AgeEditor /> : (
-              <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid #f3f4f6', paddingBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <button
-                    onClick={startEditAge}
-                    title="Редактировать возраст"
-                    style={{
-                      width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', color: '#9ca3af',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      opacity: 0.6, transition: 'all 0.2s', marginTop: 12, flexShrink: 0
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = '#eff6ff'; }}
-                    onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    ✏️
-                  </button>
-
-                  <div style={{ display: 'flex', gap: 40, flex: 1 }}>
-                    <div>
-                      <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>Возраст (авто-расчёт)</div>
-                      <div style={{ fontSize: 15, color: '#111827', display: 'flex', alignItems: 'center', gap: 6, minHeight: 28 }}>
-                        🎂 {ageString}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>Дата рождения</div>
-                      <div style={{ fontSize: 15, color: '#111827', minHeight: 28, display: 'flex', alignItems: 'center' }}>
-                        {pet.birth_date ? new Date(pet.birth_date).toLocaleDateString('ru-RU') : 'Не указана'}
-                        {pet.age_type === 'approximate' && <span style={{ color: '#9ca3af', fontSize: 13, marginLeft: 6 }}>(примерно)</span>}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Основные данные</CardTitle>
+          <CardDescription>Базовая информация о питомце. Кликните на любое поле, чтобы отредактировать.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+            {renderRow('Имя питомца', 'name', pet.name, 'Введите имя')}
+            {renderRow('Вид животного', 'species_id', pet.species_id?.toString(), 'Выберите вид', 'select', [{value: '1', label: 'Собака'}, {value: '2', label: 'Кошка'}])}
+            {renderRow('Порода', 'breed_id', pet.breed_id?.toString(), 'Поиск породы...', 'combobox', breedOptions)}
+            {renderRow('Пол', 'gender', pet.gender, 'Выберите пол', 'select', [{value: 'male', label: 'Самец'}, {value: 'female', label: 'Самка'}])}
+          </div>
+          
+          <div className="mt-2">
+            <AgeSection />
           </div>
 
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <EditableRow 
-              field="description" 
-              label="Описание питомца (для каталога)" 
-              value={pet.description || ''} 
-              displayValue={pet.description || '—'} 
-              placeholder="Подробный рассказ о питомце, характере, привычках..."
-              as="textarea" 
-            />
+          <div className="mt-6">
+            {renderRow('Описание питомца (для каталога)', 'description', pet.description, 'Подробный рассказ о питомце, характере, привычках...', 'textarea')}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Секция: Внешность */}
-      <div>
-        <div className={s.headerCard}>
-          <div className={s.sectionTitle}>Внешний вид и приметы</div>
-          <div className={s.sectionDesc}>Окрас, шерсть, размер и особые приметы питомца.</div>
-        </div>
-        <div className={s.card}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-            <EditableRow 
-              field="size" label="Размер" 
-              value={pet.size || ''} 
-              displayValue={pet.size === 'small' ? 'Маленький' : pet.size === 'medium' ? 'Средний' : pet.size === 'large' ? 'Крупный' : 'Не указан'} 
-              as="select" options={[{ value: 'small', label: 'Маленький' }, { value: 'medium', label: 'Средний' }, { value: 'large', label: 'Крупный' }]}
-            />
-            
-            <EditableRow field="color" label="Окрас" value={pet.color || ''} displayValue={pet.color || '—'} />
-            <EditableRow field="fur" label="Шерсть" value={pet.fur || ''} displayValue={pet.fur || '—'} />
-            <EditableRow field="ears" label="Уши" value={pet.ears || ''} displayValue={pet.ears || '—'} />
-            <EditableRow field="tail" label="Хвост" value={pet.tail || ''} displayValue={pet.tail || '—'} />
-            <EditableRow field="special_marks" label="Особые приметы" value={pet.special_marks || ''} displayValue={pet.special_marks || '—'} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Внешний вид и приметы</CardTitle>
+          <CardDescription>Физические характеристики и особенности экстерьера.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+            {renderRow('Размер', 'size', pet.size, 'Выберите размер', 'select', [{value: 'small', label: 'Маленький'}, {value: 'medium', label: 'Средний'}, {value: 'large', label: 'Крупный'}])}
+            {renderRow('Окрас', 'color', pet.color, 'Например: черный с белым')}
+            {renderRow('Шерсть', 'fur', pet.fur, 'Например: короткая')}
+            {renderRow('Уши', 'ears', pet.ears, 'Например: висячие')}
+            {renderRow('Хвост', 'tail', pet.tail, 'Например: купирован')}
+            {renderRow('Особые приметы', 'special_marks', pet.special_marks, 'Например: шрам на носу')}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Секция: Репродуктивный статус */}
-      <div>
-        <div className={s.headerCard}>
-          <div className={s.sectionTitle}>Репродуктивный статус</div>
-          <div className={s.sectionDesc}>Данные о стерилизации или кастрации питомца.</div>
-        </div>
-        <div className={s.card}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-            <EditableRow 
-              field="sterilization_date" label="Дата стерилизации (кастрации)" 
-              value={pet.sterilization_date || ''} 
-              displayValue={pet.sterilization_date ? `Да, проведена: ${new Date(pet.sterilization_date).toLocaleDateString('ru-RU')}` : 'Нет информации / Не стерилизован(а)'} 
-              as="date"
-            />
-            <EditableRow 
-              field="sterilization_type" label="Тип операции" 
-              value={pet.sterilization_type || ''} 
-              displayValue={pet.sterilization_type || 'Не указан'} 
-              placeholder="Например: Кастрация, Овариогистерэктомия"
-            />
-            <EditableRow 
-              field="sterilization_specialist" label="Специалист" 
-              value={pet.sterilization_specialist || ''} 
-              displayValue={pet.sterilization_specialist || 'Не указан'} 
-              placeholder="ФИО хирурга"
-            />
-            <EditableRow 
-              field="sterilization_org" label="Организация (клиника)" 
-              value={pet.sterilization_org || ''} 
-              displayValue={pet.sterilization_org || 'Не указана'} 
-              placeholder="Название клиники"
-            />
+      <Card>
+        <CardHeader>
+          <CardTitle>Репродуктивный статус</CardTitle>
+          <CardDescription>Данные о стерилизации или кастрации питомца.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+            {renderRow('Дата стерилизации', 'sterilization_date', pet.sterilization_date?.split('T')[0], 'Укажите дату', 'date')}
+            {renderRow('Тип операции', 'sterilization_type', pet.sterilization_type, 'Например: Кастрация')}
+            {renderRow('Специалист', 'sterilization_specialist', pet.sterilization_specialist, 'ФИО хирурга')}
+            {renderRow('Организация (клиника)', 'sterilization_org', pet.sterilization_org, 'Название клиники')}
           </div>
-        </div>
-      </div>
-      
+        </CardContent>
+      </Card>
     </div>
   );
 }

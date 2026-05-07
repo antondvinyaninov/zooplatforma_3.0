@@ -24,17 +24,17 @@ func NewHandler(db *sql.DB, cfg *config.Config) *Handler {
 }
 
 type SupportMessage struct {
-	ID            int        `json:"id"`
-	Name          string     `json:"name"`
-	Email         string     `json:"email"`
-	Topic         string     `json:"topic"`
-	Message       string     `json:"message"`
-	AttachmentURL *string    `json:"attachment_url"`
-	AdminNotes    *string    `json:"admin_notes"`
-	Status        string                   `json:"status"`
-	CreatedAt     time.Time                `json:"created_at"`
-	UpdatedAt     time.Time                `json:"updated_at"`
-	Comments      []SupportMessageComment  `json:"comments,omitempty"`
+	ID            int                     `json:"id"`
+	Name          string                  `json:"name"`
+	Email         string                  `json:"email"`
+	Topic         string                  `json:"topic"`
+	Message       string                  `json:"message"`
+	AttachmentURL *string                 `json:"attachment_url"`
+	AdminNotes    *string                 `json:"admin_notes"`
+	Status        string                  `json:"status"`
+	CreatedAt     time.Time               `json:"created_at"`
+	UpdatedAt     time.Time               `json:"updated_at"`
+	Comments      []SupportMessageComment `json:"comments,omitempty"`
 }
 
 type SupportMessageComment struct {
@@ -64,7 +64,7 @@ func (h *Handler) GetMessages(c *gin.Context) {
 	for rows.Next() {
 		var msg SupportMessage
 		if err := rows.Scan(
-			&msg.ID, &msg.Name, &msg.Email, &msg.Topic, &msg.Message, 
+			&msg.ID, &msg.Name, &msg.Email, &msg.Topic, &msg.Message,
 			&msg.AttachmentURL, &msg.AdminNotes, &msg.Status, &msg.CreatedAt, &msg.UpdatedAt,
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Error scanning message row"})
@@ -90,7 +90,7 @@ func (h *Handler) GetMessageByID(c *gin.Context) {
 		FROM support_messages 
 		WHERE id = $1
 	`, id).Scan(
-		&msg.ID, &msg.Name, &msg.Email, &msg.Topic, &msg.Message, 
+		&msg.ID, &msg.Name, &msg.Email, &msg.Topic, &msg.Message,
 		&msg.AttachmentURL, &msg.AdminNotes, &msg.Status, &msg.CreatedAt, &msg.UpdatedAt,
 	)
 
@@ -109,14 +109,14 @@ func (h *Handler) GetMessageByID(c *gin.Context) {
 		WHERE message_id = $1
 		ORDER BY created_at ASC
 	`, id)
-	
+
 	if err == nil {
 		defer rows.Close()
 		msg.Comments = []SupportMessageComment{}
 		for rows.Next() {
 			var comment SupportMessageComment
 			if err := rows.Scan(
-				&comment.ID, &comment.MessageID, &comment.Comment, 
+				&comment.ID, &comment.MessageID, &comment.Comment,
 				&comment.AdminEmail, &comment.IsPublic, &comment.CreatedAt,
 			); err == nil {
 				msg.Comments = append(msg.Comments, comment)
@@ -250,7 +250,7 @@ func (h *Handler) AddMessageComment(c *gin.Context) {
 			FROM support_messages 
 			WHERE id = $1
 		`, id).Scan(&ticketID, &userEmail, &userName, &topic)
-		
+
 		if err == nil {
 			// Отправляем письмо синхронно, чтобы админ увидел ошибку, если почта не работает
 			errMail := h.mailer.SendSupportReplyEmail(userEmail, userName, topic, req.Comment, ticketID)
@@ -305,10 +305,9 @@ func (h *Handler) AddMessageComment(c *gin.Context) {
 		FROM support_message_comments 
 		WHERE id = $1
 	`, commentID).Scan(
-		&newComment.ID, &newComment.MessageID, &newComment.Comment, 
+		&newComment.ID, &newComment.MessageID, &newComment.Comment,
 		&newComment.AdminEmail, &newComment.IsPublic, &newComment.CreatedAt,
 	)
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Comment added successfully", "data": newComment})
 }
-

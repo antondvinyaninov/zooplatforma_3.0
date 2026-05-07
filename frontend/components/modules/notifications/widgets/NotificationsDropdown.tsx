@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { notificationsApi, Notification } from '@/lib/api';
 import { getMediaUrl, getFullName } from '@/lib/utils';
+import { getWebSocketUrl } from '@/lib/urls';
 
 export default function NotificationsDropdown() {
   const { isAuthenticated } = useAuth();
@@ -27,13 +28,63 @@ export default function NotificationsDropdown() {
     if (isAuthenticated) {
       loadUnreadCount();
 
-      // Обновляем каждые 2 минуты
-      const interval = setInterval(loadUnreadCount, 120000);
-      return () => clearInterval(interval);
+      // Подключаемся к WebSocket для получения real-time уведомлений
+      let ws: WebSocket | null = null;
+      let reconnectTimeout: NodeJS.Timeout;
+
+      const connectWS = () => {
+        // Подключаемся, используя token=authenticated (авторизация по кукам)
+        ws = new WebSocket(`${getWebSocketUrl()}?token=authenticated`);
+
+        ws.onopen = () => {
+          console.log('🔗 WebSocket (Notifications) подключен');
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'new_notification') {
+              // Мгновенно увеличиваем счетчик
+              setUnreadCount((prev) => prev + 1);
+
+              // Воспроизводим звук (Мяу!)
+              try {
+                const audio = new Audio('/sounds/meow.mp3');
+                // Звук может быть заблокирован браузером, если юзер еще не кликнул по странице
+                audio.play().catch(e => console.log('Audio playback blocked by browser expectedly:', e));
+              } catch (e) {
+                console.error("Failed to play sound", e);
+              }
+              
+              // Если дропдаун открыт, пытаемся подгрузить новые
+              if (isOpen) {
+                loadNotifications();
+              }
+            }
+          } catch (e) {
+            console.error('Ошибка парсинга WS-сообщения:', e);
+          }
+        };
+
+        ws.onclose = () => {
+          console.log('❌ WebSocket (Notifications) отключен. Переподключение через 5с...');
+          reconnectTimeout = setTimeout(connectWS, 5000);
+        };
+      };
+
+      connectWS();
+
+      return () => {
+        if (ws) {
+          ws.onclose = null; // убираем реконнект
+          ws.close();
+        }
+        clearTimeout(reconnectTimeout);
+      };
     } else {
       setUnreadCount(0);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -120,6 +171,16 @@ export default function NotificationsDropdown() {
     }
   };
 
+  // Метод для вызова тестового уведомления:
+  const triggerTestNotification = async () => {
+    try {
+      await fetch('/api/auth/test-notification');
+      console.log('Тестовое уведомление запрошено у сервера');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleNotificationClick = (notification: Notification) => {
     // Отмечаем как прочитанное
     if (!notification.is_read) {
@@ -194,14 +255,23 @@ export default function NotificationsDropdown() {
           {/* Header */}
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">Уведомления</h3>
-            {unreadCount > 0 && (
+            <div className="flex gap-3">
               <button
-                onClick={handleMarkAllAsRead}
-                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                onClick={triggerTestNotification}
+                className="text-xs text-green-600 hover:text-green-700 font-medium border border-green-200 rounded px-2 py-1"
+                title="Отправить тестовое уведомление самому себе"
               >
-                Прочитать все
+                Тест пуша
               </button>
-            )}
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium self-center"
+                >
+                  Прочитать все
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Content */}

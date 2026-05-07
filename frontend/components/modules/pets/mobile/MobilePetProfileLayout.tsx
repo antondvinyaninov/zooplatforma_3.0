@@ -121,6 +121,13 @@ export default function MobilePetProfileLayout({
           >
             {uploadSuccess ? '✓ Фото загружено' : uploading ? 'Загрузка...' : '+ Изменить фото'}
           </button>
+          <input
+            ref={uploadInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleQuickUpload}
+          />
         </div>
       </div>
 

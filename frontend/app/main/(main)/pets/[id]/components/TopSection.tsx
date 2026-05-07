@@ -42,7 +42,8 @@ export default function TopSection({ pet, isOwnerOrCurator }: TopSectionProps) {
   const viewsCount = pet.views_count || 0;
 
   const handleShare = async () => {
-    const postUrl = `${window.location.origin}/main/pets/${pet.id}`;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://zooplatforma.ru';
+    const postUrl = `${baseUrl}/main/pets/${pet.id}`;
     const shareTitle = `ЗооПлатформа | ${pet.name || 'Питомец'} (${pet.species_name || pet.species || 'животное'})`;
     const shareText = pet.description 
       ? pet.description.substring(0, 100) + (pet.description.length > 100 ? '...' : '') 

@@ -149,7 +149,8 @@ export default function GroupSettingsModal({ chat, currentUserId, onClose, onUpd
     try {
       const res = await apiClient.get<any>(`/api/chats/${chat.id}/invite`);
       if (res.success && res.data?.token) {
-        const link = `${window.location.origin}/main/join/${res.data.token}`;
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://zooplatforma.ru';
+        const link = `${baseUrl}/main/join/${res.data.token}`;
         await navigator.clipboard.writeText(link);
         setCopiedLink(true);
         setTimeout(() => setCopiedLink(false), 2000);

@@ -175,17 +175,17 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		defer rows.Close()
 
 		type Pet struct {
-			ID           int    `json:"id"`
-			OrgPetNumber int    `json:"org_pet_number"`
-			Name         string `json:"name"`
-			SpeciesID    *int   `json:"species_id"`
-			SpeciesName  string `json:"species_name"`
-			BreedID      *int   `json:"breed_id"`
-			BreedName    string `json:"breed_name"`
-			BirthDate    string `json:"birth_date"`
-			Gender       string `json:"gender"`
-			Description  string `json:"description"`
-			PhotoURL     string `json:"photo_url"`
+			ID                int    `json:"id"`
+			OrgPetNumber      int    `json:"org_pet_number"`
+			Name              string `json:"name"`
+			SpeciesID         *int   `json:"species_id"`
+			SpeciesName       string `json:"species_name"`
+			BreedID           *int   `json:"breed_id"`
+			BreedName         string `json:"breed_name"`
+			BirthDate         string `json:"birth_date"`
+			Gender            string `json:"gender"`
+			Description       string `json:"description"`
+			PhotoURL          string `json:"photo_url"`
 			Color             string `json:"color"`
 			Size              string `json:"size"`
 			MarkingSpecialist string `json:"marking_specialist"`
@@ -235,64 +235,64 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		}
 
 		type PetDetail struct {
-			ID               int      `json:"id"`
-			OrgPetNumber     int      `json:"org_pet_number"`
-			Name             string   `json:"name"`
-			SpeciesID        *int     `json:"species_id"`
-			SpeciesName      string   `json:"species_name"`
-			BreedID          *int     `json:"breed_id"`
-			BreedName        string   `json:"breed_name"`
-			BirthDate        string   `json:"birth_date"`
-			AgeType          string   `json:"age_type"`
-			ApproxYears      int      `json:"approximate_years"`
-			ApproxMonths     int      `json:"approximate_months"`
-			Gender           string   `json:"gender"`
-			Description      string   `json:"description"`
-			PhotoURL         string   `json:"photo_url"`
-			Color            string   `json:"color"`
-			Fur              string   `json:"fur"`
-			Ears             string   `json:"ears"`
-			Tail             string   `json:"tail"`
-			Size             string   `json:"size"`
-			SpecialMarks     string   `json:"special_marks"`
-			Relationship     string   `json:"relationship"`
+			ID           int    `json:"id"`
+			OrgPetNumber int    `json:"org_pet_number"`
+			Name         string `json:"name"`
+			SpeciesID    *int   `json:"species_id"`
+			SpeciesName  string `json:"species_name"`
+			BreedID      *int   `json:"breed_id"`
+			BreedName    string `json:"breed_name"`
+			BirthDate    string `json:"birth_date"`
+			AgeType      string `json:"age_type"`
+			ApproxYears  int    `json:"approximate_years"`
+			ApproxMonths int    `json:"approximate_months"`
+			Gender       string `json:"gender"`
+			Description  string `json:"description"`
+			PhotoURL     string `json:"photo_url"`
+			Color        string `json:"color"`
+			Fur          string `json:"fur"`
+			Ears         string `json:"ears"`
+			Tail         string `json:"tail"`
+			Size         string `json:"size"`
+			SpecialMarks string `json:"special_marks"`
+			Relationship string `json:"relationship"`
 			// Идентификация
-			MarkingDate       string   `json:"marking_date"`
-			TagNumber         string   `json:"tag_number"`
-			BrandNumber       string   `json:"brand_number"`
-			ChipNumber        string   `json:"chip_number"`
-			MarkingSpecialist string   `json:"marking_specialist"`
-			MarkingOrg        string   `json:"marking_org"`
+			MarkingDate       string `json:"marking_date"`
+			TagNumber         string `json:"tag_number"`
+			BrandNumber       string `json:"brand_number"`
+			ChipNumber        string `json:"chip_number"`
+			MarkingSpecialist string `json:"marking_specialist"`
+			MarkingOrg        string `json:"marking_org"`
 			// Место содержания
-			LocationType     string   `json:"location_type"`
-			LocationAddress  string   `json:"location_address"`
-			City             string   `json:"city"`
-			ActualCity       string   `json:"actual_city"`
-			LocationCage     string   `json:"location_cage"`
-			LocationContact  string   `json:"location_contact"`
-			LocationPhone    string   `json:"location_phone"`
-			LocationNotes    string   `json:"location_notes"`
+			LocationType    string `json:"location_type"`
+			LocationAddress string `json:"location_address"`
+			City            string `json:"city"`
+			ActualCity      string `json:"actual_city"`
+			LocationCage    string `json:"location_cage"`
+			LocationContact string `json:"location_contact"`
+			LocationPhone   string `json:"location_phone"`
+			LocationNotes   string `json:"location_notes"`
 			// Здоровье
-			Weight             float64  `json:"weight"`
-			SterilizationDate  string   `json:"sterilization_date"`
-			SterilizationSpec  string   `json:"sterilization_specialist"`
-			SterilizationOrg   string   `json:"sterilization_org"`
-			SterilizationType  string   `json:"sterilization_type"`
-			HealthNotes        string   `json:"health_notes"`
-			CreatedAt          string   `json:"created_at"`
+			Weight            float64 `json:"weight"`
+			SterilizationDate string  `json:"sterilization_date"`
+			SterilizationSpec string  `json:"sterilization_specialist"`
+			SterilizationOrg  string  `json:"sterilization_org"`
+			SterilizationType string  `json:"sterilization_type"`
+			HealthNotes       string  `json:"health_notes"`
+			CreatedAt         string  `json:"created_at"`
 			// Медиа
-			MediaURLs          []string `json:"media_urls"`
-			FacePhotoURL       string   `json:"face_photo_url"`
-			BodyPhotoURL       string   `json:"body_photo_url"`
+			MediaURLs    []string `json:"media_urls"`
+			FacePhotoURL string   `json:"face_photo_url"`
+			BodyPhotoURL string   `json:"body_photo_url"`
 			// Каталог
-			CatalogStatus      string   `json:"catalog_status"`
-			CatalogData        any      `json:"catalog_data"`
+			CatalogStatus string `json:"catalog_status"`
+			CatalogData   any    `json:"catalog_data"`
 			// Опекун (Организация)
-			OrgID              int      `json:"org_id"`
-			OrgName            string   `json:"org_name"`
-			OrgEmail           string   `json:"org_email"`
-			OrgPhone           string   `json:"org_phone"`
-			OrgLogo            string   `json:"org_logo"`
+			OrgID    int    `json:"org_id"`
+			OrgName  string `json:"org_name"`
+			OrgEmail string `json:"org_email"`
+			OrgPhone string `json:"org_phone"`
+			OrgLogo  string `json:"org_logo"`
 		}
 
 		var pet PetDetail
@@ -349,7 +349,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			&pet.City, &pet.ActualCity,
 			&pet.LocationCage, &pet.LocationContact,
 			&pet.LocationPhone, &pet.LocationNotes,
-			&pet.Weight, &pet.SterilizationDate, 
+			&pet.Weight, &pet.SterilizationDate,
 			&pet.SterilizationSpec, &pet.SterilizationOrg, &pet.SterilizationType,
 			&pet.HealthNotes,
 			&pet.CreatedAt,
@@ -590,13 +590,13 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		orgId := c.Param("orgId")
 		petId := c.Param("petId")
 
-		// Проверка прав 
+		// Проверка прав
 		var role string
 		err := db.QueryRow(`
 			SELECT role FROM organization_members 
 			WHERE organization_id = $1 AND user_id = $2
 		`, orgId, intUserID).Scan(&role)
-		
+
 		if err == sql.ErrNoRows {
 			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
 			return
@@ -636,22 +636,22 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
 			return
 		}
-		
+
 		q := c.Query("q")
 		if len(q) < 1 {
 			c.JSON(200, gin.H{"success": true, "data": []map[string]interface{}{}})
 			return
 		}
-		
+
 		orgId := c.Param("orgId")
-		
+
 		var userRole string
 		_ = db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, intUserID).Scan(&userRole)
 		if userRole != "owner" && userRole != "admin" {
 			c.JSON(403, gin.H{"success": false, "error": "Permission denied"})
 			return
 		}
-		
+
 		query := `
 			SELECT id, name, email, avatar 
 			FROM users u
@@ -661,7 +661,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			)
 			LIMIT 20
 		`
-		
+
 		wildcard := "%" + q + "%"
 		rows, err := db.Query(query, wildcard, q, orgId)
 		if err != nil {
@@ -669,32 +669,32 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			return
 		}
 		defer rows.Close()
-		
+
 		var users []map[string]interface{}
 		for rows.Next() {
 			var id int
 			var name, email string
 			var avatar *string
-			
+
 			if err := rows.Scan(&id, &name, &email, &avatar); err == nil {
 				avatarStr := ""
 				if avatar != nil {
 					avatarStr = *avatar
 				}
-				
+
 				users = append(users, map[string]interface{}{
-					"id": id,
-					"name": name,
-					"email": email,
+					"id":     id,
+					"name":   name,
+					"email":  email,
 					"avatar": avatarStr,
 				})
 			}
 		}
-		
+
 		if users == nil {
 			users = []map[string]interface{}{}
 		}
-		
+
 		c.JSON(200, gin.H{"success": true, "data": users})
 	})
 
@@ -737,18 +737,18 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			var id int
 			var name, email, avatar, role, position, orgAvatar, permStr string
 			if err := rows.Scan(&id, &name, &email, &avatar, &role, &position, &orgAvatar, &permStr); err == nil {
-			    var perms map[string]interface{}
-			    json.Unmarshal([]byte(permStr), &perms)
+				var perms map[string]interface{}
+				json.Unmarshal([]byte(permStr), &perms)
 				staff = append(staff, map[string]interface{}{
-					"id": id,
-					"name": name,
-					"email": email,
-					"avatar": avatar,
+					"id":           id,
+					"name":         name,
+					"email":        email,
+					"avatar":       avatar,
 					"orgAvatarUrl": orgAvatar,
-					"role": role,
-					"jobTitle": position,
-					"permissions": perms,
-					"isOwner": role == "owner",
+					"role":         role,
+					"jobTitle":     position,
+					"permissions":  perms,
+					"isOwner":      role == "owner",
 				})
 			}
 		}
@@ -773,9 +773,9 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			return
 		}
 
-        var id int
-        var name, email, avatar, role, position, orgAvatar, permStr string
-        var isPublic bool
+		var id int
+		var name, email, avatar, role, position, orgAvatar, permStr string
+		var isPublic bool
 		err := db.QueryRow(`
 			SELECT u.id, 
 			       COALESCE(u.name, '') || CASE WHEN u.last_name IS NOT NULL AND u.last_name != '' THEN ' ' || u.last_name ELSE '' END, 
@@ -790,30 +790,30 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			JOIN users u ON om.user_id = u.id
 			WHERE om.organization_id = $1 AND u.id = $2
 		`, orgId, staffId).Scan(&id, &name, &email, &avatar, &role, &position, &orgAvatar, &permStr, &isPublic)
-		
+
 		if err == sql.ErrNoRows {
-		    c.JSON(404, gin.H{"success": false, "error": "Staff not found"})
+			c.JSON(404, gin.H{"success": false, "error": "Staff not found"})
 			return
 		} else if err != nil {
 			c.JSON(500, gin.H{"success": false, "error": "Database error"})
 			return
 		}
-		
-        var perms map[string]interface{}
-        json.Unmarshal([]byte(permStr), &perms)
-        
-        c.JSON(200, gin.H{"success": true, "data": map[string]interface{}{
-            "id": id,
-            "name": name,
-            "email": email,
-            "avatar": avatar,
-            "orgAvatarUrl": orgAvatar,
-            "role": role,
-            "jobTitle": position,
-            "permissions": perms,
-            "isOwner": role == "owner",
-            "isPublic": isPublic,
-        }})
+
+		var perms map[string]interface{}
+		json.Unmarshal([]byte(permStr), &perms)
+
+		c.JSON(200, gin.H{"success": true, "data": map[string]interface{}{
+			"id":           id,
+			"name":         name,
+			"email":        email,
+			"avatar":       avatar,
+			"orgAvatarUrl": orgAvatar,
+			"role":         role,
+			"jobTitle":     position,
+			"permissions":  perms,
+			"isOwner":      role == "owner",
+			"isPublic":     isPublic,
+		}})
 	})
 
 	r.PUT("/:orgId/staff/:staffId", func(c *gin.Context) {
@@ -830,9 +830,9 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			c.JSON(403, gin.H{"success": false, "error": "Not a member of this organization"})
 			return
 		}
-		
+
 		if myRole != "owner" && myRole != "admin" && fmt.Sprintf("%d", intUserID) != staffId {
-		    c.JSON(403, gin.H{"success": false, "error": "Insufficient permissions"})
+			c.JSON(403, gin.H{"success": false, "error": "Insufficient permissions"})
 			return
 		}
 
@@ -840,13 +840,13 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			JobTitle     *string                `json:"jobTitle"`
 			OrgAvatarUrl *string                `json:"orgAvatarUrl"`
 			Permissions  map[string]interface{} `json:"permissions"`
-            IsPublic     *bool                  `json:"isPublic"`
+			IsPublic     *bool                  `json:"isPublic"`
 		}
 		if err := c.ShouldBindJSON(&input); err != nil {
 			c.JSON(400, gin.H{"success": false, "error": "Invalid input"})
 			return
 		}
-		
+
 		permBytes, _ := json.Marshal(input.Permissions)
 
 		_, err := db.Exec(`
@@ -857,7 +857,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
                 is_public = COALESCE($4, is_public)
 		    WHERE organization_id = $5 AND user_id = $6
 		`, input.JobTitle, input.OrgAvatarUrl, string(permBytes), input.IsPublic, orgId, staffId)
-		
+
 		if err != nil {
 			c.JSON(500, gin.H{"success": false, "error": "Database error"})
 			return
@@ -880,7 +880,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			return
 		}
 		if myRole != "owner" && myRole != "admin" {
-		    c.JSON(403, gin.H{"success": false, "error": "Insufficient permissions"})
+			c.JSON(403, gin.H{"success": false, "error": "Insufficient permissions"})
 			return
 		}
 
@@ -892,28 +892,28 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			c.JSON(400, gin.H{"success": false, "error": "Invalid input"})
 			return
 		}
-		
+
 		var targetUserId int
 		err := db.QueryRow(`SELECT id FROM users WHERE email = $1`, input.Email).Scan(&targetUserId)
 		if err == sql.ErrNoRows {
-		    c.JSON(404, gin.H{"success": false, "error": "Пользователь с таким email не найден в системе"})
+			c.JSON(404, gin.H{"success": false, "error": "Пользователь с таким email не найден в системе"})
 			return
 		} else if err != nil {
 			c.JSON(500, gin.H{"success": false, "error": "Database error"})
 			return
 		}
-		
+
 		jobTitle := "Специалист"
 		if input.JobTitle != "" {
-		    jobTitle = input.JobTitle
+			jobTitle = input.JobTitle
 		}
-		
+
 		_, err = db.Exec(`
 		    INSERT INTO organization_members (organization_id, user_id, role, position, permissions)
 		    VALUES ($1, $2, 'specialist', $3, '{"pets":true,"medical":true,"finance":false}')
 		    ON CONFLICT (organization_id, user_id) DO NOTHING
 		`, orgId, targetUserId, jobTitle)
-		
+
 		if err != nil {
 			c.JSON(500, gin.H{"success": false, "error": "Database error"})
 			return
@@ -921,7 +921,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 
 		c.JSON(200, gin.H{"success": true})
 	})
-	
+
 	r.DELETE("/:orgId/staff/:staffId", func(c *gin.Context) {
 		intUserID, ok := getUserID(c)
 		if !ok {
@@ -937,14 +937,14 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			return
 		}
 		if myRole != "owner" && myRole != "admin" {
-		    c.JSON(403, gin.H{"success": false, "error": "Insufficient permissions"})
+			c.JSON(403, gin.H{"success": false, "error": "Insufficient permissions"})
 			return
 		}
-		
+
 		var targetRole string
 		db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgId, staffId).Scan(&targetRole)
 		if targetRole == "owner" {
-		    c.JSON(400, gin.H{"success": false, "error": "Cannot delete owner"})
+			c.JSON(400, gin.H{"success": false, "error": "Cannot delete owner"})
 			return
 		}
 
@@ -1037,9 +1037,9 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			SpecialistPosition string `json:"specialist_position"`
 			Notes              string `json:"notes"`
 			// Идентификаторы питомца
-			ChipNumber     string `json:"chip_number,omitempty"`
-			TagNumber      string `json:"tag_number,omitempty"`
-			BrandNumber    string `json:"brand_number,omitempty"`
+			ChipNumber  string `json:"chip_number,omitempty"`
+			TagNumber   string `json:"tag_number,omitempty"`
+			BrandNumber string `json:"brand_number,omitempty"`
 		}
 		if err := c.ShouldBindJSON(&input); err != nil {
 			c.JSON(400, gin.H{"success": false, "error": "Invalid input"})

@@ -6,7 +6,7 @@ import { useAuth } from '../../../../../contexts/AuthContext';
 import { useToast } from '../../../../../contexts/ToastContext';
 import { usersApi } from '../../../../../lib/api';
 import { getMediaUrl } from '../../../../../lib/utils';
-import { UserIcon, CameraIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { UserIcon, CameraIcon, XMarkIcon, PhoneIcon, LockClosedIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import CityAutocomplete from '../../../../../components/main/shared/CityAutocomplete';
 import ConfirmModal from '../../../../../components/main/shared/ConfirmModal';
@@ -388,6 +388,34 @@ export default function EditProfilePage() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
       {/* Center Column - Main Form (2 columns width) */}
       <div className="lg:col-span-2">
+        {/* Horizontal Navigation for Mobile (Hidden on Desktop) */}
+        <div className="lg:hidden bg-white/90 backdrop-blur-md rounded-xl shadow-sm border border-gray-100 p-2 mb-4 sticky top-[56px] z-40 overflow-x-auto hide-scrollbar">
+          <nav className="flex items-center gap-1 min-w-max">
+            {[
+              { id: 'profile', name: 'Профиль', icon: UserIcon },
+              { id: 'contacts', name: 'Контакты', icon: PhoneIcon },
+              { id: 'privacy', name: 'Приватность', icon: LockClosedIcon },
+              { id: 'social', name: 'Соцсети', icon: UserGroupIcon },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveSection(item.id as any)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeSection === item.id
+                    ? 'bg-blue-50 text-blue-700 border border-blue-100/50'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <item.icon className={`w-4 h-4 ${activeSection === item.id ? 'text-blue-600' : 'text-gray-400'}`} />
+                <span>{item.name}</span>
+                {activeSection === item.id && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] ml-1"></div>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           {/* Section Title */}
           <div className="border-b border-gray-200 p-6">
@@ -462,7 +490,7 @@ export default function EditProfilePage() {
                 {coverPreview ? (
                   <div className="relative">
                     <div className="relative h-48 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg overflow-hidden">
-                      <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
+                      <img src={coverPreview || undefined} alt="Cover" className="w-full h-full object-cover" />
                       {isUploadingCover && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
@@ -523,7 +551,7 @@ export default function EditProfilePage() {
                     <div className="w-24 h-24 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
                       {avatarPreview ? (
                         <img
-                          src={avatarPreview}
+                          src={avatarPreview || undefined}
                           alt={user?.name}
                           className="w-full h-full object-cover"
                         />
@@ -800,7 +828,7 @@ export default function EditProfilePage() {
                     <div className="text-sm font-medium">
                       {isSocialLoading ? (
                         <span className="text-gray-500">Проверка...</span>
-                      ) : socialLinks?.vk?.linked ? (
+                      ) : socialLinks?.vk && socialLinks.vk.linked ? (
                         <span className="text-green-600">Подключено</span>
                       ) : (
                         <span className="text-gray-500">Не подключено</span>
@@ -849,7 +877,7 @@ export default function EditProfilePage() {
                     <div className="text-sm font-medium">
                       {isSocialLoading ? (
                         <span className="text-gray-500">Проверка...</span>
-                      ) : socialLinks?.ok?.linked ? (
+                      ) : socialLinks?.ok && socialLinks.ok.linked ? (
                         <span className="text-green-600">Подключено</span>
                       ) : (
                         <span className="text-gray-500">Не подключено</span>
@@ -894,7 +922,7 @@ export default function EditProfilePage() {
                     <div className="text-sm font-medium">
                       {isSocialLoading ? (
                         <span className="text-gray-500">Проверка...</span>
-                      ) : socialLinks?.mailru?.linked ? (
+                      ) : socialLinks?.mailru && socialLinks.mailru.linked ? (
                         <span className="text-green-600">Подключено</span>
                       ) : (
                         <span className="text-gray-500">Не подключено</span>
@@ -949,8 +977,8 @@ export default function EditProfilePage() {
         </div>
       </div>
 
-      {/* Right Column - Sections Menu */}
-      <div className="lg:col-span-1 space-y-2.5">
+      {/* Right Column - Sections Menu (Hidden on Mobile) */}
+      <div className="hidden lg:block lg:col-span-1 space-y-2.5">
         {/* Sections Navigation */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-4 border-b border-gray-200">

@@ -12,6 +12,12 @@ import PetHealth from '@/components/modules/pets/profile/PetHealth';
 import PetGallery from '@/components/modules/pets/profile/PetGallery';
 import { useBreadcrumb } from '@/components/BreadcrumbContext';
 
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Dialog, DialogTitle } from '@/components/ui/Dialog';
+import { Badge } from '@/components/ui/Badge';
+import { Switch } from '@/components/ui/Switch';
+
 export interface PetDetail {
   id: number;
   name: string;
@@ -101,6 +107,7 @@ export default function PetProfileLayout({
   const [photoUrl, setPhotoUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const { uploadFile } = useMediaUpload();
   const { setItems } = useBreadcrumb();
@@ -172,18 +179,17 @@ export default function PetProfileLayout({
   };
 
   const handleDelete = async () => {
-    if (confirm('Вы уверены, что хотите удалить карточку питомца? Это действие необратимо.')) {
-      try {
-        const res = await fetch(apiUrl, { method: 'DELETE' });
-        if (res.ok) {
-          router.push(backUrl);
-        } else {
-          const data = await res.json();
-          alert(data.error || 'Ошибка при удалении');
-        }
-      } catch (e) {
-        alert('Ошибка сети при удалении');
+    try {
+      const res = await fetch(apiUrl, { method: 'DELETE' });
+      if (res.ok) {
+        setDeleteDialogOpen(false);
+        router.push(backUrl);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Ошибка при удалении');
       }
+    } catch (e) {
+      alert('Ошибка сети при удалении');
     }
   };
 
@@ -237,10 +243,12 @@ export default function PetProfileLayout({
   const isRegistered = !!pet.marking_date || !!pet.chip_number || !!pet.brand_number || !!pet.tag_number;
 
   const InfoRow = ({ icon, label, value }: { icon: string; label: string; value?: string | null }) => (
-    <div style={{ display: 'flex', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f3f4f6' }}>
-      <div style={{ width: 32, fontSize: 16, flexShrink: 0 }}>{icon}</div>
-      <div style={{ flex: 1, fontSize: 13, color: '#6b7280' }}>{label}</div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: value ? '#111827' : '#d1d5db' }}>{value || '—'}</div>
+    <div className="flex items-center py-3 border-b border-gray-100 last:border-0 last:pb-0">
+      <div className="w-8 text-base shrink-0">{icon}</div>
+      <div className="flex-1 text-[13px] text-gray-500">{label}</div>
+      <div className={`text-[13px] font-semibold ${value ? 'text-gray-900' : 'text-gray-300'}`}>
+        {value || '—'}
+      </div>
     </div>
   );
 
@@ -286,71 +294,44 @@ export default function PetProfileLayout({
   }
 
   return (
-    <div style={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 32 }}>
+    <div className="max-w-7xl mx-auto px-4 pb-12 pt-4">
       {/* Основной грид */}
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 280px', gap: 16, alignItems: 'start' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_280px] gap-4 items-start">
 
         {/* Левая колонка */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="flex flex-col gap-4">
           {/* Фото */}
-          <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-            <div style={{
-              height: 260, background: (photoUrl) ? '#000' : gradient,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 100,
-              position: 'relative',
-            }}>
+          <Card className="overflow-hidden">
+            <div className="relative h-[260px] flex items-center justify-center text-[100px]" style={{ background: photoUrl ? '#000' : gradient }}>
               {photoUrl
-                ? <img src={photoUrl} alt={pet.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ? <img src={photoUrl} alt={pet.name} className="w-full h-full object-cover" />
                 : (isdog ? '🐕' : '🐈')}
-              <span style={{
-                position: 'absolute', top: 12, left: 12,
-                background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)',
-                borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: '#374151',
-              }}>
+              <Badge variant="secondary" className="absolute top-3 left-3 bg-white/90 text-gray-800 hover:bg-white backdrop-blur shadow-sm">
                 №{pet.org_pet_number || pet.id}
-              </span>
+              </Badge>
             </div>
-            <div style={{ padding: '16px 16px 12px' }}>
-              <div style={{ fontWeight: 700, fontSize: 18, color: '#111827', marginBottom: 4 }}>{pet.name}</div>
-              <div style={{ fontSize: 13, color: '#6b7280' }}>
+            <div className="p-4 pb-3">
+              <div className="font-bold text-lg text-gray-900 mb-1">{pet.name}</div>
+              <div className="text-[13px] text-gray-500">
                 {pet.species_name || (isdog ? 'Собака' : 'Кошка')}{pet.breed_name ? ` · ${pet.breed_name}` : ''}
               </div>
             </div>
-            <div style={{ padding: '0 12px 12px' }}>
-              <button
-                onClick={() => uploadInputRef.current?.click()}
+            <div className="px-3 pb-3">
+              <Button
+                variant="outline"
                 disabled={uploading}
-                onMouseEnter={e => {
-                  if (!uploading) {
-                    (e.currentTarget as HTMLButtonElement).style.background = '#f0f9ff';
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = '#93c5fd';
-                    (e.currentTarget as HTMLButtonElement).style.color = '#3b82f6';
-                  }
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = '#d1d5db';
-                  (e.currentTarget as HTMLButtonElement).style.color = '#6b7280';
-                }}
-                style={{
-                  width: '100%', padding: '8px', borderRadius: 8,
-                  border: uploadSuccess ? '1px solid #86efac' : '1px dashed #d1d5db',
-                  background: uploadSuccess ? '#f0fdf4' : uploading ? '#f9fafb' : 'transparent',
-                  fontSize: 12,
-                  color: uploadSuccess ? '#16a34a' : uploading ? '#9ca3af' : '#6b7280',
-                  cursor: uploading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s',
-                }}
+                onClick={() => uploadInputRef.current?.click()}
+                className={`w-full text-xs font-medium transition-all ${uploadSuccess ? 'border-green-300 bg-green-50 text-green-600' : uploading ? 'bg-gray-50 text-gray-400' : ''}`}
               >
                 {uploadSuccess ? '✓ Фото загружено' : uploading ? 'Загрузка...' : '+ Загрузить фото'}
-              </button>
+              </Button>
               <input
                 ref={uploadInputRef}
-                type="file" accept="image/*" style={{ display: 'none' }}
+                type="file" accept="image/*" className="hidden"
                 onChange={handleQuickUpload}
               />
             </div>
-          </div>
+          </Card>
 
           <PetNavMenu activeTab={activeTab} onChange={setActiveTab} showFundraising={showFundraising && pet.catalog_status === 'needs_help'} />
         </div>
@@ -359,55 +340,34 @@ export default function PetProfileLayout({
         <div>{renderCenter()}</div>
 
         {/* Правая колонка */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ position: 'sticky', top: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="flex flex-col gap-4">
+          <div className="sticky top-4 flex flex-col gap-4">
 
             {/* Действия */}
-            <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)', padding: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Действия</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs uppercase tracking-wider text-gray-500">Действия</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
                 {catalogToggle && (
-                  <div style={{ paddingBottom: 12, borderBottom: '1px solid #f3f4f6' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: pet.catalog_status && pet.catalog_status !== 'draft' ? '#2563eb' : '#374151' }}>
+                  <div className="pb-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className={`text-[13px] font-semibold ${pet.catalog_status && pet.catalog_status !== 'draft' ? 'text-blue-600' : 'text-gray-700'}`}>
                         {pet.catalog_status && pet.catalog_status !== 'draft' ? 'В каталоге' : 'Не в каталоге'}
                       </div>
-                      <label style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-                        <input 
-                          type="checkbox" 
-                          style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} 
-                          checked={pet.catalog_status !== 'draft'}
-                          onChange={(e) => handleCatalogStatusChange(e.target.checked ? 'looking_for_home' : 'draft')}
-                        />
-                        <div style={{ 
-                          width: 40, height: 24, borderRadius: 24, 
-                          background: pet.catalog_status !== 'draft' ? '#3b82f6' : '#d1d5db',
-                          position: 'relative', transition: 'background 0.2s' 
-                        }}>
-                          <div style={{
-                            width: 20, height: 20, background: '#fff', borderRadius: '50%',
-                            position: 'absolute', top: 2, left: pet.catalog_status !== 'draft' ? 18 : 2,
-                            transition: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 1px 2px rgba(0,0,0,0.15)'
-                          }} />
-                        </div>
-                      </label>
+                      <Switch
+                        checked={pet.catalog_status !== 'draft'}
+                        onCheckedChange={(val: boolean) => handleCatalogStatusChange(val ? 'looking_for_home' : 'draft')}
+                      />
                     </div>
                     
                     {pet.catalog_status && pet.catalog_status !== 'draft' && (
-                      <div style={{ marginTop: 10 }}>
-                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>Тип объявления:</div>
+                      <div className="mt-2">
+                        <div className="text-[11px] text-gray-500 mb-1">Тип объявления:</div>
                         <select 
                           value={pet.catalog_status}
                           onChange={(e) => handleCatalogStatusChange(e.target.value)}
-                          style={{ 
-                            width: '100%', padding: '8px 10px', fontSize: 13, 
-                            borderRadius: 8, border: '1px solid #e5e7eb', background: '#f9fafb',
-                            color: '#111827', outline: 'none', cursor: 'pointer',
-                            appearance: 'none', 
-                            backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")',
-                            backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px'
-                          }}
+                          className="w-full flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
                         >
                           <option value="looking_for_home">Ищет дом</option>
                           <option value="needs_help">Сбор средств</option>
@@ -419,12 +379,7 @@ export default function PetProfileLayout({
                           href={`/main/pets/${pet.id}`} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          style={{ 
-                            display: 'block', marginTop: 16, fontSize: 13, color: '#2563eb', 
-                            textDecoration: 'none', fontWeight: 600, textAlign: 'center' 
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-                          onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+                          className="block mt-4 text-[13px] text-blue-600 font-semibold text-center hover:underline"
                         >
                           ↗ Открыть карточку в каталоге
                         </a>
@@ -435,68 +390,87 @@ export default function PetProfileLayout({
                 
                 {extraRightActions}
 
-                <button 
-                  onClick={handleDelete}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, border: '1px solid #fca5a5', background: '#fef2f2', color: '#ef4444', cursor: 'pointer', fontWeight: 600, textAlign: 'left', transition: 'all 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#f87171'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.borderColor = '#fca5a5'; }}
+                <Button 
+                  variant="danger" 
+                  className="w-full justify-start mt-2"
+                  onClick={() => setDeleteDialogOpen(true)}
                 >
                   🗑 Удалить карточку
-                </button>
-              </div>
-            </div>
+                </Button>
+              </CardContent>
+            </Card>
 
             {/* Инфо и Основное */}
-            <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)', padding: '16px 16px 8px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>Инфо</div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 12, borderBottom: '1px solid #f3f4f6', marginBottom: 4 }}>
-                <div>
-                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Системный ID</div>
-                  <div style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>#{pet.id}</div>
-                </div>
-                {pet.org_pet_number && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs uppercase tracking-wider text-gray-500">Инфо</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col">
+                <div className="flex flex-col gap-2 pb-3 mb-1 border-b border-gray-100">
                   <div>
-                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Учетный номер</div>
-                    <div style={{ fontSize: 13, color: '#374151', fontWeight: 700 }}>#{pet.org_pet_number}</div>
+                    <div className="text-[11px] text-gray-400 mb-[2px]">Системный ID</div>
+                    <div className="text-[13px] text-gray-700 font-semibold">#{pet.id}</div>
                   </div>
-                )}
-                {(pet.city || pet.location_address) && (
+                  {pet.org_pet_number && (
+                    <div>
+                      <div className="text-[11px] text-gray-400 mb-[2px]">Учетный номер</div>
+                      <div className="text-[13px] text-gray-800 font-bold">#{pet.org_pet_number}</div>
+                    </div>
+                  )}
+                  {(pet.city || pet.location_address) && (
+                    <div>
+                      <div className="text-[11px] text-gray-400 mb-[2px]">Город</div>
+                      <div className="text-[13px] text-gray-700 font-semibold">{pet.city || pet.location_address}</div>
+                    </div>
+                  )}
                   <div>
-                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Город</div>
-                    <div style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>{pet.city || pet.location_address}</div>
+                    <div className="text-[11px] text-gray-400 mb-[2px]">Добавлен</div>
+                    <div className="text-[13px] text-gray-700">
+                      {new Date(pet.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </div>
                   </div>
-                )}
-                <div>
-                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Добавлен</div>
-                  <div style={{ fontSize: 13, color: '#374151' }}>
-                    {new Date(pet.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 1 }}>Ответственный</div>
-                  <div style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>
-                    {pet.org_id ? (
-                      <span>Организация (<a href={`/orgs/${pet.org_id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }} onMouseEnter={e => e.currentTarget.style.textDecoration='underline'} onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>{pet.owner_name || pet.org_name || 'Профиль'}</a>)</span>
-                    ) : pet.user_id ? (
-                      <span>{pet.relationship === 'curator' ? 'Куратор' : pet.relationship === 'guardian' ? 'Опекун' : 'Владелец'} (<a href={`/main/${pet.user_id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }} onMouseEnter={e => e.currentTarget.style.textDecoration='underline'} onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>{pet.owner_name || 'Профиль'}</a>)</span>
-                    ) : (
-                      pet.relationship === 'curator' ? 'Куратор' : pet.relationship === 'guardian' ? 'Опекун' : 'Владелец'
-                    )}
+                  <div>
+                    <div className="text-[11px] text-gray-400 mb-[2px]">Ответственный</div>
+                    <div className="text-[13px] text-gray-700 font-semibold">
+                      {pet.org_id ? (
+                        <span>Организация (<a href={`/orgs/${pet.org_id}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{pet.owner_name || pet.org_name || 'Профиль'}</a>)</span>
+                      ) : pet.user_id ? (
+                        <span>{pet.relationship === 'curator' ? 'Куратор' : pet.relationship === 'guardian' ? 'Опекун' : 'Владелец'} (<a href={`/main/${pet.user_id}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{pet.owner_name || 'Профиль'}</a>)</span>
+                      ) : (
+                        pet.relationship === 'curator' ? 'Куратор' : pet.relationship === 'guardian' ? 'Опекун' : 'Владелец'
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <InfoRow icon="⚧" label="Пол" value={pet.gender === 'male' ? 'Самец ♂' : 'Самка ♀'} />
-              {ageStr && <InfoRow icon="🎂" label="Возраст" value={ageStr} />}
-              <InfoRow icon="📏" label="Размер" value={pet.size ? SIZE_LABELS[pet.size] : null} />
-              <InfoRow icon="🎨" label="Окрас" value={pet.color} />
-            </div>
+                <InfoRow icon="⚧" label="Пол" value={pet.gender === 'male' ? 'Самец ♂' : 'Самка ♀'} />
+                {ageStr && <InfoRow icon="🎂" label="Возраст" value={ageStr} />}
+                <InfoRow icon="📏" label="Размер" value={pet.size ? SIZE_LABELS[pet.size] : null} />
+                <InfoRow icon="🎨" label="Окрас" value={pet.color} />
+              </CardContent>
+            </Card>
 
           </div>
         </div>
 
       </div>
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle onClose={() => setDeleteDialogOpen(false)}>
+          Удалить карточку питомца?
+        </DialogTitle>
+        <p className="text-sm text-gray-500 mb-6">
+          Вы уверены, что хотите удалить карточку питомца? Это действие необратимо.
+        </p>
+        <div className="flex justify-end gap-3 mt-6">
+          <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            Отмена
+          </Button>
+          <Button variant="danger" onClick={handleDelete}>
+            Удалить
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

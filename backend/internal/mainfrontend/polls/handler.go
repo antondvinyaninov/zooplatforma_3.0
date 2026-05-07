@@ -21,12 +21,12 @@ func (h *Handler) GetPollByPostID(c *gin.Context) {
 	postID := c.Param("post_id")
 
 	// Получаем текущего пользователя
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	poll, err := h.getPollByPostID(postID, currentUserID)
 	if err == sql.ErrNoRows {
@@ -45,12 +45,12 @@ currentUserID := userIDInterface.(int)
 func (h *Handler) VotePoll(c *gin.Context) {
 	pollID := c.Param("id")
 
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	var req struct {
 		OptionIDs []int `json:"option_ids"`
@@ -163,12 +163,12 @@ currentUserID := userIDInterface.(int)
 func (h *Handler) DeleteVote(c *gin.Context) {
 	pollID := c.Param("id")
 
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	// Получаем post_id
 	var postID int

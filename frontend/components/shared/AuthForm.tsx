@@ -5,6 +5,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import VKIDButton from '../auth/VKIDButton';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Label } from '../ui/Label';
 
 type AuthMode = 'login' | 'register';
 
@@ -164,17 +167,15 @@ export default function AuthForm({
               {/* Name (только для регистрации) */}
               {mode === 'register' && (
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  <Label htmlFor="name" className="mb-2 block">
                     Имя
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id="name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                    style={{ '--tw-ring-color': '#1B76FF' } as React.CSSProperties}
                     placeholder="Ваше имя"
                   />
                 </div>
@@ -182,40 +183,35 @@ export default function AuthForm({
 
               {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <Label htmlFor="email" className="mb-2 block">
                   Email
-                </label>
-                <div className="relative">
-                  <EnvelopeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full pl-10 pr-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                    style={{ '--tw-ring-color': '#1B76FF' } as React.CSSProperties}
-                    placeholder="your@email.com"
-                  />
-                </div>
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  icon={<EnvelopeIcon className="w-5 h-5" />}
+                  placeholder="your@email.com"
+                />
               </div>
 
               {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <Label htmlFor="password" className="mb-2 block">
                   Пароль
-                </label>
+                </Label>
                 <div className="relative">
-                  <LockClosedIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
+                  <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full pl-10 pr-10 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                    style={{ '--tw-ring-color': '#1B76FF' } as React.CSSProperties}
+                    icon={<LockClosedIcon className="w-5 h-5" />}
                     placeholder="••••••••"
+                    className="pr-10"
                   />
                   <button
                     type="button"
@@ -244,23 +240,22 @@ export default function AuthForm({
               {/* Confirm Password (только для регистрации) */}
               {mode === 'register' && (
                 <div>
-                  <label
+                  <Label
                     htmlFor="confirmPassword"
-                    className="block text-sm font-medium text-gray-700 mb-2"
+                    className="mb-2 block"
                   >
                     Подтвердите пароль
-                  </label>
+                  </Label>
                   <div className="relative">
-                    <LockClosedIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
+                    <Input
                       id="confirmPassword"
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
-                      className="w-full pl-10 pr-10 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                      style={{ '--tw-ring-color': '#1B76FF' } as React.CSSProperties}
+                      icon={<LockClosedIcon className="w-5 h-5" />}
                       placeholder="••••••••"
+                      className="pr-10"
                     />
                     <button
                       type="button"
@@ -285,11 +280,11 @@ export default function AuthForm({
               )}
 
               {/* Submit Button */}
-              <button
+              <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 rounded-lg text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: '#1B76FF' }}
+                className="w-full"
+                size="lg"
               >
                 {isLoading
                   ? mode === 'login'
@@ -298,7 +293,7 @@ export default function AuthForm({
                   : mode === 'login'
                     ? 'Войти'
                     : 'Зарегистрироваться'}
-              </button>
+              </Button>
             </form>
 
             {/* VK Login Button */}

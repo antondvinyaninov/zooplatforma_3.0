@@ -32,7 +32,7 @@ func NewHandler(db *sql.DB, s3Client S3Client) *Handler {
 // GetAll - получить всех пользователей (админский функционал, но перенесен в монолит)
 func (h *Handler) GetAll(c *gin.Context) {
 	searchQuery := c.Query("q")
-	
+
 	query := `
 		SELECT 
 			u.id, u.name, u.email, u.last_name, 
@@ -41,13 +41,13 @@ func (h *Handler) GetAll(c *gin.Context) {
 		FROM users u
 		LEFT JOIN user_activity ua ON u.id = ua.user_id
 	`
-	
+
 	args := []interface{}{}
 	if searchQuery != "" {
 		query += ` WHERE u.name ILIKE $1 OR u.last_name ILIKE $1 OR u.email ILIKE $1 OR CAST(u.id AS TEXT) ILIKE $1`
 		args = append(args, "%"+searchQuery+"%")
 	}
-	
+
 	query += ` ORDER BY u.created_at DESC`
 
 	if searchQuery != "" {
@@ -65,12 +65,12 @@ func (h *Handler) GetAll(c *gin.Context) {
 
 	for rows.Next() {
 		var (
-			id                            int
-			name, email                   string
-			lastName, avatar              sql.NullString
-			verified                      bool
-			createdAt                     string
-			lastSeen                      sql.NullTime
+			id               int
+			name, email      string
+			lastName, avatar sql.NullString
+			verified         bool
+			createdAt        string
+			lastSeen         sql.NullTime
 		)
 
 		if err := rows.Scan(
@@ -91,15 +91,15 @@ func (h *Handler) GetAll(c *gin.Context) {
 		}
 
 		user := map[string]interface{}{
-			"id":           id,
-			"name":         name,
-			"last_name":    lastName.String,
-			"email":        email,
-			"avatar":       avatar.String,
-			"verified":     verified,
-			"is_online":    isOnline,
-			"last_seen":    lastSeenStr,
-			"created_at":   createdAt,
+			"id":         id,
+			"name":       name,
+			"last_name":  lastName.String,
+			"email":      email,
+			"avatar":     avatar.String,
+			"verified":   verified,
+			"is_online":  isOnline,
+			"last_seen":  lastSeenStr,
+			"created_at": createdAt,
 		}
 
 		usersList = append(usersList, user)
@@ -132,8 +132,8 @@ func (h *Handler) GetByID(c *gin.Context) {
 		name, email                                        string
 		lastName, avatar, bio, phone, location, coverPhoto sql.NullString
 		verified                                           bool
-		createdAt                                string
-		lastSeen                                 sql.NullTime
+		createdAt                                          string
+		lastSeen                                           sql.NullTime
 	)
 
 	err := h.db.QueryRow(query, userID).Scan(
@@ -237,7 +237,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 // GetLogs - получить логи действий пользователя
 func (h *Handler) GetLogs(c *gin.Context) {
 	userID := c.Param("id")
-	
+
 	limit := 50
 	if l := c.Query("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil {
@@ -266,11 +266,11 @@ func (h *Handler) GetLogs(c *gin.Context) {
 
 	for rows.Next() {
 		var (
-			id                                                       int
-			actionType, entityType                                   string
-			entityID                                                 sql.NullInt64
-			actionDetails, ipAddress                                 sql.NullString
-			createdAt                                                string
+			id                       int
+			actionType, entityType   string
+			entityID                 sql.NullInt64
+			actionDetails, ipAddress sql.NullString
+			createdAt                string
 		)
 
 		err := rows.Scan(
@@ -303,7 +303,7 @@ func (h *Handler) GetStorage(c *gin.Context) {
 
 	var (
 		postsCount, petsCount, mediaCount, friendsCount, orgsCount, commentsCount int
-		mediaSizeTotal sql.NullFloat64
+		mediaSizeTotal                                                            sql.NullFloat64
 	)
 
 	// Посты
@@ -341,12 +341,12 @@ func (h *Handler) GetStorage(c *gin.Context) {
 // UpdateProfile - обновить профиль пользователя
 func (h *Handler) UpdateProfile(c *gin.Context) {
 	// Получаем ID текущего пользователя из контекста
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	var req struct {
 		Name              string `json:"name"`

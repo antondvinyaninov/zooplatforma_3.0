@@ -5,14 +5,19 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zooplatforma/backend/internal/shared/notificationservice"
 )
 
 type Handler struct {
-	db *sql.DB
+	db              *sql.DB
+	notificationSvc *notificationservice.Service
 }
 
-func NewHandler(db *sql.DB) *Handler {
-	return &Handler{db: db}
+func NewHandler(db *sql.DB, notifSvc *notificationservice.Service) *Handler {
+	return &Handler{
+		db:              db,
+		notificationSvc: notifSvc,
+	}
 }
 
 // GetStatus - получить статус дружбы с пользователем
@@ -227,12 +232,12 @@ func (h *Handler) GetFriends(c *gin.Context) {
 
 // SendRequest - отправить запрос в друзья
 func (h *Handler) SendRequest(c *gin.Context) {
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	var req struct {
 		FriendID int `json:"friend_id"`
@@ -282,11 +287,7 @@ currentUserID := userIDInterface.(int)
 	`, currentUserID, req.FriendID)
 
 	// Отправляем уведомление получателю
-	_, err = h.db.Exec(`
-		INSERT INTO notifications (user_id, actor_id, type, message, is_read, created_at, updated_at)
-		VALUES ($1, $2, 'friend_request', 'отправил(а) вам заявку в друзья', false, NOW(), NOW())
-	`, req.FriendID, currentUserID)
-
+	err = h.notificationSvc.Notify(c.Request.Context(), req.FriendID, "friend_request", &currentUserID, "user", &currentUserID, "отправил(а) вам заявку в друзья")
 	if err != nil {
 		// Логируем ошибку, но не прерываем выполнение (заявка уже отправлена)
 		// log.Printf("Failed to create notification for friend request: %v", err)
@@ -297,12 +298,12 @@ currentUserID := userIDInterface.(int)
 
 // AcceptRequest - принять запрос в друзья
 func (h *Handler) AcceptRequest(c *gin.Context) {
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	var req struct {
 		FriendID int `json:"friend_id"`
@@ -345,17 +346,20 @@ currentUserID := userIDInterface.(int)
 		ON CONFLICT DO NOTHING
 	`, req.FriendID, currentUserID)
 
+	// Отправляем уведомление о принятии дружбы
+	_ = h.notificationSvc.Notify(c.Request.Context(), req.FriendID, "friend_accepted", &currentUserID, "user", &currentUserID, "принял(а) вашу заявку в друзья")
+
 	c.JSON(200, gin.H{"success": true, "message": "Friend request accepted"})
 }
 
 // RejectRequest - отклонить запрос в друзья
 func (h *Handler) RejectRequest(c *gin.Context) {
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	var req struct {
 		FriendID int `json:"friend_id"`
@@ -388,12 +392,12 @@ currentUserID := userIDInterface.(int)
 
 // RemoveFriend - удалить из друзей
 func (h *Handler) RemoveFriend(c *gin.Context) {
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	var req struct {
 		FriendID int `json:"friend_id"`
@@ -427,12 +431,12 @@ currentUserID := userIDInterface.(int)
 
 // GetRequests - получить входящие запросы в друзья
 func (h *Handler) GetRequests(c *gin.Context) {
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	rows, err := h.db.Query(`
 		SELECT 

@@ -17,15 +17,11 @@ const emptyForm = {
   size: '',
 };
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', borderRadius: 8,
-  border: '1px solid #e5e7eb', fontSize: 13, outline: 'none',
-  background: '#f9fafb', boxSizing: 'border-box',
-};
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Label } from '@/components/ui/Label';
 
-const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 4,
-};
+const selectStyle = "flex h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-colors";
 
 export default function AddPetModal({ orgId, onClose, onSuccess }: AddPetModalProps) {
   const [form, setForm] = useState({ ...emptyForm });
@@ -160,12 +156,11 @@ export default function AddPetModal({ orgId, onClose, onSuccess }: AddPetModalPr
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Кличка */}
           <div>
-            <label style={labelStyle}>
+            <Label className="mb-1 block text-xs">
               Кличка{' '}
-              <span style={{ fontWeight: 400, color: '#d1d5db' }}>(необязательно)</span>
-            </label>
-            <input
-              style={inputStyle}
+              <span className="font-normal text-gray-300">(необязательно)</span>
+            </Label>
+            <Input
               placeholder="Барсик, Рекс..."
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -173,11 +168,11 @@ export default function AddPetModal({ orgId, onClose, onSuccess }: AddPetModalPr
           </div>
 
           {/* Вид + Пол */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={labelStyle}>Вид *</label>
+              <Label className="mb-1 block text-xs">Вид *</Label>
               <select
-                style={inputStyle}
+                className={selectStyle}
                 value={form.species_id}
                 onChange={(e) => {
                   setForm({ ...form, species_id: Number(e.target.value), breed_id: null });
@@ -189,9 +184,9 @@ export default function AddPetModal({ orgId, onClose, onSuccess }: AddPetModalPr
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Пол *</label>
+              <Label className="mb-1 block text-xs">Пол *</Label>
               <select
-                style={inputStyle}
+                className={selectStyle}
                 value={form.gender}
                 onChange={(e) => setForm({ ...form, gender: e.target.value })}
               >
@@ -202,10 +197,9 @@ export default function AddPetModal({ orgId, onClose, onSuccess }: AddPetModalPr
           </div>
 
           {/* Порода с автодополнением */}
-          <div style={{ position: 'relative' }}>
-            <label style={labelStyle}>Порода</label>
-            <input
-              style={inputStyle}
+          <div className="relative">
+            <Label className="mb-1 block text-xs">Порода</Label>
+            <Input
               placeholder="Начните вводить породу..."
               value={breedSearch}
               onChange={(e) => {
@@ -248,20 +242,19 @@ export default function AddPetModal({ orgId, onClose, onSuccess }: AddPetModalPr
           </div>
 
           {/* Окрас + Размер */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={labelStyle}>Окрас</label>
-              <input
-                style={inputStyle}
+              <Label className="mb-1 block text-xs">Окрас</Label>
+              <Input
                 placeholder="Рыжий, чёрный..."
                 value={form.color}
                 onChange={(e) => setForm({ ...form, color: e.target.value })}
               />
             </div>
             <div>
-              <label style={labelStyle}>Размер</label>
+              <Label className="mb-1 block text-xs">Размер</Label>
               <select
-                style={inputStyle}
+                className={selectStyle}
                 value={form.size}
                 onChange={(e) => setForm({ ...form, size: e.target.value })}
               >
@@ -275,29 +268,21 @@ export default function AddPetModal({ orgId, onClose, onSuccess }: AddPetModalPr
         </div>
 
         {/* Кнопки */}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24 }}>
-          <button
+        <div className="flex justify-end gap-3 mt-6">
+          <Button
+            variant="outline"
             onClick={handleClose}
             disabled={saving}
-            style={{
-              padding: '8px 16px', borderRadius: 8, border: '1px solid #e5e7eb',
-              background: '#fff', fontWeight: 500, fontSize: 13, cursor: 'pointer',
-            }}
           >
             Отмена
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleSubmit}
             disabled={saving}
-            style={{
-              padding: '8px 20px', borderRadius: 8, border: 'none',
-              background: saving ? '#9ca3af' : '#16a34a',
-              color: '#fff', fontWeight: 600, fontSize: 13,
-              cursor: saving ? 'not-allowed' : 'pointer',
-            }}
           >
             {saving ? 'Сохранение...' : 'Добавить'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -93,52 +93,52 @@ func (h *Handler) GetByID(c *gin.Context) {
 	}
 
 	org := map[string]interface{}{
-		"id":                  orgID,
-		"name":                name,
-		"short_name":          shortName.String,
-		"legal_form":          legalForm.String,
-		"type":                orgType,
-		"inn":                 inn.String,
-		"ogrn":                ogrn.String,
-		"kpp":                 kpp.String,
-		"registration_date":   registrationDate.String,
-		"email":               email.String,
-		"phone":               phone.String,
-		"website":             website.String,
-		"vk_link":             vkLink.String,
-		"telegram_link":       telegramLink.String,
-		"whatsapp_link":       whatsappLink.String,
-		"max_link":            maxLink.String,
-		"youtube_link":        youtubeLink.String,
-		"ok_link":             okLink.String,
-		"rutube_link":         rutubeLink.String,
+		"id":                    orgID,
+		"name":                  name,
+		"short_name":            shortName.String,
+		"legal_form":            legalForm.String,
+		"type":                  orgType,
+		"inn":                   inn.String,
+		"ogrn":                  ogrn.String,
+		"kpp":                   kpp.String,
+		"registration_date":     registrationDate.String,
+		"email":                 email.String,
+		"phone":                 phone.String,
+		"website":               website.String,
+		"vk_link":               vkLink.String,
+		"telegram_link":         telegramLink.String,
+		"whatsapp_link":         whatsappLink.String,
+		"max_link":              maxLink.String,
+		"youtube_link":          youtubeLink.String,
+		"ok_link":               okLink.String,
+		"rutube_link":           rutubeLink.String,
 		"telegram_channel_link": telegramChannelLink.String,
-		"max_channel_link":    maxChannelLink.String,
-		"address_full":        addressFull.String,
-		"address_postal_code": addressPostalCode.String,
-		"address_region":      addressRegion.String,
-		"address_city":        addressCity.String,
-		"address_street":      addressStreet.String,
-		"address_house":       addressHouse.String,
-		"address_office":      addressOffice.String,
-		"geo_lat":             geoLat.Float64,
-		"geo_lon":             geoLon.Float64,
-		"description":         description.String,
-		"bio":                 bio.String,
-		"logo":                logo.String,
-		"cover_photo":         coverPhoto.String,
-		"director_name":       directorName.String,
-		"director_position":   directorPosition.String,
-		"owner_user_id":       int(ownerUserID.Int64),
-		"profile_visibility":  profileVisibility.String,
-		"show_phone":          showPhone.String,
-		"show_email":          showEmail.String,
-		"allow_messages":      allowMessages.String,
-		"is_verified":         isVerified,
-		"is_active":           isActive,
-		"status":              status,
-		"created_at":          createdAt,
-		"updated_at":          updatedAt,
+		"max_channel_link":      maxChannelLink.String,
+		"address_full":          addressFull.String,
+		"address_postal_code":   addressPostalCode.String,
+		"address_region":        addressRegion.String,
+		"address_city":          addressCity.String,
+		"address_street":        addressStreet.String,
+		"address_house":         addressHouse.String,
+		"address_office":        addressOffice.String,
+		"geo_lat":               geoLat.Float64,
+		"geo_lon":               geoLon.Float64,
+		"description":           description.String,
+		"bio":                   bio.String,
+		"logo":                  logo.String,
+		"cover_photo":           coverPhoto.String,
+		"director_name":         directorName.String,
+		"director_position":     directorPosition.String,
+		"owner_user_id":         int(ownerUserID.Int64),
+		"profile_visibility":    profileVisibility.String,
+		"show_phone":            showPhone.String,
+		"show_email":            showEmail.String,
+		"allow_messages":        allowMessages.String,
+		"is_verified":           isVerified,
+		"is_active":             isActive,
+		"status":                status,
+		"created_at":            createdAt,
+		"updated_at":            updatedAt,
 	}
 
 	c.JSON(200, gin.H{"success": true, "data": org})
@@ -471,7 +471,7 @@ func (h *Handler) GetMembers(c *gin.Context) {
 			canPost                    bool
 			isPublic                   bool
 			joinedAt                   string
-			userName, userLastName     string
+			userName, userLastName     sql.NullString
 			userAvatar                 sql.NullString
 		)
 
@@ -481,7 +481,17 @@ func (h *Handler) GetMembers(c *gin.Context) {
 			&userName, &userLastName, &userAvatar,
 		)
 		if err != nil {
+			fmt.Println("Error scanning member:", err) // log error just in case
 			continue
+		}
+
+		fullName := userName.String
+		if userLastName.String != "" {
+			if fullName != "" {
+				fullName += " " + userLastName.String
+			} else {
+				fullName = userLastName.String
+			}
 		}
 
 		member := map[string]interface{}{
@@ -494,7 +504,7 @@ func (h *Handler) GetMembers(c *gin.Context) {
 			"can_post":        canPost,
 			"is_public":       isPublic,
 			"joined_at":       joinedAt,
-			"user_name":       userName + " " + userLastName,
+			"user_name":       fullName,
 			"user_avatar":     userAvatar.String,
 		}
 
@@ -559,82 +569,82 @@ func (h *Handler) ClaimOwnership(c *gin.Context) {
 
 // TransferOwnership - передача прав владельца организации
 func (h *Handler) TransferOwnership(c *gin.Context) {
-    // 1. Авторизуем пользователя
-    userID, ok := getUserID(c)
-    if !ok {
-        c.JSON(401, gin.H{"success": false, "error": "Unauthorized (missing user_id)"})
-        return
-    }
+	// 1. Авторизуем пользователя
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized (missing user_id)"})
+		return
+	}
 
-    // 2. Параметры запроса
-    orgID := c.Param("id")
-    var req struct {
-        NewOwnerID int `json:"new_owner_id"`
-    }
-    if err := c.ShouldBindJSON(&req); err != nil {
-        c.JSON(400, gin.H{"success": false, "error": "Invalid payload: " + err.Error()})
-        return
-    }
+	// 2. Параметры запроса
+	orgID := c.Param("id")
+	var req struct {
+		NewOwnerID int `json:"new_owner_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": "Invalid payload: " + err.Error()})
+		return
+	}
 
-    // 3. Проверяем, что текущий пользователь – владелец
-    var curRole string
-    err := h.db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgID, userID).Scan(&curRole)
-    if err != nil || curRole != "owner" {
-        c.JSON(403, gin.H{"success": false, "error": "Только владелец может передать права"})
-        return
-    }
+	// 3. Проверяем, что текущий пользователь – владелец
+	var curRole string
+	err := h.db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgID, userID).Scan(&curRole)
+	if err != nil || curRole != "owner" {
+		c.JSON(403, gin.H{"success": false, "error": "Только владелец может передать права"})
+		return
+	}
 
-    // 4. Проверяем, что новый владелец уже член организации
-    var isMember bool
-    err = h.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM organization_members WHERE organization_id = $1 AND user_id = $2)`, orgID, req.NewOwnerID).Scan(&isMember)
-    if err != nil || !isMember {
-        c.JSON(400, gin.H{"success": false, "error": "Новый владелец не является членом организации"})
-        return
-    }
+	// 4. Проверяем, что новый владелец уже член организации
+	var isMember bool
+	err = h.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM organization_members WHERE organization_id = $1 AND user_id = $2)`, orgID, req.NewOwnerID).Scan(&isMember)
+	if err != nil || !isMember {
+		c.JSON(400, gin.H{"success": false, "error": "Новый владелец не является членом организации"})
+		return
+	}
 
-    // 5. Транзакция: обновляем роли и owner_user_id
-    tx, err := h.db.Begin()
-    if err != nil {
-        c.JSON(500, gin.H{"success": false, "error": "Failed to start transaction"})
-        return
-    }
-    defer tx.Rollback()
+	// 5. Транзакция: обновляем роли и owner_user_id
+	tx, err := h.db.Begin()
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to start transaction"})
+		return
+	}
+	defer tx.Rollback()
 
-    // 5.1 Сменить роль текущего владельца на admin
-    _, err = tx.Exec(`UPDATE organization_members SET role = 'admin' WHERE organization_id = $1 AND user_id = $2`, orgID, userID)
-    if err != nil {
-        c.JSON(500, gin.H{"success": false, "error": "Failed to demote current owner"})
-        return
-    }
+	// 5.1 Сменить роль текущего владельца на admin
+	_, err = tx.Exec(`UPDATE organization_members SET role = 'admin' WHERE organization_id = $1 AND user_id = $2`, orgID, userID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to demote current owner"})
+		return
+	}
 
-    // 5.2 Сменить роль нового владельца на owner
-    _, err = tx.Exec(`UPDATE organization_members SET role = 'owner' WHERE organization_id = $1 AND user_id = $2`, orgID, req.NewOwnerID)
-    if err != nil {
-        c.JSON(500, gin.H{"success": false, "error": "Failed to promote new owner"})
-        return
-    }
+	// 5.2 Сменить роль нового владельца на owner
+	_, err = tx.Exec(`UPDATE organization_members SET role = 'owner' WHERE organization_id = $1 AND user_id = $2`, orgID, req.NewOwnerID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to promote new owner"})
+		return
+	}
 
-    // 5.3 Обновить поле owner_user_id в таблице organizations
-    _, err = tx.Exec(`UPDATE organizations SET owner_user_id = $1 WHERE id = $2`, req.NewOwnerID, orgID)
-    if err != nil {
-        c.JSON(500, gin.H{"success": false, "error": "Failed to update organization owner"})
-        return
-    }
+	// 5.3 Обновить поле owner_user_id в таблице organizations
+	_, err = tx.Exec(`UPDATE organizations SET owner_user_id = $1 WHERE id = $2`, req.NewOwnerID, orgID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to update organization owner"})
+		return
+	}
 
-    // 5.4 Записать в журнал действий (используем правильные названия колонок из таблицы admin_logs)
-    _, err = tx.Exec(`INSERT INTO admin_logs (admin_id, target_type, target_id, action_type, created_at) VALUES ($1, 'organization', $2, 'transfer_ownership', NOW())`, userID, orgID)
-    if err != nil {
-        c.JSON(500, gin.H{"success": false, "error": "Failed to write audit log: " + err.Error()})
-        return
-    }
+	// 5.4 Записать в журнал действий (используем правильные названия колонок из таблицы admin_logs)
+	_, err = tx.Exec(`INSERT INTO admin_logs (admin_id, target_type, target_id, action_type, created_at) VALUES ($1, 'organization', $2, 'transfer_ownership', NOW())`, userID, orgID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Failed to write audit log: " + err.Error()})
+		return
+	}
 
-    // 6. Коммит
-    if err = tx.Commit(); err != nil {
-        c.JSON(500, gin.H{"success": false, "error": "Transaction commit failed"})
-        return
-    }
+	// 6. Коммит
+	if err = tx.Commit(); err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Transaction commit failed"})
+		return
+	}
 
-    c.JSON(200, gin.H{"success": true, "message": "Права успешно переданы"})
+	c.JSON(200, gin.H{"success": true, "message": "Права успешно переданы"})
 }
 
 // Update - обновить профиль организации
@@ -700,4 +710,184 @@ func (h *Handler) Update(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"success": true, "message": "Организация успешно обновлена"})
+}
+
+// AddMember - добавить участника в организацию
+func (h *Handler) AddMember(c *gin.Context) {
+	orgID := c.Param("id")
+
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized (missing user_id)"})
+		return
+	}
+
+	// Проверяем права текущего пользователя (должен быть owner или admin)
+	var curRole string
+	err := h.db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgID, userID).Scan(&curRole)
+	if err != nil || (curRole != "owner" && curRole != "admin") {
+		c.JSON(403, gin.H{"success": false, "error": "Только владельцы или администраторы могут добавлять участников"})
+		return
+	}
+
+	var req struct {
+		UserID   int    `json:"user_id" binding:"required"`
+		Role     string `json:"role" binding:"required"`
+		Position string `json:"position"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	// Проверяем, не состоит ли уже этот пользователь в организации
+	var exists bool
+	err = h.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM organization_members WHERE organization_id = $1 AND user_id = $2)`, orgID, req.UserID).Scan(&exists)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	if exists {
+		c.JSON(400, gin.H{"success": false, "error": "Пользователь уже является участником организации"})
+		return
+	}
+
+	insertQuery := `
+		INSERT INTO organization_members (
+			organization_id, user_id, role, position,
+			can_post, can_edit, can_manage_members, joined_at
+		) VALUES ($1, $2, $3, $4, true, true, false, NOW())
+	`
+
+	_, err = h.db.Exec(insertQuery, orgID, req.UserID, req.Role, req.Position)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Ошибка при добавлении участника: " + err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "message": "Участник успешно добавлен"})
+}
+
+// UpdateMember - обновить данные участника
+func (h *Handler) UpdateMember(c *gin.Context) {
+	memberID := c.Param("memberId")
+
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized (missing user_id)"})
+		return
+	}
+
+	// Получаем orgID по memberID
+	var orgID int
+	var targetRole string
+	err := h.db.QueryRow(`SELECT organization_id, role FROM organization_members WHERE id = $1`, memberID).Scan(&orgID, &targetRole)
+	if err != nil {
+		c.JSON(404, gin.H{"success": false, "error": "Участник не найден"})
+		return
+	}
+
+	// Проверяем права текущего пользователя
+	var curRole string
+	err = h.db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgID, userID).Scan(&curRole)
+	if err != nil || (curRole != "owner" && curRole != "admin") {
+		c.JSON(403, gin.H{"success": false, "error": "Только владельцы или администраторы могут изменять участников"})
+		return
+	}
+
+	// Admin не может менять Owner
+	if curRole == "admin" && targetRole == "owner" {
+		c.JSON(403, gin.H{"success": false, "error": "Администратор не может изменять владельца"})
+		return
+	}
+
+	var req struct {
+		Role     string `json:"role"`
+		Position string `json:"position"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": err.Error()})
+		return
+	}
+
+	// Если пытаются сделать кого-то owner, это делается через TransferOwnership
+	if req.Role == "owner" && targetRole != "owner" {
+		c.JSON(400, gin.H{"success": false, "error": "Смена владельца осуществляется через передачу прав"})
+		return
+	}
+
+	updateQuery := `
+		UPDATE organization_members 
+		SET role = COALESCE(NULLIF($1, ''), role), 
+		    position = COALESCE($2, position)
+		WHERE id = $3
+	`
+
+	_, err = h.db.Exec(updateQuery, req.Role, req.Position, memberID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Ошибка при обновлении участника: " + err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "message": "Данные участника обновлены"})
+}
+
+// RemoveMember - удалить участника из организации
+func (h *Handler) RemoveMember(c *gin.Context) {
+	memberID := c.Param("memberId")
+
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized (missing user_id)"})
+		return
+	}
+
+	// Получаем orgID и роль удаляемого
+	var orgID int
+	var targetRole string
+	var targetUserID int
+	err := h.db.QueryRow(`SELECT organization_id, role, user_id FROM organization_members WHERE id = $1`, memberID).Scan(&orgID, &targetRole, &targetUserID)
+	if err != nil {
+		c.JSON(404, gin.H{"success": false, "error": "Участник не найден"})
+		return
+	}
+
+	// Проверяем права текущего пользователя
+	var curRole string
+	err = h.db.QueryRow(`SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`, orgID, userID).Scan(&curRole)
+	if err != nil {
+		c.JSON(403, gin.H{"success": false, "error": "Нет доступа к этой организации"})
+		return
+	}
+
+	// Можно удалить самого себя, если ты не владелец
+	if targetUserID == userID {
+		if curRole == "owner" {
+			c.JSON(400, gin.H{"success": false, "error": "Владелец не может покинуть организацию, не передав права"})
+			return
+		}
+	} else {
+		// Иначе удалять могут только owner и admin
+		if curRole != "owner" && curRole != "admin" {
+			c.JSON(403, gin.H{"success": false, "error": "Только владельцы или администраторы могут удалять участников"})
+			return
+		}
+		// Admin не может удалить Owner
+		if curRole == "admin" && targetRole == "owner" {
+			c.JSON(403, gin.H{"success": false, "error": "Администратор не может удалить владельца"})
+			return
+		}
+	}
+
+	deleteQuery := `DELETE FROM organization_members WHERE id = $1`
+	_, err = h.db.Exec(deleteQuery, memberID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "error": "Ошибка при удалении участника: " + err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true, "message": "Участник удален из организации"})
 }

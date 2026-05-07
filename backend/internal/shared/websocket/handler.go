@@ -36,8 +36,8 @@ type UsersPayload struct {
 }
 
 type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan []byte
+	clients     map[*Client]bool
+	broadcast   chan []byte
 	sendToUser  chan UserPayload
 	sendToUsers chan UsersPayload
 	register    chan *Client
