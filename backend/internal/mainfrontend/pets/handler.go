@@ -85,8 +85,8 @@ func (h *Handler) GetUserPets(c *gin.Context) {
 }
 
 // GetCatalog - получить всех питомцев для каталога (только питомцы под опекой, не владельческие)
-	func (h *Handler) GetCatalog(c *gin.Context) {
-		query := `
+func (h *Handler) GetCatalog(c *gin.Context) {
+	query := `
 			SELECT 
 				p.id, p.name, p.species, p.breed, p.gender, p.birth_date,
 				p.color, p.size, p.photo_url, p.user_id, p.description,
@@ -127,16 +127,16 @@ func (h *Handler) GetUserPets(c *gin.Context) {
 
 	for rows.Next() {
 		var (
-			id, userID                                        int
-			name, species                                     string
-			breed, gender, color, size, photoURL, description sql.NullString
-			birthDate                                         sql.NullString
+			id, userID                                                                      int
+			name, species                                                                   string
+			breed, gender, color, size, photoURL, description                               sql.NullString
+			birthDate                                                                       sql.NullString
 			ownerName, ownerLastName, location, phone, locationType, ownerAvatar, breedName sql.NullString
-			catalogStatus                                     sql.NullString
-			catalogDataRaw                                    []byte
-			speciesName                                       sql.NullString
-			orgID                                             sql.NullInt64
-			viewsCount                                        sql.NullInt64
+			catalogStatus                                                                   sql.NullString
+			catalogDataRaw                                                                  []byte
+			speciesName                                                                     sql.NullString
+			orgID                                                                           sql.NullInt64
+			viewsCount                                                                      sql.NullInt64
 		)
 
 		err := rows.Scan(
@@ -186,22 +186,22 @@ func (h *Handler) GetUserPets(c *gin.Context) {
 		}
 
 		pet := map[string]interface{}{
-			"id":          id,
-			"name":        name,
-			"species":     resolvedSpecies,
-			"breed":       resolvedBreed,
-			"gender":      gender.String,
-			"birth_date":  birthDate.String,
-			"color":       color.String,
-			"size":        size.String,
-			"photo":       photoURL.String,
-			"user_id":     userID,
-			"description": description.String,
-			"owner_name":  ownerFullName,
-			"owner_avatar": ownerAvatar.String,
-			"city":        location.String,
-			"phone":       phone.String,
-			"status":      status,
+			"id":             id,
+			"name":           name,
+			"species":        resolvedSpecies,
+			"breed":          resolvedBreed,
+			"gender":         gender.String,
+			"birth_date":     birthDate.String,
+			"color":          color.String,
+			"size":           size.String,
+			"photo":          photoURL.String,
+			"user_id":        userID,
+			"description":    description.String,
+			"owner_name":     ownerFullName,
+			"owner_avatar":   ownerAvatar.String,
+			"city":           location.String,
+			"phone":          phone.String,
+			"status":         status,
 			"catalog_status": catalogStatus.String,
 			"catalog_data":   parsedCatalogData,
 			"views_count":    viewsCount.Int64,
@@ -281,24 +281,24 @@ func (h *Handler) GetByID(c *gin.Context) {
 		birthDate, sterilizationDate                      sql.NullString
 		relationship, locationType, microchip             sql.NullString
 
-		fur, ears, tail, specialMarks                     sql.NullString
-		markingDate, tagNumber, brandNumber               sql.NullString
-		locationAddress, petCity, locationCage            sql.NullString
-		locationContact, locationPhone, locationNotes     sql.NullString
-		weight, healthNotes                               sql.NullString
-		viewsCount                                        sql.NullInt64
-		ageType                                           sql.NullString
-		approxYears, approxMonths                         sql.NullInt64
-		isSterilizedActual                                sql.NullBool
-		mediaUrlsRaw                                      []byte
-		catalogStatus                                     sql.NullString
-		catalogDataRaw                                    []byte
+		fur, ears, tail, specialMarks                 sql.NullString
+		markingDate, tagNumber, brandNumber           sql.NullString
+		locationAddress, petCity, locationCage        sql.NullString
+		locationContact, locationPhone, locationNotes sql.NullString
+		weight, healthNotes                           sql.NullString
+		viewsCount                                    sql.NullInt64
+		ageType                                       sql.NullString
+		approxYears, approxMonths                     sql.NullInt64
+		isSterilizedActual                            sql.NullBool
+		mediaUrlsRaw                                  []byte
+		catalogStatus                                 sql.NullString
+		catalogDataRaw                                []byte
 
-		ownerName, ownerLastName, ownerAvatar             sql.NullString
-		location, phone, createdAt, ownerEmail            sql.NullString
+		ownerName, ownerLastName, ownerAvatar  sql.NullString
+		location, phone, createdAt, ownerEmail sql.NullString
 
-		speciesID, breedID, orgID                         sql.NullInt64
-		speciesNameStr, breedNameStr, orgNameStr          sql.NullString
+		speciesID, breedID, orgID                sql.NullInt64
+		speciesNameStr, breedNameStr, orgNameStr sql.NullString
 	)
 
 	err := h.db.QueryRow(query, petID).Scan(
@@ -375,36 +375,36 @@ func (h *Handler) GetByID(c *gin.Context) {
 		"microchip":          microchip.String,
 		"sterilization_date": sterilizationDate.String,
 
-		"fur":                fur.String,
-		"ears":               ears.String,
-		"tail":               tail.String,
-		"special_marks":      specialMarks.String,
-		"marking_date":       markingDate.String,
-		"tag_number":         tagNumber.String,
-		"brand_number":       brandNumber.String,
-		"actual_city":        petCity.String,
-		"location_address":   locationAddress.String,
-		"location_cage":      locationCage.String,
-		"location_contact":   locationContact.String,
-		"location_phone":     locationPhone.String,
-		"location_notes":     locationNotes.String,
-		"weight":             weight.String,
-		"health_notes":       healthNotes.String,
-		"views_count":        viewsCount.Int64,
+		"fur":              fur.String,
+		"ears":             ears.String,
+		"tail":             tail.String,
+		"special_marks":    specialMarks.String,
+		"marking_date":     markingDate.String,
+		"tag_number":       tagNumber.String,
+		"brand_number":     brandNumber.String,
+		"actual_city":      petCity.String,
+		"location_address": locationAddress.String,
+		"location_cage":    locationCage.String,
+		"location_contact": locationContact.String,
+		"location_phone":   locationPhone.String,
+		"location_notes":   locationNotes.String,
+		"weight":           weight.String,
+		"health_notes":     healthNotes.String,
+		"views_count":      viewsCount.Int64,
 
-		"owner_name":         ownerFullName,
-		"owner_email":        ownerEmail.String,
-		"city":               location.String,
-		"phone":              phone.String,
-		"is_vaccinated":      false, // TODO: получить из медицинских записей
-		"is_sterilized":      isSterilizedActual.Bool || (sterilizationDate.Valid && sterilizationDate.String != ""),
-		"chip_number":        microchip.String,
-		"created_at":         createdAt.String,
-		"media_urls":         parsedMediaUrls,
-		"catalog_status":     catalogStatus.String,
-		"catalog_data":       parsedCatalogData,
-		"org_id":             orgID.Int64,
-		"org_name":           orgNameStr.String,
+		"owner_name":     ownerFullName,
+		"owner_email":    ownerEmail.String,
+		"city":           location.String,
+		"phone":          phone.String,
+		"is_vaccinated":  false, // TODO: получить из медицинских записей
+		"is_sterilized":  isSterilizedActual.Bool || (sterilizationDate.Valid && sterilizationDate.String != ""),
+		"chip_number":    microchip.String,
+		"created_at":     createdAt.String,
+		"media_urls":     parsedMediaUrls,
+		"catalog_status": catalogStatus.String,
+		"catalog_data":   parsedCatalogData,
+		"org_id":         orgID.Int64,
+		"org_name":       orgNameStr.String,
 	}
 
 	if speciesID.Valid {
@@ -475,16 +475,16 @@ func (h *Handler) GetOrganizationPets(c *gin.Context) {
 
 	for rows.Next() {
 		var (
-			id, userID                                        int
-			name, species                                     string
-			breed, gender, color, size, photoURL, description sql.NullString
-			birthDate                                         sql.NullString
+			id, userID                                                                      int
+			name, species                                                                   string
+			breed, gender, color, size, photoURL, description                               sql.NullString
+			birthDate                                                                       sql.NullString
 			ownerName, ownerLastName, location, phone, locationType, ownerAvatar, breedName sql.NullString
-			catalogStatus                                     sql.NullString
-			catalogDataRaw                                    []byte
-			speciesName                                       sql.NullString
-			orgID                                             sql.NullInt64
-			viewsCount                                        sql.NullInt64
+			catalogStatus                                                                   sql.NullString
+			catalogDataRaw                                                                  []byte
+			speciesName                                                                     sql.NullString
+			orgID                                                                           sql.NullInt64
+			viewsCount                                                                      sql.NullInt64
 		)
 
 		err := rows.Scan(

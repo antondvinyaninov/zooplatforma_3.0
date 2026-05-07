@@ -413,8 +413,8 @@ func (h *Handler) UpdateEmail(c *gin.Context) {
 	err := h.db.QueryRow(`SELECT id FROM users WHERE email = $1`, req.Email).Scan(&existingID)
 	if err == nil && existingID != userID.(int) {
 		c.JSON(http.StatusConflict, gin.H{
-			"success": false, 
-			"error": "Этот email уже зарегистрирован на другой аккаунт", 
+			"success":        false,
+			"error":          "Этот email уже зарегистрирован на другой аккаунт",
 			"merge_required": true,
 		})
 		return
@@ -800,7 +800,7 @@ func (h *Handler) AdminGenerateTempPassword(c *gin.Context) {
 	// Сейчас метод открыт для интеграции в админ-панель
 
 	// 8-символьный hex пароль из 4 случайных байт (например: "a1b2c3d4")
-	tempPassword, err := GenerateRandomToken(4) 
+	tempPassword, err := GenerateRandomToken(4)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to generate temp password"})
 		return

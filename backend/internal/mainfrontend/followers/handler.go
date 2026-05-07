@@ -48,7 +48,7 @@ func (h *Handler) Follow(c *gin.Context) {
 		return
 	}
 
-	// Используем xmax или проверяем affected rows для postgres, 
+	// Используем xmax или проверяем affected rows для postgres,
 	// но проще вернуть id или просто проверить affected rows
 	result, err := h.db.Exec(`
 		INSERT INTO followers (follower_id, following_id) 

@@ -278,7 +278,7 @@ func (h *VKHandler) SDKCallback(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create user: " + err.Error()})
 				return
 			}
-			
+
 			// Отправляем уведомление в Telegram (для новых пользователей)
 			h.notifier.NotifyNewUser(vkUser.FirstName, email, userID)
 		} else if errEmail != nil {

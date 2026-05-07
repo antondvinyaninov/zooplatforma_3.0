@@ -112,14 +112,14 @@ func (h *Handler) GetPostComments(c *gin.Context) {
 		}
 
 		comment := map[string]interface{}{
-			"id":         id,
-			"post_id":    postIDInt,
-			"user_id":    userID,
-			"content":    content,
-			"status":     status,
+			"id":          id,
+			"post_id":     postIDInt,
+			"user_id":     userID,
+			"content":     content,
+			"status":      status,
 			"attachments": attachments,
-			"created_at": createdAt,
-			"updated_at": updatedAt,
+			"created_at":  createdAt,
+			"updated_at":  updatedAt,
 			"user": map[string]interface{}{
 				"id":          userID,
 				"first_name":  firstName,
@@ -182,7 +182,7 @@ func (h *Handler) CreateComment(c *gin.Context) {
 			}
 		} else if replySetting == "following" {
 			var isFollowing bool
-			// Check if postAuthorID follows userID 
+			// Check if postAuthorID follows userID
 			followQuery := `SELECT EXISTS(SELECT 1 FROM user_followers WHERE follower_id = $1 AND following_id = $2)`
 			h.db.QueryRow(followQuery, postAuthorID, userID).Scan(&isFollowing)
 			if !isFollowing {
@@ -428,7 +428,7 @@ func (h *Handler) DeleteComment(c *gin.Context) {
 // ApproveComment - одобрить комментарий
 func (h *Handler) ApproveComment(c *gin.Context) {
 	commentID := c.Param("id")
-	
+
 	// Получаем текущего пользователя из контекста (установлено middleware)
 	userIDInterface, hasUser := c.Get("user_id")
 	if !hasUser {
@@ -502,7 +502,7 @@ func (h *Handler) ApproveComment(c *gin.Context) {
 // RejectComment - отклонить комментарий
 func (h *Handler) RejectComment(c *gin.Context) {
 	commentID := c.Param("id")
-	
+
 	// Получаем текущего пользователя из контекста (установлено middleware)
 	userIDInterface, hasUser := c.Get("user_id")
 	if !hasUser {

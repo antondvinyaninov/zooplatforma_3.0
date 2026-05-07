@@ -31,7 +31,6 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		authGroup.GET("/me", authHandler.Me)
 	}
 
-
 	// Pets routes
 	petsGroup := r.Group("/pets")
 	{
@@ -357,6 +356,5 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 		medicalRecords.PUT("/:id", petsHandler.UpdateMedicalRecord)
 		medicalRecords.DELETE("/:id", petsHandler.DeleteMedicalRecord)
 	}
-
 
 }

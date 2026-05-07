@@ -122,22 +122,22 @@ func (h *Handler) GetPosts(c *gin.Context) {
 
 	for rows.Next() {
 		var (
-			id                                            int
-			userID                                        int
-			likesCount, commentsCount, sharesCount        sql.NullInt64
-			content, createdAt, updatedAt                 sql.NullString
-			firstName                                     sql.NullString
-			lastName                                      sql.NullString
-			avatarURL                                     sql.NullString
-			isVerified                                    sql.NullBool
-			orgName                                       sql.NullString
-			orgLogo                                       sql.NullString
-			orgVerified                                   sql.NullBool
+			id                                             int
+			userID                                         int
+			likesCount, commentsCount, sharesCount         sql.NullInt64
+			content, createdAt, updatedAt                  sql.NullString
+			firstName                                      sql.NullString
+			lastName                                       sql.NullString
+			avatarURL                                      sql.NullString
+			isVerified                                     sql.NullBool
+			orgName                                        sql.NullString
+			orgLogo                                        sql.NullString
+			orgVerified                                    sql.NullBool
 			mediaJSON, tagsJSON, attachmentsJSON, petsJSON sql.NullString
-			authorType                                    string
-			replySetting                                  string
-			verifyReplies                                 bool
-			hasPoll                                       bool
+			authorType                                     string
+			replySetting                                   string
+			verifyReplies                                  bool
+			hasPoll                                        bool
 		)
 
 		err := rows.Scan(
@@ -312,22 +312,22 @@ func (h *Handler) GetPostByID(c *gin.Context) {
 	`
 
 	var (
-		id                                            int
-		userID                                        int
-		likesCount, commentsCount, sharesCount        sql.NullInt64
-		content, createdAt, updatedAt                 sql.NullString
-		firstName                                     sql.NullString
-		lastName                                      sql.NullString
-		avatarURL                                     sql.NullString
-		isVerified                                    sql.NullBool
-		orgName                                       sql.NullString
-		orgLogo                                       sql.NullString
-		orgVerified                                   sql.NullBool
+		id                                             int
+		userID                                         int
+		likesCount, commentsCount, sharesCount         sql.NullInt64
+		content, createdAt, updatedAt                  sql.NullString
+		firstName                                      sql.NullString
+		lastName                                       sql.NullString
+		avatarURL                                      sql.NullString
+		isVerified                                     sql.NullBool
+		orgName                                        sql.NullString
+		orgLogo                                        sql.NullString
+		orgVerified                                    sql.NullBool
 		mediaJSON, tagsJSON, attachmentsJSON, petsJSON sql.NullString
-		authorType                                    string
-		replySetting                                  string
-		verifyReplies                                 bool
-		hasPoll                                       bool
+		authorType                                     string
+		replySetting                                   string
+		verifyReplies                                  bool
+		hasPoll                                        bool
 	)
 
 	err := h.db.QueryRow(query, postID).Scan(

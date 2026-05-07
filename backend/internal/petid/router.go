@@ -32,7 +32,30 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 	breeds := r.Group("/breeds")
 	{
 		breeds.GET("", func(c *gin.Context) {
-			c.JSON(200, gin.H{"success": true, "data": []interface{}{}})
+			rows, err := db.Query("SELECT id, name, species_id FROM breeds ORDER BY name ASC")
+			if err != nil {
+				c.JSON(500, gin.H{"success": false, "error": "Database error"})
+				return
+			}
+			defer rows.Close()
+
+			type Breed struct {
+				ID        int    `json:"id"`
+				Name      string `json:"name"`
+				SpeciesID int    `json:"species_id"`
+			}
+			var breedList []Breed
+			for rows.Next() {
+				var b Breed
+				if err := rows.Scan(&b.ID, &b.Name, &b.SpeciesID); err == nil {
+					breedList = append(breedList, b)
+				}
+			}
+			if breedList == nil {
+				breedList = []Breed{}
+			}
+
+			c.JSON(200, gin.H{"success": true, "breeds": breedList, "data": breedList})
 		})
 	}
 
@@ -45,7 +68,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 				c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
 				return
 			}
-			
+
 			// Получаем всех питомцев системы
 			rows, err := db.Query(`
 				SELECT 
@@ -69,22 +92,22 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 			defer rows.Close()
 
 			type Pet struct {
-				ID           int     `json:"id"`
-				Name         string  `json:"name"`
-				SpeciesID    *int    `json:"species_id"`
-				SpeciesName  string  `json:"species_name"`
-				BreedID      *int    `json:"breed_id"`
-				BreedName    string  `json:"breed_name"`
-				OwnerID      int     `json:"owner_id"`
-				OwnerName    string  `json:"owner_name"`
-				BirthDate    string  `json:"birth_date"`
-				Gender       string  `json:"gender"`
-				Description  string  `json:"description"`
-				Relationship string  `json:"relationship"`
-				PhotoURL     string  `json:"photo_url"`
-				Color        string  `json:"color"`
-				Size         string  `json:"size"`
-				CreatedAt    string  `json:"created_at"`
+				ID           int    `json:"id"`
+				Name         string `json:"name"`
+				SpeciesID    *int   `json:"species_id"`
+				SpeciesName  string `json:"species_name"`
+				BreedID      *int   `json:"breed_id"`
+				BreedName    string `json:"breed_name"`
+				OwnerID      int    `json:"owner_id"`
+				OwnerName    string `json:"owner_name"`
+				BirthDate    string `json:"birth_date"`
+				Gender       string `json:"gender"`
+				Description  string `json:"description"`
+				Relationship string `json:"relationship"`
+				PhotoURL     string `json:"photo_url"`
+				Color        string `json:"color"`
+				Size         string `json:"size"`
+				CreatedAt    string `json:"created_at"`
 			}
 
 			var petList []Pet
@@ -334,4 +357,4 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config) {
 	}
 }
 
-// This will just break the file syntax. Better to use sed or manual file rewrite to insert.  
+// This will just break the file syntax. Better to use sed or manual file rewrite to insert.

@@ -63,7 +63,7 @@ func (h *Handler) CreateSupportMessage(c *gin.Context) {
 			return
 		}
 
-		// Генерируем уникальное имя файла для S3 
+		// Генерируем уникальное имя файла для S3
 		// (например: support/12345678_MyScreenshot.png)
 		fileKey := fmt.Sprintf("support/%d_%s", time.Now().Unix(), file.Filename)
 

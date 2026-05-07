@@ -1,6 +1,11 @@
 import './globals.css';
 import { QueryProvider } from '@/components/providers/query-provider';
 import Script from 'next/script';
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+
 
 export default function RootLayout({
   children,
@@ -8,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" suppressHydrationWarning>
+    <html lang="ru" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <head>
         <Script id="google-tag-manager" strategy="afterInteractive">
           {`

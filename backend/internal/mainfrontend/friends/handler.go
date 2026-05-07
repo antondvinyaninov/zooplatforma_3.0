@@ -232,12 +232,12 @@ func (h *Handler) GetFriends(c *gin.Context) {
 
 // SendRequest - отправить запрос в друзья
 func (h *Handler) SendRequest(c *gin.Context) {
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	var req struct {
 		FriendID int `json:"friend_id"`
@@ -298,12 +298,12 @@ currentUserID := userIDInterface.(int)
 
 // AcceptRequest - принять запрос в друзья
 func (h *Handler) AcceptRequest(c *gin.Context) {
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	var req struct {
 		FriendID int `json:"friend_id"`
@@ -354,12 +354,12 @@ currentUserID := userIDInterface.(int)
 
 // RejectRequest - отклонить запрос в друзья
 func (h *Handler) RejectRequest(c *gin.Context) {
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	var req struct {
 		FriendID int `json:"friend_id"`
@@ -392,12 +392,12 @@ currentUserID := userIDInterface.(int)
 
 // RemoveFriend - удалить из друзей
 func (h *Handler) RemoveFriend(c *gin.Context) {
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	var req struct {
 		FriendID int `json:"friend_id"`
@@ -431,12 +431,12 @@ currentUserID := userIDInterface.(int)
 
 // GetRequests - получить входящие запросы в друзья
 func (h *Handler) GetRequests(c *gin.Context) {
-userIDInterface, hasUser := c.Get("user_id")
-if !hasUser {
-c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
-return
-}
-currentUserID := userIDInterface.(int)
+	userIDInterface, hasUser := c.Get("user_id")
+	if !hasUser {
+		c.JSON(401, gin.H{"success": false, "error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDInterface.(int)
 
 	rows, err := h.db.Query(`
 		SELECT 

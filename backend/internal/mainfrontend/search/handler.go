@@ -96,7 +96,7 @@ func (h *Handler) Search(c *gin.Context) {
 		}
 	}
 
-	// 3. Поиск постов 
+	// 3. Поиск постов
 	// (взято с учетом текущего формата постов)
 	posts := []map[string]interface{}{}
 	postsQuery := `
@@ -119,12 +119,12 @@ func (h *Handler) Search(c *gin.Context) {
 		for postRows.Next() {
 			var (
 				id, userIDInt, likesCount, commentsCount int
-				content, createdAt, updatedAt string
-				firstName string
-				lastName, avatarURL sql.NullString
-				isVerified bool
-				mediaJSON, tagsJSON string
-				authorType string
+				content, createdAt, updatedAt            string
+				firstName                                string
+				lastName, avatarURL                      sql.NullString
+				isVerified                               bool
+				mediaJSON, tagsJSON                      string
+				authorType                               string
 			)
 
 			if err := postRows.Scan(&id, &userIDInt, &content, &createdAt, &updatedAt, &likesCount, &commentsCount, &firstName, &lastName, &avatarURL, &isVerified, &mediaJSON, &tagsJSON, &authorType); err == nil {
