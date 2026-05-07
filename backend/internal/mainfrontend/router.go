@@ -22,9 +22,9 @@ import (
 	"github.com/zooplatforma/backend/internal/mainfrontend/users"
 	"github.com/zooplatforma/backend/internal/shared/auth"
 	"github.com/zooplatforma/backend/internal/shared/config"
+	"github.com/zooplatforma/backend/internal/shared/notificationservice"
 	"github.com/zooplatforma/backend/internal/shared/s3"
 	"github.com/zooplatforma/backend/internal/shared/websocket"
-	"github.com/zooplatforma/backend/internal/shared/notificationservice"
 )
 
 func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websocket.Hub) {
@@ -194,9 +194,12 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		organizationsGroup.GET("/check-inn/:inn", organizationsHandler.CheckByInn)
 		organizationsGroup.GET("/:id", organizationsHandler.GetByID)
 		organizationsGroup.GET("/members/:id", organizationsHandler.GetMembers)
+		organizationsGroup.POST("/:id/members", organizationsHandler.AddMember)
+		organizationsGroup.PUT("/members/:memberId", organizationsHandler.UpdateMember)
+		organizationsGroup.DELETE("/members/:memberId", organizationsHandler.RemoveMember)
 		organizationsGroup.POST("", organizationsHandler.Create)
 		organizationsGroup.POST("/claim-ownership/:id", organizationsHandler.ClaimOwnership)
-	organizationsGroup.POST("/:id/transfer", organizationsHandler.TransferOwnership)
+		organizationsGroup.POST("/:id/transfer", organizationsHandler.TransferOwnership)
 		organizationsGroup.PUT("/:id", organizationsHandler.Update)
 	}
 
@@ -230,7 +233,7 @@ func SetupRoutes(r *gin.RouterGroup, db *sql.DB, cfg *config.Config, hub *websoc
 		chatsGroup.POST("/:id/participants", chatsHandler.AddParticipant)
 		chatsGroup.DELETE("/:id/participants/:user_id", chatsHandler.RemoveParticipant)
 		chatsGroup.PUT("/:id", chatsHandler.UpdateChat)
-		
+
 		chatsGroup.GET("/:id/invite", chatsHandler.GetInviteLink)
 		chatsGroup.GET("/invite/:token/preview", chatsHandler.PreviewInvite)
 		chatsGroup.POST("/invite/:token/join", chatsHandler.JoinByInvite)
