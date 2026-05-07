@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/Switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
 import { InlineEdit } from '@/components/ui/InlineEdit';
 import { Dialog, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
-import { Tabs } from '@/components/ui/Tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
@@ -142,13 +142,28 @@ export default function UIKitPage() {
 
           <section className="space-y-6">
             <h2 className="text-xl font-semibold border-b pb-2">Вкладки (Tabs)</h2>
-            <Tabs 
-              categories={[
-                { name: 'Посты', content: <p className="text-sm text-gray-600">Здесь будут все ваши последние посты.</p> },
-                { name: 'Галерея', content: <p className="text-sm text-gray-600">Ваша фото-галерея питомцев.</p> },
-                { name: 'Настройки', content: <p className="text-sm text-gray-600">Окно с параметрами и уведомлениями.</p> },
-              ]} 
-            />
+            <Tabs defaultValue="Посты" className="w-full">
+              <TabsList variant="line" className="w-full justify-start overflow-x-auto border-b border-gray-200 mb-4 pb-0 h-auto">
+                <TabsTrigger value="Посты" className="flex items-center gap-2 px-4 py-3 rounded-none data-active:border-b-2 data-active:border-violet-600 data-active:text-violet-700 font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent">
+                  Посты
+                </TabsTrigger>
+                <TabsTrigger value="Галерея" className="flex items-center gap-2 px-4 py-3 rounded-none data-active:border-b-2 data-active:border-violet-600 data-active:text-violet-700 font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent">
+                  Галерея
+                </TabsTrigger>
+                <TabsTrigger value="Настройки" className="flex items-center gap-2 px-4 py-3 rounded-none data-active:border-b-2 data-active:border-violet-600 data-active:text-violet-700 font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent">
+                  Настройки
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="Посты" className="mt-0">
+                <p className="text-sm text-gray-600">Здесь будут все ваши последние посты.</p>
+              </TabsContent>
+              <TabsContent value="Галерея" className="mt-0">
+                <p className="text-sm text-gray-600">Ваша фото-галерея питомцев.</p>
+              </TabsContent>
+              <TabsContent value="Настройки" className="mt-0">
+                <p className="text-sm text-gray-600">Окно с параметрами и уведомлениями.</p>
+              </TabsContent>
+            </Tabs>
           </section>
 
         </div>

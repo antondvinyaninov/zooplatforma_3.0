@@ -37,7 +37,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Tabs } from '@/components/ui/Tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Dialog, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
 
 type OrganizationPageProps = {
@@ -405,7 +405,27 @@ export default function OrganizationPage({ params }: OrganizationPageProps) {
         {/* Left Column - Main Content */}
         <div className="lg:col-span-2 space-y-4">
           {/* Вкладки (Tabs) */}
-          <Tabs categories={tabCategories} />
+          {tabCategories.length > 0 && (
+            <Tabs defaultValue={tabCategories[0].name} className="w-full">
+              <TabsList variant="line" className="w-full justify-start overflow-x-auto border-b border-gray-200 mb-4 pb-0 h-auto">
+                {tabCategories.map((tab) => (
+                  <TabsTrigger 
+                    key={tab.name} 
+                    value={tab.name} 
+                    className="flex items-center gap-2 px-4 py-3 rounded-none data-active:border-b-2 data-active:border-violet-600 data-active:text-violet-700 font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent"
+                  >
+                    {tab.icon}
+                    {tab.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {tabCategories.map((tab) => (
+                <TabsContent key={tab.name} value={tab.name} className="mt-0">
+                  {tab.content}
+                </TabsContent>
+              ))}
+            </Tabs>
+          )}
 
           {/* Посты организации */}
           <div className="space-y-4">
